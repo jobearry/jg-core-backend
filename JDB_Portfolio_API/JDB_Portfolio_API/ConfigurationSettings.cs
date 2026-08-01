@@ -3,10 +3,11 @@ using JDB_Portfolio_API.Domain.Entities;
 using JDB_Portfolio_API.Domain.Interfaces;
 using JDB_Portfolio_API.Persistence.Contexts;
 using JDB_Portfolio_API.Persistence.Services;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.OpenApi;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi;
 using System.Text;
 
 namespace JDB_Portfolio_API
@@ -76,21 +77,21 @@ namespace JDB_Portfolio_API
                     Contact = contactInfo
                 });
 
-                options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+                options.AddSecurityDefinition("bearer", new OpenApiSecurityScheme
                 {
+                    Name = "JWT Authentication",
+                    Description = "JWT Authorization header using the Bearer scheme. Input your token here.",
+                    In = ParameterLocation.Header,
                     Type = SecuritySchemeType.Http,
-                    Description = "JWT Authorization header using the Bearer scheme. Example: \"Authorization: Bearer {token}\"",
-                    Scheme = "bearer",
-                    BearerFormat = "JWT"
+                    Scheme = JwtBearerDefaults.AuthenticationScheme,
+                    BearerFormat = "JWT",
                 });
 
-                options.AddSecurityRequirement(_ => new OpenApiSecurityRequirement
+                options.AddSecurityRequirement(document => new OpenApiSecurityRequirement
                 {
-                    {
-                        new OpenApiSecuritySchemeReference("Bearer"),
-                        new List<string>()
-                    }
+                    [new OpenApiSecuritySchemeReference("bearer", document)] = []
                 });
+
             });
         }
 
@@ -100,15 +101,18 @@ namespace JDB_Portfolio_API
             services.Configure<JwtOptions>(configuration.GetSection("Jwt"));
 
             var jwtOptions = configuration.GetSection("Jwt").Get<JwtOptions>()!;
+            
             var jwtKey = Encoding.UTF8.GetBytes(jwtOptions.Key);
 
             // register authorization + authentication using JWT Bearer
-            services.AddAuthorization();
-            services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+            services.AddAuthentication(options =>
+                    {
+                        options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+                        options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+                    })
                     .AddJwtBearer(options =>
                     {
-                        options.RequireHttpsMetadata = false;
-                        options.SaveToken = true;
+                        options.MapInboundClaims = false;
                         options.TokenValidationParameters = new TokenValidationParameters
                         {
                             ValidateIssuer = true,
@@ -118,8 +122,10 @@ namespace JDB_Portfolio_API
                             ValidIssuer = jwtOptions.Issuer,
                             ValidAudience = jwtOptions.Audience,
                             IssuerSigningKey = new SymmetricSecurityKey(jwtKey),
+                            ClockSkew = TimeSpan.Zero
                         };
                     });
+            services.AddAuthorization();
         }
 
         public static void AddCorsOrigins(this IServiceCollection services)

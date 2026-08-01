@@ -1,14 +1,13 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace JDB_Portfolio_API.Application.Settings
+namespace JDB_Portfolio_API.Application.Settings;
+
+public class JwtOptions
 {
-    public class JwtOptions
-    {
-        public string Key { get; set; } = string.Empty;
-        public string Issuer { get; set; } = string.Empty;
-        public string Audience { get; set; } = string.Empty;
-        public int ExpirationMinutes { get; set; } = 60;
-    }
+    public string Key { get; set; } = string.Empty;
+    public string Issuer { get; set; } = string.Empty;
+    public string Audience { get; set; } = string.Empty;
+    public int ExpirationInMinutes { get; set; } = 60;
 }
