@@ -1,9 +1,12 @@
-﻿using JDB_Portfolio_API.Application.Services;
-using JDB_Portfolio_API.Application.Settings;
+﻿using JDB_Portfolio_API.Application.Settings;
 using JDB_Portfolio_API.Domain.Entities;
+using JDB_Portfolio_API.Domain.Interfaces;
 using JDB_Portfolio_API.Persistence.Contexts;
+using JDB_Portfolio_API.Persistence.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
 using System.Text;
 
 namespace JDB_Portfolio_API
@@ -17,7 +20,12 @@ namespace JDB_Portfolio_API
 
             //Notion
             services.Configure<NotionSettings>(configuration.GetSection("Notion"));
-            services.AddHttpClient<INotionClientService>();
+            services.AddHttpClient<NotionClientService>()
+                .ConfigureHttpClient(client =>
+                {
+                    client.BaseAddress = new Uri("https://api.notion.com");
+                });
+            services.AddScoped<INotionClientService>(sp => sp.GetRequiredService<NotionClientService>());
 
             // Register DbContext
             services.AddDbContext<PortfolioContext>(options =>
@@ -76,52 +84,43 @@ namespace JDB_Portfolio_API
                     BearerFormat = "JWT"
                 });
 
-                //options.AddSecurityRequirement(new OpenApiSecurityRequirement
-                //{
-                //    {
-                //        new OpenApiSecurityScheme
-                //        {
-                //            Reference = new OpenApiReference { Type = ReferenceType.SecurityScheme, Id = "Bearer" }
-                //        },
-                //        new string[] { }
-                //    }
-                //});
+                options.AddSecurityRequirement(_ => new OpenApiSecurityRequirement
+                {
+                    {
+                        new OpenApiSecuritySchemeReference("Bearer"),
+                        new List<string>()
+                    }
+                });
             });
         }
 
-        //public static void AddAuthentication(this IServiceCollection services, IConfiguration configuration)
-        //{
-        //    // bind options and register
-        //    services.Configure<JwtOptions>(configuration.GetSection("Jwt"));
+        public static void AddAuthentication(this IServiceCollection services, IConfiguration configuration)
+        {
+            // bind options and register
+            services.Configure<JwtOptions>(configuration.GetSection("Jwt"));
 
-        //    var jwtOptions = configuration.GetSection("Jwt").Get<JwtOptions>()!;
-        //    var jwtKey = Encoding.UTF8.GetBytes(jwtOptions.Key);
+            var jwtOptions = configuration.GetSection("Jwt").Get<JwtOptions>()!;
+            var jwtKey = Encoding.UTF8.GetBytes(jwtOptions.Key);
 
-        //    // register authorization
-        //    services.AddAuthorization();
-        //    services.AddAuthentication(options =>
-        //    {
-        //        options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-        //        options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-        //    })
-        //    .AddJwtBearer(options =>
-        //    {
-        //        options.RequireHttpsMetadata = false;
-        //        options.SaveToken = true;
-        //        options.TokenValidationParameters = new TokenValidationParameters
-        //        {
-        //            ValidateIssuer = true,
-        //            ValidateAudience = true,
-        //            ValidateLifetime = true,
-        //            ValidateIssuerSigningKey = true,
-        //            ValidIssuer = jwtOptions.Issuer,
-        //            ValidAudience = jwtOptions.Audience,
-        //            IssuerSigningKey = new SymmetricSecurityKey(jwtKey),
-        //        };
-
-        //    });
-
-        //}
+            // register authorization + authentication using JWT Bearer
+            services.AddAuthorization();
+            services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+                    .AddJwtBearer(options =>
+                    {
+                        options.RequireHttpsMetadata = false;
+                        options.SaveToken = true;
+                        options.TokenValidationParameters = new TokenValidationParameters
+                        {
+                            ValidateIssuer = true,
+                            ValidateAudience = true,
+                            ValidateLifetime = true,
+                            ValidateIssuerSigningKey = true,
+                            ValidIssuer = jwtOptions.Issuer,
+                            ValidAudience = jwtOptions.Audience,
+                            IssuerSigningKey = new SymmetricSecurityKey(jwtKey),
+                        };
+                    });
+        }
 
         public static void AddCorsOrigins(this IServiceCollection services)
         {

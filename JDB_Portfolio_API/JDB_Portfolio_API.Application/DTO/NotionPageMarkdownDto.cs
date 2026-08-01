@@ -4,7 +4,7 @@ using System.Text;
 
 namespace JDB_Portfolio_API.Application.DTO;
 
-internal class NotionPageMarkdownDto
+public class NotionPageMarkdownDto
 {
     public string Object { get; set; } = string.Empty;
     public string Id { get; set; } = string.Empty;

@@ -1,5 +1,6 @@
 ﻿using JDB_Portfolio_API.Application.DTO;
 using JDB_Portfolio_API.Application.Settings;
+using JDB_Portfolio_API.Domain.Interfaces;
 using Microsoft.Extensions.Options;
 using System;
 using System.Collections.Generic;
@@ -8,12 +9,9 @@ using System.Net.Http.Json;
 using System.Text;
 using System.Xml.Linq;
 
-namespace JDB_Portfolio_API.Application.Services;
+namespace JDB_Portfolio_API.Persistence.Services;
 
-public interface INotionClientService
-{
-    Task<List<NotionPageCardDto>> QueryPageAsync(string pageId);
-}
+
 public class NotionClientService : INotionClientService
 {
     private readonly HttpClient _httpClient;
@@ -31,7 +29,7 @@ public class NotionClientService : INotionClientService
     public async Task<List<NotionPageCardDto>> QueryPageAsync(string pageId)
     {
         var response = await _httpClient.GetAsync(
-            $"https://api.notion.com/v1/pages/{pageId}/markdown"
+            $"/v1/pages/{pageId}/markdown"
         );
 
         response.EnsureSuccessStatusCode();

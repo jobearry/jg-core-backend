@@ -1,5 +1,5 @@
 using JDB_Portfolio_API.Application.DTO;
-using JDB_Portfolio_API.Application.Services;
+using JDB_Portfolio_API.Domain.Interfaces;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
@@ -10,8 +10,8 @@ namespace Portfolio_API.Controllers.Notion
     [ApiController]
     public class NotionController : ControllerBase
     {
-        private readonly NotionClientService _notionClient;
-        public NotionController(NotionClientService notionClient)
+        private readonly INotionClientService _notionClient;
+        public NotionController(INotionClientService notionClient)
         {
             _notionClient = notionClient;
         }
