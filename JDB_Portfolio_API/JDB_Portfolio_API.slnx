@@ -1,0 +1,12 @@
+<Solution>
+  <Folder Name="/1.0 Presentation/">
+    <Project Path="JDB_Portfolio_API/JDB_Portfolio_API.csproj" />
+  </Folder>
+  <Folder Name="/2.0 Core/">
+    <Project Path="JDB_Portfolio_API.Application/JDB_Portfolio_API.Application.csproj" />
+    <Project Path="JDB_Portfolio_API.Domain/JDB_Portfolio_API.Domain.csproj" />
+  </Folder>
+  <Folder Name="/3.0 Infrastructure/">
+    <Project Path="JDB_Portfolio_API.Persistence/JDB_Portfolio_API.Persistence.csproj" />
+  </Folder>
+</Solution>
