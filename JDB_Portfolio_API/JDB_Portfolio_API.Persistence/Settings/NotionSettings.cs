@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace JDB_Portfolio_API.Application.Settings
+namespace JDB_Portfolio_API.Persistence.Settings
 {
     public class NotionSettings
     {

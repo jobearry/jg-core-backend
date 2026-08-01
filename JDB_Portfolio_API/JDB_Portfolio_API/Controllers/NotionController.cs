@@ -5,9 +5,9 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Portfolio_API.Controllers.Notion
 {
-    [Route("api/v2/[controller]")]
-    [ApiExplorerSettings(GroupName= "v2")] 
+    [Route("api/v1/[controller]")]
     [ApiController]
+    [Tags("NotionAPI")]
     public class NotionController : ControllerBase
     {
         private readonly INotionClientService _notionClient;

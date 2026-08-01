@@ -1,0 +1,46 @@
+# Docs for the Azure Web Apps Deploy action: https://github.com/Azure/webapps-deploy
+# More GitHub Actions for Azure: https://github.com/Azure/actions
+
+name: Build and deploy ASP.Net Core app to Azure Web App - jdb-portfolio-api
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'   # latest LTS
+
+      - name: Restore dependencies
+        run: dotnet restore JDB_Portfolio_API/JDB_Portfolio_API.slnx
+
+      - name: Build with dotnet        
+        run: dotnet build JDB_Portfolio_API/JDB_Portfolio_API.slnx --configuration Release --no-restore
+
+      - name: dotnet publish
+        run: dotnet publish JDB_Portfolio_API/JDB_Portfolio_API/JDB_Portfolio_API.csproj -c Release --no-restore -o ./publish
+
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Deploy to jdb-portfolio-api azure webapp
+        uses: azure/webapps-deploy@v2
+        with:
+          app-name: jdb-portfolio-api
+          package: ./publish

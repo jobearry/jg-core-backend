@@ -19,7 +19,6 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI(ui =>
     {
         ui.SwaggerEndpoint("v1/swagger.json", "JDB Portfolio API v1");
-        ui.SwaggerEndpoint("v2/swagger.json", "JDB Portfolio API v2");
     });
 }
 
