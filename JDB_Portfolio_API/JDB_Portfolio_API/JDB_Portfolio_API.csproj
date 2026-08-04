@@ -18,6 +18,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\JDB_Portfolio_API.Application\JDB_Portfolio_API.Application.csproj" />
+    <ProjectReference Include="..\JDB_Portfolio_API.ExternalService\JDB_Portfolio_API.ExternalService.csproj" />
     <ProjectReference Include="..\JDB_Portfolio_API.Persistence\JDB_Portfolio_API.Persistence.csproj" />
   </ItemGroup>
 

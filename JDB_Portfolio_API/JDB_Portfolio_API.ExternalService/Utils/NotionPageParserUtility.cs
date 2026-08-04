@@ -2,7 +2,7 @@
 using System;
 using System.Xml.Linq;
 
-namespace JDB_Portfolio_API.Persistence.Utils;
+namespace JDB_Portfolio_API.ExternalService.Utils;
 
 public static class NotionPageParserUtility
 {

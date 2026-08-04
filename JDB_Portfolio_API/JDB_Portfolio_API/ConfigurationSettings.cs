@@ -2,8 +2,8 @@
 using JDB_Portfolio_API.Domain.Entities;
 using JDB_Portfolio_API.Domain.Interfaces;
 using JDB_Portfolio_API.Persistence.Contexts;
-using JDB_Portfolio_API.Persistence.Services;
-using JDB_Portfolio_API.Persistence.Settings;
+using JDB_Portfolio_API.ExternalService.Services;
+using JDB_Portfolio_API.ExternalService.Settings;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;

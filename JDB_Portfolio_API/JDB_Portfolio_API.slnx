@@ -7,6 +7,7 @@
     <Project Path="JDB_Portfolio_API.Domain/JDB_Portfolio_API.Domain.csproj" />
   </Folder>
   <Folder Name="/3.0 Infrastructure/">
+    <Project Path="JDB_Portfolio_API.ExternalService/JDB_Portfolio_API.ExternalService.csproj" />
     <Project Path="JDB_Portfolio_API.Persistence/JDB_Portfolio_API.Persistence.csproj" />
   </Folder>
 </Solution>

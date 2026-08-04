@@ -1,7 +1,7 @@
 ﻿using JDB_Portfolio_API.Application.DTO;
 using JDB_Portfolio_API.Domain.Interfaces;
-using JDB_Portfolio_API.Persistence.Settings;
-using JDB_Portfolio_API.Persistence.Utils;
+using JDB_Portfolio_API.ExternalService.Settings;
+using JDB_Portfolio_API.ExternalService.Utils;
 using Microsoft.Extensions.Options;
 using System;
 using System.Collections.Generic;
@@ -9,7 +9,7 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text;
 
-namespace JDB_Portfolio_API.Persistence.Services;
+namespace JDB_Portfolio_API.ExternalService.Services;
 
 public class NotionClientService : INotionClientService
 {

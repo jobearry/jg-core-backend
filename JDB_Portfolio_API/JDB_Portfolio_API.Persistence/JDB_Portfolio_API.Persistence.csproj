@@ -24,4 +24,10 @@
     <ProjectReference Include="..\JDB_Portfolio_API.Domain\JDB_Portfolio_API.Domain.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Services\" />
+    <Folder Include="Settings\" />
+    <Folder Include="Utils\" />
+  </ItemGroup>
+
 </Project>
