@@ -1,5 +1,7 @@
 using JDB_Portfolio_API.Application.DTO;
+using JDB_Portfolio_API.Application.Services;
 using JDB_Portfolio_API.Domain.Interfaces;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
@@ -7,27 +9,37 @@ namespace Portfolio_API.Controllers.Notion
 {
     [Route("api/v1/[controller]")]
     [ApiController]
-    [Tags("NotionAPI")]
+    [Tags("ExternalServices")]
+    [Authorize]
     public class NotionController : ControllerBase
     {
-        private readonly INotionClientService _notionClient;
-        public NotionController(INotionClientService notionClient)
+        private readonly PortfolioService _portfolioService;
+        public NotionController(PortfolioService portfolioService)
         {
-            _notionClient = notionClient;
+            _portfolioService = portfolioService;
         }
 
         [HttpGet("query/{pageId}")]
-        public async Task<ActionResult<NotionPageCardDto>> QueryPage(string pageId)
+        public async Task<IActionResult> QueryPage(string pageId)
         {
-            var result = await _notionClient.QueryPageAsync(pageId);
-            return Ok(result); // returns raw JSON string
+            var result = await _portfolioService.GetPageAsync(pageId);
+            if (!result.IsSuccess)
+            {
+                return StatusCode(502, new { error = result.Error });
+            }
+
+            return Ok(result.Value);
         }
 
         [HttpGet("query/{pageId}/count")]
         public async Task<IActionResult> QueryPageCount(string pageId)
         {
-            var result = await _notionClient.QueryPageAsync(pageId);
-            return Ok(result.Count);
+            var result = await _portfolioService.GetPageAsync(pageId);
+            if (!result.IsSuccess)
+            {
+                return StatusCode(502, new { error = result.Error });
+            }
+            return Ok(result.Value!.Count);
         }
     }
 }

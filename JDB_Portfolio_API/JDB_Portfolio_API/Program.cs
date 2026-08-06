@@ -6,6 +6,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 builder.Services.AddSwaggerConfig(builder.Configuration);
 builder.Services.AddDatabase(builder.Configuration);
+builder.Services.AddExternalService(builder.Configuration);
 builder.Services.AddAuthentication(builder.Configuration);
 builder.Services.AddCorsOrigins();
 

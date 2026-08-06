@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using JDB_Portfolio_API.Domain.Entities;
+using JDB_Portfolio_API.Persistence.Entities;
 using Microsoft.EntityFrameworkCore;
 
 namespace JDB_Portfolio_API.Persistence.Contexts;
@@ -12,19 +12,19 @@ public partial class PortfolioContext : DbContext
     {
     }
 
-    public virtual DbSet<Experience> Experiences { get; set; }
+    public virtual DbSet<ExperienceEntity> Experiences { get; set; }
 
-    public virtual DbSet<Project> Projects { get; set; }
+    public virtual DbSet<ProjectEntity> Projects { get; set; }
 
-    public virtual DbSet<Recommendation> Recommendations { get; set; }
+    public virtual DbSet<RecommendationEntity> Recommendations { get; set; }
 
-    public virtual DbSet<TechStack> TechStacks { get; set; }
+    public virtual DbSet<TechStackEntity> TechStacks { get; set; }
 
-    public virtual DbSet<TechStackCategory> TechStackCategories { get; set; }
+    public virtual DbSet<TechStackCategoryEntity> TechStackCategories { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        modelBuilder.Entity<Experience>(entity =>
+        modelBuilder.Entity<ExperienceEntity>(entity =>
         {
             entity.HasKey(e => e.Id).HasName("experience_pkey");
 
@@ -49,7 +49,7 @@ public partial class PortfolioContext : DbContext
                 .HasColumnName("type");
         });
 
-        modelBuilder.Entity<Project>(entity =>
+        modelBuilder.Entity<ProjectEntity>(entity =>
         {
             entity.HasKey(e => e.Id).HasName("project_pkey");
 
@@ -71,7 +71,7 @@ public partial class PortfolioContext : DbContext
                 .HasColumnName("updated_at");
         });
 
-        modelBuilder.Entity<Recommendation>(entity =>
+        modelBuilder.Entity<RecommendationEntity>(entity =>
         {
             entity.HasKey(e => e.Id).HasName("recommendations_pkey");
 
@@ -93,7 +93,7 @@ public partial class PortfolioContext : DbContext
                 .HasColumnName("posted_at");
         });
 
-        modelBuilder.Entity<TechStack>(entity =>
+        modelBuilder.Entity<TechStackEntity>(entity =>
         {
             entity.HasKey(e => e.Id).HasName("tech_stack_pkey");
 
@@ -115,7 +115,7 @@ public partial class PortfolioContext : DbContext
             entity.Property(e => e.TechStackCategoryId).HasColumnName("tech_stack_category_id");
         });
 
-        modelBuilder.Entity<TechStackCategory>(entity =>
+        modelBuilder.Entity<TechStackCategoryEntity>(entity =>
         {
             entity.HasKey(e => e.Id).HasName("tech_stack_category_pkey");
 

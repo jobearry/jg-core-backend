@@ -6,4 +6,8 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\JDB_Portfolio_API.Domain\JDB_Portfolio_API.Domain.csproj" />
+  </ItemGroup>
+
 </Project>
