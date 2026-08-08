@@ -8,5 +8,5 @@ public interface IRepository<T> where T : class
     Task<int> GetCountAsync();
     Task<List<T>> GetAllAsync();
     Task<T?> GetByIdAsync(int id);
-    Task AddNewItemAsync(T entity);
+    //Task AddNewAsync(T entity);
 }
