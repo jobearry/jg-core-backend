@@ -11,6 +11,8 @@ using System.Text;
 using JDB_Portfolio_API.ExternalService.Notion.Services;
 using JDB_Portfolio_API.ExternalService.Notion.Settings;
 using JDB_Portfolio_API.Application.Services;
+using JDB_Portfolio_API.Persistence.Repositories;
+using JDB_Portfolio_API.Persistence.Profiles;
 
 namespace JDB_Portfolio_API
 {
@@ -36,7 +38,8 @@ namespace JDB_Portfolio_API
             //services.AddScoped(typeof(IService<>), typeof(BasePortfolioService<>));
             //services.AddScoped(typeof(IMappedService<,,>), typeof(BaseMappedPortfolioService<,,>));
 
-            ////DI for experiences section
+            ////DI for experiences 
+            services.AddScoped<IPortfolioExperienceRepository, EfPortfolioExperienceRepository>();
             //services.AddScoped<IMapper<Experience, DTOExperience, DTOExperienceCreate>, ExperiencesReadMapper>();
             //services.AddScoped<IPortfolioExperienceService, PortfolioExperienceService>();
             //services.AddScoped<IPortfolioExperienceRepository, PortfolioExperienceRepository>();
@@ -59,6 +62,15 @@ namespace JDB_Portfolio_API
                 });
 
             services.AddScoped<INotionService>(sp => sp.GetRequiredService<NotionClientService>());
+        }
+        public static void AddMapper(this IServiceCollection services, IConfiguration configuration)
+        {
+            services.AddAutoMapper(a =>
+                {
+
+                },
+                typeof(PortfolioMappingProfile).Assembly
+            );
         }
         public static void AddSwaggerConfig(this IServiceCollection services, IConfiguration configuration)
         {

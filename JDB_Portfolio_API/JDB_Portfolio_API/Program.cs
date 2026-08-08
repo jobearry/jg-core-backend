@@ -1,4 +1,5 @@
 using JDB_Portfolio_API;
+using JDB_Portfolio_API.Endpoints;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -8,6 +9,7 @@ builder.Services.AddSwaggerConfig(builder.Configuration);
 builder.Services.AddDatabase(builder.Configuration);
 builder.Services.AddExternalService(builder.Configuration);
 builder.Services.AddAuthentication(builder.Configuration);
+builder.Services.AddMapper(builder.Configuration);
 builder.Services.AddCorsOrigins();
 
 var app = builder.Build();
@@ -29,5 +31,9 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+
+//endpoints
+app.MapAuthEndpoints();
+app.MapNotionEndpoints();
 
 app.Run();
