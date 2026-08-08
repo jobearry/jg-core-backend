@@ -40,15 +40,7 @@ namespace JDB_Portfolio_API
 
             ////DI for experiences 
             services.AddScoped<IPortfolioExperienceRepository, EfPortfolioExperienceRepository>();
-            //services.AddScoped<IMapper<Experience, DTOExperience, DTOExperienceCreate>, ExperiencesReadMapper>();
-            //services.AddScoped<IPortfolioExperienceService, PortfolioExperienceService>();
-            //services.AddScoped<IPortfolioExperienceRepository, PortfolioExperienceRepository>();
-
-            ////DI for tech stack section
-            //services.AddScoped<IMapper<TechStackDescription, DTOTechStackDescription, DTOTechStackDescription>, TechStackDescriptionMapper>();
-            //services.AddScoped<IMapper<TechStackSpec, DTOTechStackSpec, DTOTechStackSpec>, TechStackSpecMapper>();
-            //services.AddScoped<ITechStackMapper, TechStackMapper>();
-            //services.AddScoped<IPortfolioTechStackService, PortfolioTechStackService>();
+            services.AddScoped<PortfolioExperienceServices>();
         }
         public static void AddExternalService(this IServiceCollection services, IConfiguration configuration)
         {

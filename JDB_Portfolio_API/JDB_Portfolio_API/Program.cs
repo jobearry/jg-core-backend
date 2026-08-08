@@ -36,4 +36,7 @@ app.MapControllers();
 app.MapAuthEndpoints();
 app.MapNotionEndpoints();
 
+//portfolio endpoints
+app.MapPortfolioExperienceEndpoints();
+
 app.Run();

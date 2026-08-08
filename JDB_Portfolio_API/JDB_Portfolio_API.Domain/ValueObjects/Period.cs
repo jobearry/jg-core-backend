@@ -11,9 +11,9 @@ public sealed class Period
 
     public Period (DateTime? startedAt = null, DateTime? finishedAt = null)
     {
-        if (startedAt == default)
+        if (startedAt.HasValue && startedAt.Value == default)
             throw new ArgumentException("StartedAt must be a valid date.");
-        if (finishedAt == default)
+        if (finishedAt.HasValue && finishedAt.Value == default)
             throw new ArgumentException("FinishedAt must be a valid date.");
         if (finishedAt < startedAt)
             throw new ArgumentException("FinishedAt cannot be before StartedAt.");
@@ -25,7 +25,7 @@ public sealed class Period
     {
         get
         {
-            if (!StartedAt.HasValue) return TimeSpan.Zero;
+            if (!StartedAt.HasValue) return null;
 
             var effectiveEnd = FinishedAt ?? DateTime.UtcNow;
             return effectiveEnd - StartedAt.Value;
