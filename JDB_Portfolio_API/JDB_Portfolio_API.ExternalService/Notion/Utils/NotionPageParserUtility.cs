@@ -1,12 +1,13 @@
-﻿using JDB_Portfolio_API.Application.DTO;
+﻿using JDB_Portfolio_API.Domain.ValueObjects;
+using JDB_Portfolio_API.ExternalService.Notion.DTO;
 using System;
 using System.Xml.Linq;
 
-namespace JDB_Portfolio_API.ExternalService.Utils;
+namespace JDB_Portfolio_API.ExternalService.Notion.Utils;
 
 public static class NotionPageParserUtility
 {
-    public static List<NotionPageCardDto> Parse(string markdown)
+    public static List<NotionPage> Parse(string markdown)
     {
         // Wrap root because input has multiple top-level nodes
         var xml = $"<root>{markdown}</root>";
@@ -26,7 +27,7 @@ public static class NotionPageParserUtility
                     .Replace("—", "")
                     .Trim();
 
-                return new NotionPageCardDto
+                return new NotionPage
                 {
                     Url = url,
                     Date = date,

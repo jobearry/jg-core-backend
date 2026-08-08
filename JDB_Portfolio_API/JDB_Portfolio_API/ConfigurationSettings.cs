@@ -2,14 +2,15 @@
 using JDB_Portfolio_API.Domain.Entities;
 using JDB_Portfolio_API.Domain.Interfaces;
 using JDB_Portfolio_API.Persistence.Contexts;
-using JDB_Portfolio_API.ExternalService.Services;
-using JDB_Portfolio_API.ExternalService.Settings;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
 using System.Text;
+using JDB_Portfolio_API.ExternalService.Notion.Services;
+using JDB_Portfolio_API.ExternalService.Notion.Settings;
+using JDB_Portfolio_API.Application.Services;
 
 namespace JDB_Portfolio_API
 {
@@ -20,19 +21,13 @@ namespace JDB_Portfolio_API
             // Read connection string from appsettings.json or environment variables
             var jdbConnectionString = configuration.GetConnectionString("JDBConnection");
 
-            //Notion
-            services.Configure<NotionSettings>(configuration.GetSection("Notion"));
-            services.AddHttpClient<NotionClientService>()
-                .ConfigureHttpClient(client =>
-                {
-                    client.BaseAddress = new Uri("https://api.notion.com");
-                });
-            services.AddScoped<INotionClientService>(sp => sp.GetRequiredService<NotionClientService>());
 
             // Register DbContext
             services.AddDbContext<PortfolioContext>(options =>
                 options.UseNpgsql(jdbConnectionString)
             );
+
+            services.AddScoped<PortfolioService>();
 
             // Base DI for repositories
             //services.AddScoped(typeof(IRepository<>), typeof(BasePortfolioRepository<>));
@@ -52,7 +47,19 @@ namespace JDB_Portfolio_API
             //services.AddScoped<ITechStackMapper, TechStackMapper>();
             //services.AddScoped<IPortfolioTechStackService, PortfolioTechStackService>();
         }
+        public static void AddExternalService(this IServiceCollection services, IConfiguration configuration)
+        {
 
+            //Notion
+            services.Configure<NotionSettings>(configuration.GetSection("Notion"));
+            services.AddHttpClient<NotionClientService>()
+                .ConfigureHttpClient(client =>
+                {
+                    client.BaseAddress = new Uri("https://api.notion.com");
+                });
+
+            services.AddScoped<INotionService>(sp => sp.GetRequiredService<NotionClientService>());
+        }
         public static void AddSwaggerConfig(this IServiceCollection services, IConfiguration configuration)
         {
             var contactInfo = new OpenApiContact
