@@ -1,5 +1,7 @@
-﻿using JDB_Portfolio_API.Domain.Entities;
+﻿using JDB_Portfolio_API.Application.Common;
+using JDB_Portfolio_API.Domain.Entities;
 using JDB_Portfolio_API.Domain.Interfaces;
+using JDB_Portfolio_API.Domain.ValueObjects;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -14,8 +16,17 @@ public class PortfolioExperienceServices
         _expRepo = expRepo;
     }
 
-    public async Task<List<Experience>> GetAllAsync()
+    public async Task<Result<List<Experience>>> GetAllAsync()
     {
-        return await _expRepo.GetAllAsync();
+        try
+        {
+            var experiences = await _expRepo.GetAllAsync();
+            return Result<List<Experience>>.Success(experiences.OrderBy(x => x.Id).ToList());
+
+        }
+        catch (HttpRequestException hre)
+        {
+            return Result<List<Experience>>.Failure("Failed to get portfolio experience content: " + hre.Message);
+        }
     }
 }
