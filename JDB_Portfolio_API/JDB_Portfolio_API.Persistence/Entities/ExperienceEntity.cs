@@ -18,4 +18,6 @@ public partial class ExperienceEntity
     public string? Responsibility { get; set; }
 
     public string? Type { get; set; }
+
+    public ICollection<ProjectEntity> Projects { get; set; } = new List<ProjectEntity>();
 }

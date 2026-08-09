@@ -10,4 +10,5 @@ public partial class TechStackCategoryEntity
     public string Category { get; set; } = null!;
 
     public DateTime? CreatedAt { get; set; }
+    public ICollection<TechStackEntity> TechStacks { get; set; } = new List<TechStackEntity>();
 }

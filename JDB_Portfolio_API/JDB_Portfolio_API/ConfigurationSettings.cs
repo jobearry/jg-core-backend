@@ -11,6 +11,8 @@ using System.Text;
 using JDB_Portfolio_API.ExternalService.Notion.Services;
 using JDB_Portfolio_API.ExternalService.Notion.Settings;
 using JDB_Portfolio_API.Application.Services;
+using JDB_Portfolio_API.Persistence.Repositories;
+using JDB_Portfolio_API.Persistence.Profiles;
 
 namespace JDB_Portfolio_API
 {
@@ -29,23 +31,12 @@ namespace JDB_Portfolio_API
 
             services.AddScoped<PortfolioService>();
 
-            // Base DI for repositories
-            //services.AddScoped(typeof(IRepository<>), typeof(BasePortfolioRepository<>));
+            ////DI for experiences 
+            services.AddScoped<IPortfolioExperienceRepository, EfPortfolioExperienceRepository>();
+            services.AddScoped<PortfolioExperienceService>();
 
-            //// Base DI for services and mappers
-            //services.AddScoped(typeof(IService<>), typeof(BasePortfolioService<>));
-            //services.AddScoped(typeof(IMappedService<,,>), typeof(BaseMappedPortfolioService<,,>));
-
-            ////DI for experiences section
-            //services.AddScoped<IMapper<Experience, DTOExperience, DTOExperienceCreate>, ExperiencesReadMapper>();
-            //services.AddScoped<IPortfolioExperienceService, PortfolioExperienceService>();
-            //services.AddScoped<IPortfolioExperienceRepository, PortfolioExperienceRepository>();
-
-            ////DI for tech stack section
-            //services.AddScoped<IMapper<TechStackDescription, DTOTechStackDescription, DTOTechStackDescription>, TechStackDescriptionMapper>();
-            //services.AddScoped<IMapper<TechStackSpec, DTOTechStackSpec, DTOTechStackSpec>, TechStackSpecMapper>();
-            //services.AddScoped<ITechStackMapper, TechStackMapper>();
-            //services.AddScoped<IPortfolioTechStackService, PortfolioTechStackService>();
+            services.AddScoped<IPortfolioProjectRepository, EfPortfolioProjectRepository>();
+            services.AddScoped<PortfolioProjectService>();
         }
         public static void AddExternalService(this IServiceCollection services, IConfiguration configuration)
         {
@@ -59,6 +50,15 @@ namespace JDB_Portfolio_API
                 });
 
             services.AddScoped<INotionService>(sp => sp.GetRequiredService<NotionClientService>());
+        }
+        public static void AddMapper(this IServiceCollection services, IConfiguration configuration)
+        {
+            services.AddAutoMapper(a =>
+                {
+
+                },
+                typeof(PortfolioMappingProfile).Assembly
+            );
         }
         public static void AddSwaggerConfig(this IServiceCollection services, IConfiguration configuration)
         {

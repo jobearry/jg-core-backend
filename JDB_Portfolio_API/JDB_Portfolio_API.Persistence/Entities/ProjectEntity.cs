@@ -18,4 +18,7 @@ public partial class ProjectEntity
     public DateTime? CreatedAt { get; set; }
 
     public DateTime? UpdatedAt { get; set; }
+
+    public ExperienceEntity? Experience { get; set; }
+    public ICollection<ProjectTechStack> ProjectTechStacks { get; set; } = new List<ProjectTechStack>();
 }

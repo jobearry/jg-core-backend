@@ -104,7 +104,26 @@ namespace JDB_Portfolio_API.Persistence.Migrations
                     b.HasKey("Id")
                         .HasName("project_pkey");
 
+                    b.HasIndex("ExperienceId");
+
                     b.ToTable("project", (string)null);
+                });
+
+            modelBuilder.Entity("JDB_Portfolio_API.Persistence.Entities.ProjectTechStack", b =>
+                {
+                    b.Property<int>("ProjectId")
+                        .HasColumnType("integer")
+                        .HasColumnName("project_id");
+
+                    b.Property<int>("TechStackId")
+                        .HasColumnType("integer")
+                        .HasColumnName("tech_stack_id");
+
+                    b.HasKey("ProjectId", "TechStackId");
+
+                    b.HasIndex("TechStackId");
+
+                    b.ToTable("project_tech_stack", (string)null);
                 });
 
             modelBuilder.Entity("JDB_Portfolio_API.Persistence.Entities.RecommendationEntity", b =>
@@ -142,7 +161,7 @@ namespace JDB_Portfolio_API.Persistence.Migrations
                     b.HasKey("Id")
                         .HasName("recommendations_pkey");
 
-                    b.ToTable("recommendations", (string)null);
+                    b.ToTable("recommendation", (string)null);
                 });
 
             modelBuilder.Entity("JDB_Portfolio_API.Persistence.Entities.TechStackCategoryEntity", b =>
@@ -205,7 +224,70 @@ namespace JDB_Portfolio_API.Persistence.Migrations
                     b.HasKey("Id")
                         .HasName("tech_stack_pkey");
 
+                    b.HasIndex("TechStackCategoryId");
+
                     b.ToTable("tech_stack", (string)null);
+                });
+
+            modelBuilder.Entity("JDB_Portfolio_API.Persistence.Entities.ProjectEntity", b =>
+                {
+                    b.HasOne("JDB_Portfolio_API.Persistence.Entities.ExperienceEntity", "Experience")
+                        .WithMany("Projects")
+                        .HasForeignKey("ExperienceId")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("FK_project_experience_experience_id");
+
+                    b.Navigation("Experience");
+                });
+
+            modelBuilder.Entity("JDB_Portfolio_API.Persistence.Entities.ProjectTechStack", b =>
+                {
+                    b.HasOne("JDB_Portfolio_API.Persistence.Entities.ProjectEntity", "Project")
+                        .WithMany("ProjectTechStacks")
+                        .HasForeignKey("ProjectId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("JDB_Portfolio_API.Persistence.Entities.TechStackEntity", "TechStack")
+                        .WithMany("ProjectTechStacks")
+                        .HasForeignKey("TechStackId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Project");
+
+                    b.Navigation("TechStack");
+                });
+
+            modelBuilder.Entity("JDB_Portfolio_API.Persistence.Entities.TechStackEntity", b =>
+                {
+                    b.HasOne("JDB_Portfolio_API.Persistence.Entities.TechStackCategoryEntity", "TechStackCategory")
+                        .WithMany("TechStacks")
+                        .HasForeignKey("TechStackCategoryId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("TechStackCategory");
+                });
+
+            modelBuilder.Entity("JDB_Portfolio_API.Persistence.Entities.ExperienceEntity", b =>
+                {
+                    b.Navigation("Projects");
+                });
+
+            modelBuilder.Entity("JDB_Portfolio_API.Persistence.Entities.ProjectEntity", b =>
+                {
+                    b.Navigation("ProjectTechStacks");
+                });
+
+            modelBuilder.Entity("JDB_Portfolio_API.Persistence.Entities.TechStackCategoryEntity", b =>
+                {
+                    b.Navigation("TechStacks");
+                });
+
+            modelBuilder.Entity("JDB_Portfolio_API.Persistence.Entities.TechStackEntity", b =>
+                {
+                    b.Navigation("ProjectTechStacks");
                 });
 #pragma warning restore 612, 618
         }

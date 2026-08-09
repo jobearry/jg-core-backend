@@ -14,4 +14,7 @@ public partial class TechStackEntity
     public DateTime? CreatedAt { get; set; }
 
     public int TechStackCategoryId { get; set; }
+
+    public ICollection<ProjectTechStack> ProjectTechStacks { get; set; } = new List<ProjectTechStack>();
+    public TechStackCategoryEntity TechStackCategory { get; set; } = null!;
 }
