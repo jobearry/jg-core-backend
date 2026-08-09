@@ -7,14 +7,15 @@ public static class PortfolioExperienceEndpoints
 {
     public static void MapPortfolioExperienceEndpoints(this IEndpointRouteBuilder routes)
     {
-        routes.MapGet("api/v1/experience", async ([FromServices] PortfolioExperienceServices expService) =>
+        routes.MapGet("api/v1/experience", async ([FromServices] PortfolioExperienceServices expService, bool includeProjects = false) =>
         {
-            var result = await expService.GetAllAsync(); 
+            var result = await expService.GetAllAsync(includeProjects);
             if (!result.IsSuccess)
             {
                 return Results.Problem(result.Error, statusCode: 502);
             }
             return Results.Ok(result);
-        });
+        }).WithTags("Portfolio");
+          //.RequireAuthorization();
     }
 }

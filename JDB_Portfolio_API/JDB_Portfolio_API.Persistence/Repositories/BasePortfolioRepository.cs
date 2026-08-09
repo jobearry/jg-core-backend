@@ -20,10 +20,10 @@ public class BasePortfolioRepository<TDomain, TEntity> : IRepository<TDomain>
     }
 
     public async Task<int> GetCountAsync() => await _dbSet.CountAsync();
-    public async Task<List<TDomain>> GetAllAsync()
+    public async Task<List<TDomain?>> GetAllAsync()
     {
         var entities = await _dbSet.ToListAsync();
-        return _mapper.Map<List<TDomain>>(entities);
+        return _mapper.Map<List<TDomain?>>(entities);
     }
     public async Task<TDomain?> GetByIdAsync(int id)
     {

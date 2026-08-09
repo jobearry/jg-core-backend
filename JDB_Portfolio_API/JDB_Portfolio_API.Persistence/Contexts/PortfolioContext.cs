@@ -24,6 +24,20 @@ public partial class PortfolioContext : DbContext
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        // Configure the many-to-many relationship between ProjectEntity and TechStackEntity
+        modelBuilder.Entity<ProjectTechStack>(e =>
+        {
+            e.HasKey(pts => new { pts.ProjectId, pts.TechStackId });
+            e.ToTable("project_tech_stack");
+            e.HasOne(pt => pt.Project)
+                .WithMany(p => p.ProjectTechStacks)
+                .HasForeignKey(pt => pt.ProjectId);
+            e.HasOne(pt => pt.TechStack)
+                .WithMany(t => t.ProjectTechStacks)
+                .HasForeignKey(pt => pt.TechStackId);
+        });
+
+        //
         modelBuilder.Entity<ExperienceEntity>(entity =>
         {
             entity.HasKey(e => e.Id).HasName("experience_pkey");
@@ -69,13 +83,20 @@ public partial class PortfolioContext : DbContext
             entity.Property(e => e.UpdatedAt)
                 .HasColumnType("timestamp without time zone")
                 .HasColumnName("updated_at");
+
+            entity.HasOne(p => p.Experience)
+                  .WithMany(e => e.Projects)
+                  .HasForeignKey(p => p.ExperienceId)
+                  .HasConstraintName("FK_project_experience_experience_id")
+                  .OnDelete(DeleteBehavior.SetNull);
+
         });
 
         modelBuilder.Entity<RecommendationEntity>(entity =>
         {
             entity.HasKey(e => e.Id).HasName("recommendations_pkey");
 
-            entity.ToTable("recommendations");
+            entity.ToTable("recommendation");
 
             entity.Property(e => e.Id)
                 .UseIdentityAlwaysColumn()
@@ -113,6 +134,11 @@ public partial class PortfolioContext : DbContext
                 .HasMaxLength(255)
                 .HasColumnName("stack_name");
             entity.Property(e => e.TechStackCategoryId).HasColumnName("tech_stack_category_id");
+
+            //entity.HasOne(t => t.TechStackCategory)
+            //      .WithMany(c => c.TechStacks)
+            //      .HasForeignKey(t => t.TechStackCategoryId)
+            //      .HasConstraintName("FK_tech_stack_tech_stack_category_id");
         });
 
         modelBuilder.Entity<TechStackCategoryEntity>(entity =>

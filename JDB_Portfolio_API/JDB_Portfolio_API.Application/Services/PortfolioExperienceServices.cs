@@ -16,17 +16,20 @@ public class PortfolioExperienceServices
         _expRepo = expRepo;
     }
 
-    public async Task<Result<List<Experience>>> GetAllAsync()
+    public async Task<Result<List<Experience?>>> GetAllAsync(bool includeProjects)
     {
         try
         {
-            var experiences = await _expRepo.GetAllAsync();
-            return Result<List<Experience>>.Success(experiences.OrderBy(x => x.Id).ToList());
+            List<Experience?> experiences = includeProjects ? 
+                await _expRepo.GetAllExperienceWithProjects() : await _expRepo.GetAllAsync();
 
+            return Result<List<Experience?>>.Success(experiences.OrderBy(x => x.Id).ToList());
         }
         catch (HttpRequestException hre)
         {
-            return Result<List<Experience>>.Failure("Failed to get portfolio experience content: " + hre.Message);
+            return Result<List<Experience?>>.Failure("Failed to get portfolio experience content: " + hre.Message);
         }
     }
+
+
 }

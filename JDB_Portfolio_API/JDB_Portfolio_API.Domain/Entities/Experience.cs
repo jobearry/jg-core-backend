@@ -19,6 +19,7 @@ public class Experience
     public string? Responsibility { get; private set; }
 
     public string? Type { get; private set; }
+    public List<Project>? Projects { get; set; } = new List<Project>();
 
     // Domain constructor
     public Experience(int id, Company? company, Period duration, Role role)

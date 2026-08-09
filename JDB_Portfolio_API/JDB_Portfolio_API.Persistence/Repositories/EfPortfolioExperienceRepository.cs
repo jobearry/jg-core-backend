@@ -5,6 +5,7 @@ using JDB_Portfolio_API.Domain.Interfaces;
 using JDB_Portfolio_API.Domain.ValueObjects;
 using JDB_Portfolio_API.Persistence.Contexts;
 using JDB_Portfolio_API.Persistence.Entities;
+using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -15,4 +16,12 @@ public class EfPortfolioExperienceRepository: BasePortfolioRepository<Experience
 {
     public EfPortfolioExperienceRepository(PortfolioContext context, IMapper mapper)
         : base(context, mapper) { }
+
+    public async Task<List<Experience?>> GetAllExperienceWithProjects()
+    {
+        var experienceEntities = await _dbSet.Include(e => e.Projects)
+                                             .ToListAsync();
+
+        return _mapper.Map<List<Experience?>>(experienceEntities);
+    }
 }
