@@ -38,5 +38,6 @@ app.MapNotionEndpoints();
 
 //portfolio endpoints
 app.MapPortfolioExperienceEndpoints();
+app.MapPortfolioProjectEndpoints();
 
 app.Run();

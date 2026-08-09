@@ -31,16 +31,12 @@ namespace JDB_Portfolio_API
 
             services.AddScoped<PortfolioService>();
 
-            // Base DI for repositories
-            //services.AddScoped(typeof(IRepository<>), typeof(BasePortfolioRepository<>));
-
-            //// Base DI for services and mappers
-            //services.AddScoped(typeof(IService<>), typeof(BasePortfolioService<>));
-            //services.AddScoped(typeof(IMappedService<,,>), typeof(BaseMappedPortfolioService<,,>));
-
             ////DI for experiences 
             services.AddScoped<IPortfolioExperienceRepository, EfPortfolioExperienceRepository>();
-            services.AddScoped<PortfolioExperienceServices>();
+            services.AddScoped<PortfolioExperienceService>();
+
+            services.AddScoped<IPortfolioProjectRepository, EfPortfolioProjectRepository>();
+            services.AddScoped<PortfolioProjectService>();
         }
         public static void AddExternalService(this IServiceCollection services, IConfiguration configuration)
         {

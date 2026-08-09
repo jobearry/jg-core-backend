@@ -8,10 +8,10 @@ using System.Text;
 
 namespace JDB_Portfolio_API.Application.Services;
 
-public class PortfolioExperienceServices
+public class PortfolioExperienceService
 {
     private readonly IPortfolioExperienceRepository _expRepo;
-    public PortfolioExperienceServices(IPortfolioExperienceRepository expRepo)
+    public PortfolioExperienceService(IPortfolioExperienceRepository expRepo)
     {
         _expRepo = expRepo;
     }
@@ -21,7 +21,7 @@ public class PortfolioExperienceServices
         try
         {
             List<Experience?> experiences = includeProjects ? 
-                await _expRepo.GetAllExperienceWithProjects() : await _expRepo.GetAllAsync();
+                await _expRepo.GetAllExperienceWithProjectsAsync() : await _expRepo.GetAllAsync();
 
             return Result<List<Experience?>>.Success(experiences.OrderBy(x => x.Id).ToList());
         }

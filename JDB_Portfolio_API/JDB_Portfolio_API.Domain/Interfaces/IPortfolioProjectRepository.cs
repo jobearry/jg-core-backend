@@ -3,5 +3,5 @@
 namespace JDB_Portfolio_API.Domain.Interfaces;
 public interface IPortfolioProjectRepository : IRepository<Project>
 {
-    //Task<Experience?> GetExperienceAsync(ExperienceId id);
+    Task<List<Project?>> GetAllProjectsWithTechStacksAsync();
 }

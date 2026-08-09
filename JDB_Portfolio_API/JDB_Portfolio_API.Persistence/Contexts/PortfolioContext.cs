@@ -28,6 +28,8 @@ public partial class PortfolioContext : DbContext
         modelBuilder.Entity<ProjectTechStack>(e =>
         {
             e.HasKey(pts => new { pts.ProjectId, pts.TechStackId });
+            e.Property(e => e.ProjectId).HasColumnName("project_id");
+            e.Property(e => e.TechStackId).HasColumnName("tech_stack_id");
             e.ToTable("project_tech_stack");
             e.HasOne(pt => pt.Project)
                 .WithMany(p => p.ProjectTechStacks)
@@ -135,10 +137,10 @@ public partial class PortfolioContext : DbContext
                 .HasColumnName("stack_name");
             entity.Property(e => e.TechStackCategoryId).HasColumnName("tech_stack_category_id");
 
-            //entity.HasOne(t => t.TechStackCategory)
-            //      .WithMany(c => c.TechStacks)
-            //      .HasForeignKey(t => t.TechStackCategoryId)
-            //      .HasConstraintName("FK_tech_stack_tech_stack_category_id");
+            entity.HasOne(t => t.TechStackCategory)
+                  .WithMany(c => c.TechStacks)
+                  .HasForeignKey(t => t.TechStackCategoryId)
+                  .HasConstraintName("FK_tech_stack_tech_stack_category_id");
         });
 
         modelBuilder.Entity<TechStackCategoryEntity>(entity =>

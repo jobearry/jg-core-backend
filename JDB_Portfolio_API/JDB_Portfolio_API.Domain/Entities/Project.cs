@@ -18,6 +18,8 @@ public partial class Project
 
     public Period? Period { get; set; }
 
+    public ICollection<TechStack> TechStacks { get; set; } = new List<TechStack>();
+
     public Project(int id, string projectName)
     {
         Id = id;

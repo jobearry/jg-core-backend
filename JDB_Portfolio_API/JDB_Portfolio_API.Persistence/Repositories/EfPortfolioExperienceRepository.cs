@@ -17,9 +17,11 @@ public class EfPortfolioExperienceRepository: BasePortfolioRepository<Experience
     public EfPortfolioExperienceRepository(PortfolioContext context, IMapper mapper)
         : base(context, mapper) { }
 
-    public async Task<List<Experience?>> GetAllExperienceWithProjects()
+    public async Task<List<Experience?>> GetAllExperienceWithProjectsAsync()
     {
         var experienceEntities = await _dbSet.Include(e => e.Projects)
+                                             .ThenInclude(e => e.ProjectTechStacks)
+                                             .ThenInclude(e => e.TechStack)
                                              .ToListAsync();
 
         return _mapper.Map<List<Experience?>>(experienceEntities);

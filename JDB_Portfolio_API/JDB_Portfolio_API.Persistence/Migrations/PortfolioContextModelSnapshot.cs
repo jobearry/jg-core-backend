@@ -112,10 +112,12 @@ namespace JDB_Portfolio_API.Persistence.Migrations
             modelBuilder.Entity("JDB_Portfolio_API.Persistence.Entities.ProjectTechStack", b =>
                 {
                     b.Property<int>("ProjectId")
-                        .HasColumnType("integer");
+                        .HasColumnType("integer")
+                        .HasColumnName("project_id");
 
                     b.Property<int>("TechStackId")
-                        .HasColumnType("integer");
+                        .HasColumnType("integer")
+                        .HasColumnName("tech_stack_id");
 
                     b.HasKey("ProjectId", "TechStackId");
 
@@ -231,7 +233,9 @@ namespace JDB_Portfolio_API.Persistence.Migrations
                 {
                     b.HasOne("JDB_Portfolio_API.Persistence.Entities.ExperienceEntity", "Experience")
                         .WithMany("Projects")
-                        .HasForeignKey("ExperienceId");
+                        .HasForeignKey("ExperienceId")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("FK_project_experience_experience_id");
 
                     b.Navigation("Experience");
                 });

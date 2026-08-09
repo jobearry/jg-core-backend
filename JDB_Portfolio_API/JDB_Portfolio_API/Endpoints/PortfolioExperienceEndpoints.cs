@@ -7,7 +7,7 @@ public static class PortfolioExperienceEndpoints
 {
     public static void MapPortfolioExperienceEndpoints(this IEndpointRouteBuilder routes)
     {
-        routes.MapGet("api/v1/experience", async ([FromServices] PortfolioExperienceServices expService, bool includeProjects = false) =>
+        routes.MapGet("api/v1/experience", async ([FromServices] PortfolioExperienceService expService, bool includeProjects = false) =>
         {
             var result = await expService.GetAllAsync(includeProjects);
             if (!result.IsSuccess)
