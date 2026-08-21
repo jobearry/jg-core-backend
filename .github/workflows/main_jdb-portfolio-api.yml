@@ -24,13 +24,13 @@ jobs:
           dotnet-version: '10.0.x'   # latest LTS
 
       - name: Restore dependencies
-        run: dotnet restore JDB_Portfolio_API/JDB_Portfolio_API.slnx
+        run: dotnet restore src/JDB_Portfolio_API.slnx
 
       - name: Build with dotnet        
-        run: dotnet build JDB_Portfolio_API/JDB_Portfolio_API.slnx --configuration Release --no-restore
+        run: dotnet build src/JDB_Portfolio_API.slnx --configuration Release --no-restore
 
       - name: dotnet publish
-        run: dotnet publish JDB_Portfolio_API/JDB_Portfolio_API/JDB_Portfolio_API.csproj -c Release --no-restore -o ./publish
+        run: dotnet publish JDB_Portfolio_API/src/JDB_Portfolio_API.csproj -c Release --no-restore -o ./publish
 
       - name: Azure Login
         uses: azure/login@v2
