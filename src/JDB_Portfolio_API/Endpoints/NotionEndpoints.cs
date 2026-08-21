@@ -15,7 +15,7 @@ public static class NotionEndpoints
             }
             return Results.Ok(result.Value);
         })
-        .WithTags("ExternalServices")
+        .WithTags("ExternalServices - Notion")
         .RequireAuthorization();
             
 
@@ -28,7 +28,7 @@ public static class NotionEndpoints
             }
             return Results.Ok(result.Value!.Count);
         })
-        .WithTags("ExternalServices")
+        .WithTags("ExternalServices - Notion")
         .RequireAuthorization();
     }
 }

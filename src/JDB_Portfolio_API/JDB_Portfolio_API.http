@@ -1,6 +1,6 @@
 @JDB_Portfolio_API_HostAddress = http://localhost:5254
 
-GET {{JDB_Portfolio_API_HostAddress}}/weatherforecast/
+GET {{JDB_Portfolio_API_HostAddress}}/api/v1/project
 Accept: application/json
 
 ###
