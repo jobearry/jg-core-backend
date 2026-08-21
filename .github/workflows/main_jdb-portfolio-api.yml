@@ -30,7 +30,7 @@ jobs:
         run: dotnet build src/JDB_Portfolio_API.slnx --configuration Release --no-restore
 
       - name: dotnet publish
-        run: dotnet publish src/JDB_Portfolio_API.csproj -c Release --no-restore -o ./publish
+        run: dotnet publish src/JDB_Portfolio_API/JDB_Portfolio_API.csproj -c Release --no-restore -o ./publish
 
       - name: Azure Login
         uses: azure/login@v2
