@@ -1,5 +1,7 @@
 using JDB_Portfolio_API;
 using JDB_Portfolio_API.Endpoints;
+using JDB_Portfolio_API.Persistence.Contexts;
+using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -14,6 +16,13 @@ builder.Services.AddMapper(builder.Configuration);
 builder.Services.AddCorsOrigins();
 
 var app = builder.Build();
+
+using (var scope = app.Services.CreateScope())
+{
+    var dbContext = scope.ServiceProvider.GetRequiredService<PortfolioContext>();
+    dbContext.Database.Migrate();
+
+}
 
 app.UseCors("AllowSPA");
 // Configure the HTTP request pipeline.
