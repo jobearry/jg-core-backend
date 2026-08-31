@@ -1,33 +1,11 @@
 # =============================================================================
 # Spins up:
 #   - api : the ASP.NET Core Web API (built from the ../Dockerfile)
-#   - db  : a PostgreSQL instance used by the API (via EF Core / Npgsql)
 # =============================================================================
 
 name: jdb-portfolio-api
 
 services:
-  db:
-    image: postgres:16-alpine
-    container_name: jdb_portfolio_db
-    restart: unless-stopped
-    environment:
-      POSTGRES_USER: ${POSTGRES_USER:-postgres}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
-      POSTGRES_DB: ${POSTGRES_DB:-jdb_portfolio}
-    ports:
-      - "${POSTGRES_PORT:-5432}:5432"
-    volumes:
-      - jdb_pgdata:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER:-postgres} -d $${POSTGRES_DB:-jdb_portfolio}"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 10s
-    networks:
-      - jdb_network
-
   api:
     build:
       context: ..
@@ -55,9 +33,6 @@ services:
       Jwt__Audience: ${Jwt__Audience:?}
       Jwt__ExpirationInMinutes: ${Jwt__ExpirationInMinutes:-60}
 
-      # Connection string for the containerized PostgreSQL ("db" service).
-      # Built from the POSTGRES_* vars in docker/.env so it ALWAYS targets the
-      # compose "db" service over the internal network - never "localhost".
       ConnectionStrings__JDBConnection: "Host=db;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}"
     ports:
       # Host port configurable via API_PORT; container port is always 8080.
