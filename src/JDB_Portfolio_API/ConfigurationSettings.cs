@@ -23,7 +23,6 @@ namespace JDB_Portfolio_API
             // Read connection string from appsettings.json or environment variables
             var jdbConnectionString = configuration.GetConnectionString("JDBConnection");
 
-
             // Register DbContext
             services.AddDbContext<PortfolioContext>(options =>
                 options.UseNpgsql(jdbConnectionString)
@@ -37,6 +36,9 @@ namespace JDB_Portfolio_API
 
             services.AddScoped<IPortfolioProjectRepository, EfPortfolioProjectRepository>();
             services.AddScoped<PortfolioProjectService>();
+
+            services.AddScoped<IPortfolioTechStackRepository, EfPortfolioTechStackRepository>();
+            //services.AddScoped<PortfolioTechStackService>();
         }
         public static void AddExternalService(this IServiceCollection services, IConfiguration configuration)
         {

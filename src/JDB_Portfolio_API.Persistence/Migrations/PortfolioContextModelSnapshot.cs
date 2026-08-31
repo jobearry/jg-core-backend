@@ -265,7 +265,8 @@ namespace JDB_Portfolio_API.Persistence.Migrations
                         .WithMany("TechStacks")
                         .HasForeignKey("TechStackCategoryId")
                         .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .IsRequired()
+                        .HasConstraintName("FK_tech_stack_tech_stack_category_id");
 
                     b.Navigation("TechStackCategory");
                 });

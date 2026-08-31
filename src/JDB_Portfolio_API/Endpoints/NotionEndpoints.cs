@@ -8,27 +8,27 @@ public static class NotionEndpoints
     {
         routes.MapGet("api/v1/notion/{pageId}", async (PortfolioService portfolioService, string pageId) =>
         {
-            var result = await portfolioService.GetPageAsync(pageId);
+            var result = await portfolioService.GetNotionPageAsync(pageId);
             if (!result.IsSuccess)
             {
                 return Results.Problem(result.Error, statusCode: 502);
             }
             return Results.Ok(result.Value);
         })
-        .WithTags("ExternalServices - Notion")
-        .RequireAuthorization();
+        .WithTags("ExternalServices - Notion");
+        // .RequireAuthorization();
             
 
         routes.MapGet("api/v1/notion/{pageId}/count", async (PortfolioService portfolioService, string pageId) =>
         {
-            var result = await portfolioService.GetPageAsync(pageId);
+            var result = await portfolioService.GetNotionPageAsync(pageId);
             if (!result.IsSuccess)
             {
                 return Results.Problem(result.Error, statusCode: 502);
             }
             return Results.Ok(result.Value!.Count);
         })
-        .WithTags("ExternalServices - Notion")
-        .RequireAuthorization();
+        .WithTags("ExternalServices - Notion");
+        // .RequireAuthorization();
     }
 }
