@@ -13,14 +13,28 @@ public class PortfolioMappingProfile : Profile
             .ForMember(dest => dest.StackName, opt => opt.MapFrom(src => src.StackName))
             .ForMember(dest => dest.ImgSrc, opt => opt.MapFrom(src => src.ImgSrc))
             .ForMember(dest => dest.CreatedAt, opt => opt.MapFrom(src => src.CreatedAt))
-            .ForMember(dest => dest.TechStackCategoryId, opt => opt.MapFrom(src => src.TechStackCategoryId));
+            .ConstructUsing(dest => new TechStack
+            {
+                Id = dest.Id,
+                StackName = dest.StackName,
+                ImgSrc = dest.ImgSrc,
+                CreatedAt = dest.CreatedAt
+            })
+            .AfterMap((src, dest) =>
+            {
+                // Map the TechStackCategoryId to the Category property
+                if (src.TechStackCategory != null)
+                {
+                    dest.Category = src.TechStackCategory.Category;
+                }
+            });
 
         // TechStack → TechStackEntity
         CreateMap<TechStack, TechStackEntity>()
             .ForMember(dest => dest.StackName, opt => opt.MapFrom(src => src.StackName))
             .ForMember(dest => dest.ImgSrc, opt => opt.MapFrom(src => src.ImgSrc))
             .ForMember(dest => dest.CreatedAt, opt => opt.MapFrom(src => src.CreatedAt))
-            .ForMember(dest => dest.TechStackCategoryId, opt => opt.MapFrom(src => src.TechStackCategoryId));
+            .ForMember(dest => dest.TechStackCategoryId, opt => opt.MapFrom(src => src.Category));
 
         // TechStackCategoryEntity → TechStackCategory
         CreateMap<TechStackCategoryEntity, TechStackCategory>()
@@ -34,25 +48,25 @@ public class PortfolioMappingProfile : Profile
 
         // ProjectEntity → Project
         CreateMap<ProjectEntity, Project>()
-            .ConstructUsing(src => new Project(src.Id, src.ProjectName))
             .ForMember(dest => dest.ExperienceId, opt => opt.MapFrom(src => src.ExperienceId))
             .ForMember(dest => dest.Description, opt => opt.MapFrom(src => src.Description))
             .ForMember(dest => dest.Contribution, opt => opt.MapFrom(src => src.Contribution))
+            .ConstructUsing(src => new Project(
+                src.Id,
+                src.ProjectName
+            ))
             .AfterMap((src, dest) =>
             {
-                // Map ProjectTechStacks to TechStacks collection
-                if (src.ProjectTechStacks != null && src.ProjectTechStacks.Any())
+                if(src.ProjectTechStacks != null && src.ProjectTechStacks.Any())
                 {
-                    dest.TechStacks = src.ProjectTechStacks
-                        .Select(pts => new TechStack
-                        {
-                            Id = pts.TechStack.Id,
-                            StackName = pts.TechStack.StackName,
-                            ImgSrc = pts.TechStack.ImgSrc,
-                            CreatedAt = pts.TechStack.CreatedAt,
-                            TechStackCategoryId = pts.TechStack.TechStackCategoryId
-                        })
-                        .ToList();
+                    dest.TechStacks = src.ProjectTechStacks.Select(pts => new TechStack
+                    {
+                        Id = pts.TechStack.Id,
+                        StackName = pts.TechStack.StackName,
+                        ImgSrc = pts.TechStack.ImgSrc,
+                        CreatedAt = pts.TechStack.CreatedAt,
+                        Category = pts.TechStack.TechStackCategory.Category
+                    }).ToList();
                 }
             });
 
@@ -94,7 +108,7 @@ public class PortfolioMappingProfile : Profile
                                 StackName = pts.TechStack.StackName,
                                 ImgSrc = pts.TechStack.ImgSrc,
                                 CreatedAt = pts.TechStack.CreatedAt,
-                                TechStackCategoryId = pts.TechStack.TechStackCategoryId
+                                Category = pts.TechStack.TechStackCategory.Category
                             }).ToList()
                             : new List<TechStack>()
                     }).ToList();

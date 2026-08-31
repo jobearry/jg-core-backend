@@ -22,6 +22,7 @@ public class EfPortfolioExperienceRepository: BasePortfolioRepository<Experience
         var experienceEntities = await _dbSet.Include(e => e.Projects)
                                              .ThenInclude(e => e.ProjectTechStacks)
                                              .ThenInclude(e => e.TechStack)
+                                             .ThenInclude(e => e.TechStackCategory)
                                              .ToListAsync();
 
         return _mapper.Map<List<Experience?>>(experienceEntities);

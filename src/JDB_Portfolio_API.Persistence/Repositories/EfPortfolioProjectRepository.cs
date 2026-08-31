@@ -19,6 +19,7 @@ public class EfPortfolioProjectRepository: BasePortfolioRepository<Project, Proj
     {
         var projectEntities = await _dbSet.Include(p => p.ProjectTechStacks)
                                           .ThenInclude(pt => pt.TechStack)
+                                          .ThenInclude(ts => ts.TechStackCategory)
                                           .ToListAsync();
         return _mapper.Map<List<Project?>>(projectEntities);
     }

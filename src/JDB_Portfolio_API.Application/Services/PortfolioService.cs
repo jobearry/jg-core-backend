@@ -13,10 +13,12 @@ public class PortfolioService
 {
     private readonly INotionService _notionService;
     private readonly IPortfolioProjectRepository _projectRepository;
-    public PortfolioService(INotionService notionService, IPortfolioProjectRepository projectRepository)
+    private readonly IPortfolioTechStackRepository _techStackRepository;
+    public PortfolioService(INotionService notionService, IPortfolioProjectRepository projectRepository, IPortfolioTechStackRepository techStackRepository)
     {
         _notionService = notionService;
         _projectRepository = projectRepository;
+        _techStackRepository = techStackRepository;
     }
 
     public async Task<Result<List<NotionPage>>> GetNotionPageAsync(string pageID)
@@ -41,23 +43,21 @@ public class PortfolioService
         try
         {
             var projects = await _projectRepository.GetAllProjectsWithTechStacksAsync();
-            var projectCount = projects.Count();
-            var skillsCount = projects.SelectMany(p => p.TechStacks)
-                                      .Count();
+            var skills = await _techStackRepository.GetAllTechStacksAsync();
 
             var dashboardItems = new List<DashboardItem>
             {
                 new DashboardItem
                 {
                     Title = "Projects",
-                    Count = projectCount,
-                    Subtitle = "Work and hobbies"
+                    Count = projects.Count(),
+                    Subtitle = "projects across all roles"
                 },
                 new DashboardItem
                 {
                     Title = "Skills",
-                    Count = skillsCount,
-                    Subtitle = "Continuous learning"
+                    Count = skills.Count(),
+                    Subtitle = "tools and technologies"
                 }
             };
 
