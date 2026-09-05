@@ -9,12 +9,12 @@ public static class PortfolioExperienceEndpoints
     {
         routes.MapGet("api/v1/experience", async ([FromServices] PortfolioExperienceService expService, bool includeProjects = false) =>
         {
-            var result = await expService.GetAllAsync(includeProjects);
+            var result = await expService.GetAllExperienceAsync(includeProjects);
             if (!result.IsSuccess)
             {
                 return Results.Problem(result.Error, statusCode: 502);
             }
-            return Results.Ok(result);
+            return Results.Ok(result.Value);
         }).WithTags("Portfolio");
           //.RequireAuthorization();
     }

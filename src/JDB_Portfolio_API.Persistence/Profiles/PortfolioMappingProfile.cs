@@ -114,5 +114,26 @@ public class PortfolioMappingProfile : Profile
                     }).ToList();
                 }
             });
+
+        // RecommendationEntity → Recommendation
+        CreateMap<RecommendationEntity, Recommendation>()
+            .ConstructUsing(src => new Recommendation(
+                src.Id,
+                src.PersonName,
+                src.Description,
+                new Role(src.CareerPosition),
+                src.PostedAt
+            ))
+            .AfterMap((src, dest) =>
+            {
+                // Additional mapping logic if needed
+            });
+
+        // Recommendation → RecommendationEntity
+        CreateMap<Recommendation, RecommendationEntity>()
+            .ForMember(dest => dest.PersonName, opt => opt.MapFrom(src => src.PersonName))
+            .ForMember(dest => dest.Description, opt => opt.MapFrom(src => src.Description))
+            .ForMember(dest => dest.CareerPosition, opt => opt.MapFrom(src => src.CareerPosition))
+            .ForMember(dest => dest.PostedAt, opt => opt.MapFrom(src => src.PostedAt));
     }
 }

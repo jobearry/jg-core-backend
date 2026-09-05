@@ -10,5 +10,5 @@ public class DashboardItem
     public string Subtitle {get;set;} = string.Empty;
     public string Icon {get; set;} = string.Empty;
     public int Count {get; set;}
-
+    public string Description {get; set;} = string.Empty;
 }

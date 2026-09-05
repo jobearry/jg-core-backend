@@ -14,11 +14,17 @@ public class PortfolioService
     private readonly INotionService _notionService;
     private readonly IPortfolioProjectRepository _projectRepository;
     private readonly IPortfolioTechStackRepository _techStackRepository;
-    public PortfolioService(INotionService notionService, IPortfolioProjectRepository projectRepository, IPortfolioTechStackRepository techStackRepository)
+    private readonly IPortfolioRecommendationRepository _recommendationRepository;
+    public PortfolioService(
+        INotionService notionService, 
+        IPortfolioProjectRepository projectRepository, 
+        IPortfolioTechStackRepository techStackRepository,
+        IPortfolioRecommendationRepository recommendationRepository)
     {
         _notionService = notionService;
         _projectRepository = projectRepository;
         _techStackRepository = techStackRepository;
+        _recommendationRepository = recommendationRepository;
     }
 
     public async Task<Result<List<NotionPage>>> GetNotionPageAsync(string pageID)
@@ -44,6 +50,7 @@ public class PortfolioService
         {
             var projects = await _projectRepository.GetAllProjectsWithTechStacksAsync();
             var skills = await _techStackRepository.GetAllTechStacksAsync();
+            var recommendations = await _recommendationRepository.GetAllRecommendationsAsync();
 
             var dashboardItems = new List<DashboardItem>
             {
@@ -51,13 +58,22 @@ public class PortfolioService
                 {
                     Title = "Projects",
                     Count = projects.Count(),
-                    Subtitle = "projects across all roles"
+                    Subtitle = "projects across all roles",
+                    Description = "Building a Homelab and a Portfolio Builder app"
                 },
                 new DashboardItem
                 {
                     Title = "Skills",
                     Count = skills.Count(),
-                    Subtitle = "tools and technologies"
+                    Subtitle = "tools and technologies",
+                    Description = "Focusing on Angular and .NET"
+                },
+                new DashboardItem
+                {
+                    Title = "Recommendations",
+                    Count = recommendations.Count(),
+                    Subtitle = "satisfied clients",
+                    Description = "Collaboration and communication"
                 }
             };
 

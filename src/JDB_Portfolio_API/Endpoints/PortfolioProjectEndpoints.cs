@@ -9,12 +9,12 @@ public static class PortfolioProjectEndpoints
     {
         routes.MapGet("api/v1/project", async ([FromServices] PortfolioProjectService projectService, bool includeTools = false) =>
         {
-            var result = await projectService.GetAllAsync(includeTools);
+            var result = await projectService.GetAllProjectsAsync(includeTools);
             if (!result.IsSuccess)
             {
                 return Results.Problem(result.Error, statusCode: 502);
             }
-            return Results.Ok(result);
+            return Results.Ok(result.Value);
         }).WithTags("Portfolio");
         //.RequireAuthorization();
     }
