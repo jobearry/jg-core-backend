@@ -7,7 +7,7 @@ public static class PortfolioRecommendationEndpoints
 {
     public static void MapPortfolioRecommendationEndpoints(this IEndpointRouteBuilder routes)
     {
-        routes.MapGet("api/v1/recommendations", async ([FromServices] PortfolioRecommendationService recService) =>
+        routes.MapGet("api/v1/recommendation", async ([FromServices] PortfolioRecommendationService recService) =>
         {
             var result = await recService.GetAllRecommendationsAsync();
             if (!result.IsSuccess)

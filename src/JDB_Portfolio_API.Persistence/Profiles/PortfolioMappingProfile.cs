@@ -18,7 +18,8 @@ public class PortfolioMappingProfile : Profile
                 Id = dest.Id,
                 StackName = dest.StackName,
                 ImgSrc = dest.ImgSrc,
-                CreatedAt = dest.CreatedAt
+                CreatedAt = dest.CreatedAt,
+                Category = dest.TechStackCategory != null ? dest.TechStackCategory.Category : null
             })
             .AfterMap((src, dest) =>
             {

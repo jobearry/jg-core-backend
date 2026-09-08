@@ -59,7 +59,7 @@ public class PortfolioService
                     Title = "Projects",
                     Count = projects.Count(),
                     Subtitle = "projects across all roles",
-                    Description = "Building a Homelab and a Portfolio Builder app"
+                    Description = "Homelabbing and App Building"
                 },
                 new DashboardItem
                 {

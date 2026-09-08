@@ -41,6 +41,9 @@ namespace JDB_Portfolio_API
 
             services.AddScoped<IPortfolioRecommendationRepository, EfPortfolioRecommendationRepository>();
             services.AddScoped<PortfolioRecommendationService>();
+
+            services.AddScoped<IPortfolioTechStackRepository, EfPortfolioTechStackRepository>();
+            services.AddScoped<PortfolioSkillService>();
         }
         public static void AddExternalService(this IServiceCollection services, IConfiguration configuration)
         {
