@@ -14,5 +14,5 @@ public partial class TechStack
 
     public DateTime? CreatedAt { get; set; }
 
-    public string Category { get; set; } = null!;
+    public string? Category { get; set; }
 }

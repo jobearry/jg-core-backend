@@ -7,19 +7,22 @@ using System.Text;
 
 namespace JDB_Portfolio_API.Application.Services;
 
-public class PortfolioProjectService
+public class PortfolioProjectService : BaseService<Project>
 {
     private readonly IPortfolioProjectRepository _projectRepo;
     public PortfolioProjectService(IPortfolioProjectRepository projectRepo)
+        : base(projectRepo)
     {
         _projectRepo = projectRepo;
     }
 
-    public async Task<Result<List<Project?>>> GetAllAsync(bool includeTools)
+    public async Task<Result<List<Project?>>> GetAllProjectsAsync(bool includeTools)
     {
         try
         {
-            List<Project?> projects = includeTools ? await _projectRepo.GetAllProjectsWithTechStacksAsync() : await _projectRepo.GetAllAsync();
+            List<Project?> projects = includeTools 
+                ? await _projectRepo.GetAllProjectsWithTechStacksAsync() 
+                : await _repo.GetAllAsync();
             return Result<List<Project?>>.Success(projects.OrderBy(x => x.Id).ToList());
         }
         catch (HttpRequestException hre)

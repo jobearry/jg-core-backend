@@ -7,5 +7,5 @@ namespace JDB_Portfolio_API.Domain.Interfaces;
 
 public interface IPortfolioTechStackRepository: IRepository<TechStack>
 {
-    Task<List<TechStack>> GetAllTechStacksAsync();
+    Task<List<TechStack?>> GetAllTechStacksAsync();
 }

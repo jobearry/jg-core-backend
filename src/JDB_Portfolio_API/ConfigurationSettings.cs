@@ -4,7 +4,6 @@ using JDB_Portfolio_API.Domain.Interfaces;
 using JDB_Portfolio_API.Persistence.Contexts;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
 using System.Text;
@@ -39,6 +38,12 @@ namespace JDB_Portfolio_API
 
             services.AddScoped<IPortfolioTechStackRepository, EfPortfolioTechStackRepository>();
             //services.AddScoped<PortfolioTechStackService>();
+
+            services.AddScoped<IPortfolioRecommendationRepository, EfPortfolioRecommendationRepository>();
+            services.AddScoped<PortfolioRecommendationService>();
+
+            services.AddScoped<IPortfolioTechStackRepository, EfPortfolioTechStackRepository>();
+            services.AddScoped<PortfolioSkillService>();
         }
         public static void AddExternalService(this IServiceCollection services, IConfiguration configuration)
         {

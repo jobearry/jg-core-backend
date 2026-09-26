@@ -8,28 +8,27 @@ using System.Text;
 
 namespace JDB_Portfolio_API.Application.Services;
 
-public class PortfolioExperienceService
+public class PortfolioExperienceService: BaseService<Experience>
 {
-    private readonly IPortfolioExperienceRepository _expRepo;
-    public PortfolioExperienceService(IPortfolioExperienceRepository expRepo)
+    private readonly IPortfolioExperienceRepository _portfolioExperienceRepository;
+    public PortfolioExperienceService(IPortfolioExperienceRepository portfolioExperienceRepository)
+        : base(portfolioExperienceRepository) 
     {
-        _expRepo = expRepo;
+        _portfolioExperienceRepository = portfolioExperienceRepository;
     }
 
-    public async Task<Result<List<Experience?>>> GetAllAsync(bool includeProjects)
+    public async Task<Result<List<Experience?>>> GetAllExperienceAsync(bool includeProjects)
     {
         try
         {
             List<Experience?> experiences = includeProjects ? 
-                await _expRepo.GetAllExperienceWithProjectsAsync() : await _expRepo.GetAllAsync();
+                await _portfolioExperienceRepository.GetAllExperienceWithProjectsAsync() : await _repo.GetAllAsync();
 
-            return Result<List<Experience?>>.Success(experiences.OrderBy(x => x.Id).ToList());
+            return Result<List<Experience?>>.Success(experiences.OrderByDescending(x => x.Id).ToList());
         }
         catch (HttpRequestException hre)
         {
             return Result<List<Experience?>>.Failure("Failed to get portfolio experience content: " + hre.Message);
         }
     }
-
-
 }

@@ -6,9 +6,7 @@ using Microsoft.EntityFrameworkCore;
 var builder = WebApplication.CreateBuilder(args);
 
 // load configurations
-builder.Configuration.AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
-                     .AddJsonFile($"appsettings.{builder.Environment.EnvironmentName}.json", optional: true, reloadOnChange: true)
-                     .AddUserSecrets<Program>();
+builder.Configuration.AddUserSecrets<Program>();
 
 // Add services to the container.
 builder.Services.AddControllers();
@@ -52,6 +50,8 @@ app.MapNotionEndpoints();
 //portfolio endpoints
 app.MapPortfolioExperienceEndpoints();
 app.MapPortfolioProjectEndpoints();
+app.MapPortfolioRecommendationEndpoints();
+app.MapPortfolioSkillEndpoints();
 app.MapOverview();
 
 app.Run();
