@@ -15,11 +15,12 @@ public class EfPortfolioTechStackRepository: BasePortfolioRepository<TechStack,T
     public EfPortfolioTechStackRepository(PortfolioContext context, IMapper mapper)
         : base(context, mapper) { }
 
-    public async Task<List<TechStack?>> GetAllTechStacksAsync()
+    public async Task<List<TechStack>> GetAllTechStacksAsync()
     {
-        var techStackEntities = await _dbSet.Include(ts => ts.TechStackCategory)
+        var techStackEntities = await _dbSet.AsNoTracking()
+                                            .Include(ts => ts.TechStackCategory)
                                             .ToListAsync();
 
-        return _mapper.Map<List<TechStack?>>(techStackEntities);
+        return _mapper.Map<List<TechStack>>(techStackEntities);
     }
 }

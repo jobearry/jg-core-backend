@@ -209,6 +209,13 @@ Problems with this:
 4. Unhandled exceptions (e.g. a mapping failure) bypass this entirely and
    produce a bare `500`.
 
+**Status change (2026-10-22).** The four portfolio services now share
+`PortfolioServiceBase.ExecuteAsync`, which catches everything except
+cancellation. Previously the catch was `catch (HttpRequestException)`, which a
+database call never throws — so a database outage escaped as an unhandled `500`
+and the `502` path above was effectively dead for the portfolio endpoints. The
+`502` shape is now genuinely reachable, and the message format is unchanged.
+
 Target: typed error kinds mapped in one place to `ProblemDetails` with correct
 status codes (plan 2.2).
 

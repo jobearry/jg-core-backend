@@ -20,8 +20,11 @@ builder.Services.AddCorsOrigins();
 
 var app = builder.Build();
 
-using (var scope = app.Services.CreateScope())
+// Apply pending migrations. Gated so that a deployment where migrations are applied
+// out of band (or a multi-replica setup) does not have every instance race to migrate.
+if (app.Configuration.GetValue("Database:AutoMigrate", true))
 {
+    using var scope = app.Services.CreateScope();
     var dbContext = scope.ServiceProvider.GetRequiredService<PortfolioContext>();
     dbContext.Database.Migrate();
 }

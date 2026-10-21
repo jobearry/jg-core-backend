@@ -104,7 +104,6 @@ Behaviour that exists:
 | `Company` | `class` | ≤ 255; null/whitespace → `""` | reference | should be `record`; empty-string concept is questionable |
 | `Period` | `sealed class` | no `default` dates; `FinishedAt >= StartedAt` | reference | should be `record` |
 | `NotionPage` | `class` | none | reference | not a value object — vendor DTO |
-| `ExperienceId` | `record` (`Guid`) | none | value | unused, and contradicts `Experience.Id` (`int`) |
 
 Because `Role`, `Company`, and `Period` do not override equality, this is
 currently false:

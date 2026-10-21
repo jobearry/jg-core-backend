@@ -23,7 +23,7 @@ is *not* required for trivial pass-through code — writing a test that asserts
 | Application service with branching | **Yes** |
 | Endpoint status codes / response shape | **Yes** (one integration test) |
 | Repository query behaviour | Yes, once there is a test DB |
-| Pure delegation (`BaseService`) | No |
+| Pure delegation | No |
 | Configuration / DI wiring | Smoke test only |
 
 ## 2. Test projects

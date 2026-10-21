@@ -1,7 +1,7 @@
 # ADR-0004 — DTO boundary at the API edge
 
-- **Status:** **Proposed**
-- **Date:** 2026-10-21
+- **Status:** Accepted
+- **Date:** 2026-10-21 (proposed) · 2026-10-22 (decided — plan 001 decision D4)
 - **Related:** plan 2.1, [`../api-reference.md`](../api-reference.md)
 
 ## Context
@@ -23,7 +23,7 @@ Consequences visible in the current JSON:
 - Any domain refactor (e.g. converting `Role` to a record, or moving
   `DashboardItem` out of Domain) becomes a breaking API change.
 
-## Decision (recommended)
+## Decision
 
 Introduce a DTO layer at the application boundary:
 

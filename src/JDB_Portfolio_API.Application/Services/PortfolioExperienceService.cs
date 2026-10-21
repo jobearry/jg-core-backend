@@ -1,34 +1,26 @@
 ﻿using JDB_Portfolio_API.Application.Common;
 using JDB_Portfolio_API.Domain.Entities;
 using JDB_Portfolio_API.Domain.Interfaces;
-using JDB_Portfolio_API.Domain.ValueObjects;
-using System;
 using System.Collections.Generic;
-using System.Text;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace JDB_Portfolio_API.Application.Services;
 
-public class PortfolioExperienceService: BaseService<Experience>
+public class PortfolioExperienceService : PortfolioServiceBase<Experience, IPortfolioExperienceRepository>
 {
-    private readonly IPortfolioExperienceRepository _portfolioExperienceRepository;
-    public PortfolioExperienceService(IPortfolioExperienceRepository portfolioExperienceRepository)
-        : base(portfolioExperienceRepository) 
-    {
-        _portfolioExperienceRepository = portfolioExperienceRepository;
-    }
+    public PortfolioExperienceService(IPortfolioExperienceRepository repository)
+        : base(repository) { }
 
-    public async Task<Result<List<Experience?>>> GetAllExperienceAsync(bool includeProjects)
+    public async Task<Result<List<Experience>>> GetAllExperienceAsync(bool includeProjects)
     {
-        try
+        return await ExecuteAsync(async () =>
         {
-            List<Experience?> experiences = includeProjects ? 
-                await _portfolioExperienceRepository.GetAllExperienceWithProjectsAsync() : await _repo.GetAllAsync();
+            var experiences = includeProjects
+                ? await Repository.GetAllExperienceWithProjectsAsync()
+                : await Repository.GetAllAsync();
 
-            return Result<List<Experience?>>.Success(experiences.OrderByDescending(x => x.Id).ToList());
-        }
-        catch (HttpRequestException hre)
-        {
-            return Result<List<Experience?>>.Failure("Failed to get portfolio experience content: " + hre.Message);
-        }
+            return experiences.OrderByDescending(x => x.Id).ToList();
+        }, "get portfolio experience content");
     }
 }

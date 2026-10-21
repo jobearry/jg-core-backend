@@ -1,7 +1,7 @@
 # Plan 001 — Clean Architecture & DDD Refactor
 
-**Status:** Proposed — awaiting verification
-**Scope:** `src/JDB_Portfolio_API.Domain`, `.Application`, `.Persistence`, `.ExternalService`, `JDB_Portfolio_API` (Presentation)
+**Status:** In progress — decisions D1–D4 resolved; items 1.1, 1.6, 1.7, 1.8, 2.3 and the first two test projects are complete
+**Scope:** `src/JDB_Portfolio_API.Domain`, `.Application`, `.Persistence`, `.ExternalService`, `JDB_Portfolio_API` (Presentation), `tests/`
 **Goal:** Bring the solution in line with clean architecture dependency rules and turn the Domain project into an actual domain model rather than a set of persistence shapes.
 
 ---
@@ -54,12 +54,23 @@ The project boundaries are already clean-architecture-shaped: Domain has zero pr
 
 Four items are not mechanical. Confirm these first; they change the shape of the work.
 
-| # | Decision | Options | Recommendation |
+| # | Decision | Options | Resolution |
 |---|---|---|---|
-| D1 | Is `Period.FinishedAt` supported? | (a) add `finished_at` column + entity + mapping, or (b) delete `FinishedAt` and rename `Duration` → `TimeSinceStart` | **(a)** — the model already claims to support it, and `Duration` is currently wrong for past roles |
-| D2 | TechStack reverse mapping | (a) resolve category id via lookup, or (b) delete unused reverse mappings | **(b)** — no write path exists; add it back with a test when one does |
-| D3 | Aggregate boundary | (a) Experience owns Project for writes, or (b) Project is an independent aggregate | **(a)** — keeps one write entry point; Project stays independently *queryable* |
-| D4 | DTOs at the API edge | (a) introduce DTOs now, or (b) accept domain-as-contract | **(a)** — this is a learning project and it is the most commonly skipped step |
+| D1 | Is `Period.FinishedAt` supported? | (a) add `finished_at` column + entity + mapping, or (b) delete `FinishedAt` and rename `Duration` → `TimeSinceStart` | **(a)** — decided 2026-10-22. The model already claims to support it, and `Duration` is currently wrong for past roles |
+| D2 | TechStack reverse mapping | (a) resolve category id via lookup, or (b) delete unused reverse mappings | **(b)** — decided 2026-10-22. No write path exists; add it back with a test when one does |
+| D3 | Aggregate boundary | (a) Experience owns Project for writes, or (b) Project is an independent aggregate | **(b)** — decided 2026-10-22. A project may exist with **no** experience, and an experience may have **no** projects. The `Experience` → `Project` link is optional, so `ProjectEntity.ExperienceId` stays nullable. `Experience.Projects` becomes a read-only projection; the Project aggregate owns attach/detach |
+| D4 | DTOs at the API edge | (a) introduce DTOs now, or (b) accept domain-as-contract | **(a)** — decided 2026-10-22. This is a learning project and it is the most commonly skipped step |
+
+### Consequences of D3 (b)
+
+- `Project` is the aggregate root: `IPortfolioProjectRepository` is the write entry point, `IPortfolioExperienceRepository` is not.
+- `Experience.Projects` changes from `List<Project>?` with a public setter to a read-only collection
+  (`Project.cs`, `Experience.cs:22`). It is populated by the mapping, never mutated by callers.
+- `Project.TechStacks` holds full `TechStack` entities today (`PortfolioMappingProfile.cs:63-70`).
+  TechStack is shared reference data with no per-project state, so it must become ids or a small
+  `TechStackRef` value object — this holds under D3 (b) and is required by item 3.4 either way.
+- A standalone project appears in `GET /api/v1/project` but not under any entry of
+  `GET /api/v1/experience`. That is intended, not a defect.
 
 ---
 
@@ -73,9 +84,14 @@ Not opinions. Each item is a bug, a dead path, or a stated-rule violation.
 
 **What**
 
-- [ ] Delete `using JDB_Portfolio_API.Application.Common;` in `src/JDB_Portfolio_API.Persistence/Repositories/EfPortfolioExperienceRepository.cs:2`
-- [ ] Delete the `Application` `ProjectReference` in `src/JDB_Portfolio_API.Persistence/JDB_Portfolio_API.Persistence.csproj:28`
-- [ ] Confirm the build still succeeds
+- [x] Delete `using JDB_Portfolio_API.Application.Common;` in `src/JDB_Portfolio_API.Persistence/Repositories/EfPortfolioExperienceRepository.cs:2`
+- [x] Delete the `Application` `ProjectReference` in `src/JDB_Portfolio_API.Persistence/JDB_Portfolio_API.Persistence.csproj:28`
+- [x] Confirm the build still succeeds
+
+> **Done (2026-10-22).** The `using` was the only mention of `Application` anywhere in the
+> `Persistence` project — it was dead. Build: 0 warnings, 0 errors. The project graph now
+> matches the rule below exactly (`Domain → nothing`, `Application → Domain`,
+> `Persistence → Domain`, `ExternalService → Domain`, `Presentation → all three`).
 
 **Why**
 
@@ -215,8 +231,14 @@ Then `GET /api/v1/recommendation`. Revert the row afterwards. The DB constraint 
 
 **What**
 
-- [ ] Add `.AsNoTracking()` to all read queries in `src/JDB_Portfolio_API.Persistence/Repositories/*.cs`
-- [ ] Add `.AsSplitQuery()` to `GetAllExperienceWithProjectsAsync` (4-level include)
+- [x] Add `.AsNoTracking()` to all read queries in `src/JDB_Portfolio_API.Persistence/Repositories/*.cs`
+- [x] Add `.AsSplitQuery()` to `GetAllExperienceWithProjectsAsync` (4-level include)
+
+> **Done (2026-10-22).** `.AsNoTracking()` on all five read paths. `.AsSplitQuery()` on the two
+> multi-level includes: `GetAllExperienceWithProjectsAsync` (4 levels) and
+> `GetAllProjectsWithTechStacksAsync` (3 levels). The single-level `GetAllTechStacksAsync`
+> keeps a plain `Include` — one join, no cartesian fan-out. Verified by running every
+> endpoint against a reachable database: all queries execute and return correctly.
 
 **Why**
 
@@ -237,14 +259,30 @@ Set `"Microsoft.EntityFrameworkCore.Database.Command": "Information"` in `appset
 
 **What**
 
-- [ ] `Domain/Interfaces/IMapper.cs` — never used (AutoMapper is the real mapper)
-- [ ] `Domain/Interfaces/IService.cs` + `Application/Services/BaseService.cs` — see 2.3
-- [ ] `Domain/ValueObjects/ExperienceId.cs` — unused, and a `Guid` record that contradicts `Experience.Id` (`int`)
-- [ ] `Persistence/Entities/NotionEntity.cs` — empty class
-- [ ] `Application/DTO/PortfolioNotionPage.cs` — duplicate of `NotionPage`, unused
-- [ ] `GetCountAsync` / `GetByIdAsync` on `IRepository<T>` — never called
-- [ ] Duplicate `IPortfolioTechStackRepository` registration (`ConfigurationSettings.cs:39` and `:45`)
-- [ ] Change `List<T?>` returns to `List<T>` — nullable *elements* are meaningless here
+- [x] `Domain/Interfaces/IMapper.cs` — never used (AutoMapper is the real mapper)
+- [x] `Domain/Interfaces/IService.cs` + `Application/Services/BaseService.cs` — see 2.3
+- [x] `Domain/ValueObjects/ExperienceId.cs` — unused, and a `Guid` record that contradicts `Experience.Id` (`int`)
+- [x] `Persistence/Entities/NotionEntity.cs` — empty class
+- [x] `Application/DTO/PortfolioNotionPage.cs` — duplicate of `NotionPage`, unused
+- [x] `GetCountAsync` / `GetByIdAsync` on `IRepository<T>` — never called
+- [x] Duplicate `IPortfolioTechStackRepository` registration (`ConfigurationSettings.cs:39` and `:45`)
+- [x] Change `List<T?>` returns to `List<T>` — nullable *elements* are meaningless here
+
+> **Done (2026-10-22).** All eight items removed. Notes:
+>
+> - `BaseService<T>` was **not** dead — all four services inherited it. It was *inverted*:
+>   the base held nothing but a passthrough and a duplicate repository field, while each
+>   subclass repeated the same `try/catch → Result` block. It was replaced by
+>   `PortfolioServiceBase<T, TRepository>` (see 2.3), not simply deleted.
+> - `IMapper<,,>` hid behind a name collision: the repositories use **AutoMapper's**
+>   `IMapper` (zero type arguments), so a grep for `IMapper` made the dead interface look
+>   alive.
+> - The `List<T?>` → `List<T>` change also removed **4 of the 5** build warnings in the
+>   solution (CS8602 — dereference of a nullable element). The fifth is in
+>   `ExternalService` and is unrelated to this item.
+> - `GetByIdAsync` was **not** re-added. If a detail endpoint is built later it belongs on
+>   the specific repository interface, and it should return a DTO (decision D4), not a
+>   domain entity.
 
 **Why**
 
@@ -272,8 +310,27 @@ Each returns only the declaration plus the base implementation that nothing call
 
 **What**
 
-- [ ] Stop hardcoding a developer's user-secrets GUID in `Persistence/Contexts/PortfolioContextFactory.cs:14`; read from an env var or rely on `dotnet ef --startup-project`
-- [ ] Gate `dbContext.Database.Migrate()` in `Program.cs:26` behind a config flag
+- [x] Stop hardcoding a developer's user-secrets GUID in `Persistence/Contexts/PortfolioContextFactory.cs:14`; read from an env var or rely on `dotnet ef --startup-project`
+- [x] Gate `dbContext.Database.Migrate()` in `Program.cs:26` behind a config flag
+
+> **Done (2026-10-22).**
+>
+> - The design-time factory now reads the user-secrets id from the `JDB_USER_SECRETS_ID`
+>   environment variable and the connection string from
+>   `ConnectionStrings__JDBConnection`, falling back to `appsettings.Development.json`.
+>   The hardcoded GUID is gone. `appsettings.Development.json` is now `optional: true`, so
+>   the factory no longer throws when it is run from a directory that has no such file.
+> - `Migrate()` is gated behind `Database:AutoMigrate` (`appsettings.json`).
+>
+> **The flag defaults to `true`, deliberately.** The deploy workflow
+> (`.github/workflows/main_jdb-portfolio-api.yml`) builds, publishes and deploys — it has
+> **no migration step**. Turning the default off would silently stop applying migrations
+> in production. The race condition therefore still exists by default and is now
+> *controllable* rather than *fixed*; see KI-038 for the follow-up (give CI a migration
+> step, then default the flag to `false`).
+>
+> Verified: with `Database__AutoMigrate=false` EF issues **no** query against
+> `__EFMigrationsHistory`; with `true` it runs the migration check as before.
 
 **Why**
 
@@ -367,9 +424,56 @@ You will get an **unhandled 500** from the Npgsql exception, not the 502 the cod
 
 **What**
 
-- [ ] Delete `Application/Services/BaseService.cs` and `Domain/Interfaces/IService.cs`
-- [ ] Each service keeps one repository field only
-- [ ] Remove the unreachable fallbacks `await _repo.X() ?? await _repo.GetAllAsync()` in `PortfolioRecommendationService.cs:22` and `PortfolioSkillService.cs:22`
+- [x] Delete `Application/Services/BaseService.cs` and `Domain/Interfaces/IService.cs`
+- [x] Each service keeps one repository field only
+- [x] Remove the unreachable fallbacks `await _repo.X() ?? await _repo.GetAllAsync()` in `PortfolioRecommendationService.cs:22` and `PortfolioSkillService.cs:22`
+
+> **Done (2026-10-22), with one deliberate deviation.**
+>
+> `BaseService<T>` was **not** deleted outright — it was **replaced** by
+> `Application/Services/PortfolioServiceBase.cs`. The original base was *inverted*: it held
+> the empty part (a passthrough `GetAllAsync`, plus a `public readonly` duplicate of the
+> repository) while all four subclasses repeated the same `try/catch → Result` block. The
+> replacement holds the behaviour that was actually shared:
+>
+> ```csharp
+> public abstract class PortfolioServiceBase<T, TRepository>
+>     where T : class
+>     where TRepository : IRepository<T>
+> {
+>     protected TRepository Repository { get; }
+>     protected async Task<Result<TValue>> ExecuteAsync<TValue>(
+>         Func<Task<TValue>> operation, string operationDescription) { ... }
+> }
+> ```
+>
+> - Two type parameters are needed: the base holds the **concrete** repository port, so the
+>   subclass no longer needs a second field for it. One field per service, as required.
+> - The repository is now `protected` and read-only — nothing can bypass the service.
+> - `IService<T>` was deleted from `Domain`. Domain no longer knows that services exist.
+> - The `??` fallbacks were removed. A repository returns an empty list, never `null`, so
+>   the fallback was unreachable.
+> - The catch is now `catch (Exception ex) when (ex is not OperationCanceledException)`
+>   instead of `catch (HttpRequestException)`. The old catch could never fire for a
+>   database failure — EF/Npgsql throw `DbException`/`NpgsqlException`/`InvalidOperationException`
+>   — so a database outage escaped as an unhandled 500 instead of the intended failure
+>   result. Cancellation is explicitly **not** swallowed.
+>
+> **Still open, and deliberately so:**
+>
+> - The failure message is still a **string** and the endpoints still return **502**.
+>   That is item 2.2, which introduces typed errors.
+> - The base does **not** log. That is item 2.4, which introduces `ILogger<T>`. Adding
+>   `Microsoft.Extensions.Logging.Abstractions` to the Application project needs its own
+>   package approval.
+> - `PortfolioService` (the overview/Notion service) was **not** migrated to the new base.
+>   It calls Notion as well as three repositories, and its `catch (HttpRequestException)`
+>   is *correct* for the Notion call. Its three database calls are still mis-caught; that
+>   is item 2.4.
+>
+> Verified by `tests/JDB_Portfolio_API.Application.Tests` — a repository failure becomes a
+> failed `Result` instead of an escaping exception, and cancellation still propagates.
+> The test was mutation-checked: disabling the catch makes it fail.
 
 **Why**
 
@@ -597,9 +701,36 @@ Answer "how do I create a project?" — there are two ways today. Two answers me
 
 **What**
 
-- [ ] `tests/JDB_Portfolio_API.Domain.Tests` (xUnit): VO equality, `Period` validation, entity invariants
-- [ ] `tests/JDB_Portfolio_API.Application.Tests`: services with fake repositories
+- [x] `tests/JDB_Portfolio_API.Domain.Tests` (xUnit): VO equality, `Period` validation, entity invariants
+- [x] `tests/JDB_Portfolio_API.Application.Tests`: services with fake repositories
 - [ ] `tests/JDB_Portfolio_API.Api.Tests`: `WebApplicationFactory` smoke tests per endpoint
+
+> **Partially done (2026-10-22).** Two test projects exist and `dotnet test` is green
+> (24 tests). What they cover today:
+>
+> - **Domain.Tests** — 19 tests over `Role`, `Company` and `Period`. These are
+>   *characterisation* tests: they lock in the value objects' current behaviour so that
+>   items 3.1 and 3.3 can change it deliberately.
+> - **Application.Tests** — 5 tests over `PortfolioExperienceService`, with a hand-rolled
+>   `FakePortfolioExperienceRepository` in `Fakes/`. They cover the shared
+>   `ExecuteAsync` behaviour introduced by item 2.3.
+>
+> **Not covered yet, and deliberately so:**
+>
+> - **Entity invariants** (3.3) are not tested, because the entities do not have
+>   invariants yet. Writing those tests red-first is part of item 3.3.
+> - **VO equality** (3.1) is not tested, because `Role`/`Company`/`Period` are still
+>   classes with reference equality. Same reason.
+> - **Mapping** is not tested. The mapping profile lives in `Persistence`, so it needs a
+>   `tests/JDB_Portfolio_API.Persistence.Tests` project that does not exist yet. The
+>   testing rules make mapping tests mandatory, and item 1.2 (the `string` → `int`
+>   reverse mapping) is the first thing that needs one.
+> - **Endpoint contracts** need `Api.Tests` plus `public partial class Program { }` in
+>   the API project.
+>
+> Package baseline (approved): `xunit` 2.9.3, `xunit.runner.visualstudio` 3.1.4,
+> `Microsoft.NET.Test.Sdk` 17.14.1. The `coverlet.collector` that the template adds by
+> default was removed — coverage percentage is not a target.
 
 **Why**
 

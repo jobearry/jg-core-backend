@@ -5,8 +5,10 @@ description: Implement a feature or fix test-first in this .NET solution — wri
 
 # Test-driven change
 
-The repository has no tests yet. For the first change that adds one, you also
-create the test project (see step 0).
+Test projects already exist: `tests/JDB_Portfolio_API.Domain.Tests` and
+`tests/JDB_Portfolio_API.Application.Tests`. Add to the one that matches the
+layer you are changing. Creating a *new* test project still needs approval
+(AGENTS.md §10).
 
 ## 0. First time only — create the test project
 

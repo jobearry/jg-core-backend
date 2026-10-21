@@ -139,16 +139,25 @@ dotnet ef migrations remove --project … --startup-project …
 
 Full guide: `src/JDB_Portfolio_API.Persistence/Migrations/MIGRATION_GUIDE.md`.
 
-**Prerequisite:** `dotnet-ef` is not installed and there is no local tool
-manifest. `docker/README.md` says `dotnet tool restore`, which currently does
-nothing. Install it globally or add `.config/dotnet-tools.json`.
+**Prerequisite:** `dotnet tool restore` from the repo root. The manifest is
+`dotnet-tools.json` at the repo root and pins `dotnet-ef` 10.0.10.
 
 ## 6. Design-time context
 
-`PortfolioContextFactory` builds a context for `dotnet ef` by reading
-`appsettings.Development.json` plus a **hardcoded user-secrets GUID**
-(`57d40eab-…`). That GUID belongs to one machine; another developer gets a null
-connection string. Prefer:
+`PortfolioContextFactory` builds a context for `dotnet ef`. It reads
+`appsettings.Development.json` (optional), then user secrets **if** the
+`JDB_USER_SECRETS_ID` environment variable names the id, then the
+`ConnectionStrings__JDBConnection` environment variable, falling back to the
+connection string in `appsettings.Development.json`.
+
+```bash
+export JDB_USER_SECRETS_ID=<your user-secrets id>   # optional
+export ConnectionStrings__JDBConnection="Host=…;Database=…;Username=…;Password=…"
+```
+
+No GUID is hardcoded, so the factory works on any machine.
+
+Prefer:
 
 ```bash
 dotnet ef ... --startup-project src/JDB_Portfolio_API

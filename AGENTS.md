@@ -23,7 +23,9 @@ Current status:
 - DDD/clean-architecture refactor is **in progress**, not complete. Do not treat
   the current code as the target design — see
   [`.github/plans/001-clean-architecture-refactor.md`](.github/plans/001-clean-architecture-refactor.md).
-- **There are no tests.** Adding the first test project is an accepted plan item.
+- **Tests exist but are thin.** Two xUnit projects cover the Domain value objects and
+  the application services (24 tests). There is no mapping test project and no
+  endpoint test project yet.
 
 ---
 
@@ -51,8 +53,7 @@ Persistence  ExternalService
 **Hard rules**
 
 1. Dependencies point inward. Domain references nothing.
-2. Infrastructure projects must never reference `Application`. *(Currently
-   violated: `Persistence.csproj` references it — see plan item 1.1.)*
+2. Infrastructure projects must never reference `Application`.
 3. No project references the Presentation project.
 4. Domain contains no EF Core, ASP.NET, HTTP, JSON, or AutoMapper types.
 5. Presentation is the only place that constructs the object graph (`Program.cs`
@@ -85,7 +86,7 @@ Endpoint (minimal API)
 | External API | Notion (markdown endpoint) | `2026-03-11` |
 | Container | Docker multi-stage | SDK 10 / ASP.NET 10 |
 | CI/CD | GitHub Actions → Azure Web App (OIDC) | — |
-| Tests | **none yet** (xUnit planned) | — |
+| Tests | xUnit | 2.9.3 (runner 3.1.4, Test.Sdk 17.14.1) |
 
 Full detail, including why each package is present:
 [`.github/docs/technology-stack.md`](.github/docs/technology-stack.md).
@@ -109,6 +110,9 @@ src/
   JDB_Portfolio_API.Persistence/ Contexts/ Entities/ Repositories/ Profiles/ Migrations/
   JDB_Portfolio_API.ExternalService/ Notion/{Services,Utils,Settings,DTO}
   JDB_Portfolio_API/             Endpoints/ Program.cs ConfigurationSettings.cs
+tests/
+  JDB_Portfolio_API.Domain.Tests/       value objects, entity invariants
+  JDB_Portfolio_API.Application.Tests/  services with hand-rolled fakes
 docker/                          Dockerfile, docker-compose.yml, .env.example
 ```
 
@@ -122,11 +126,11 @@ dotnet build src/JDB_Portfolio_API.slnx
 dotnet run --project src/JDB_Portfolio_API            # http://localhost:5254
                                                       # https://localhost:7248
 
-# Tests (after the first test project exists)
+# Tests
 dotnet test src/JDB_Portfolio_API.slnx
 
-# EF Core — tool is NOT installed and there is no tool manifest yet
-dotnet tool install --global dotnet-ef
+# EF Core — the tool manifest is at the repo root
+dotnet tool restore
 dotnet ef migrations add <Name> \
   --project src/JDB_Portfolio_API.Persistence \
   --startup-project src/JDB_Portfolio_API
@@ -145,6 +149,7 @@ Required configuration (user-secrets in dev, env vars in prod):
 | Key | Purpose |
 |---|---|
 | `ConnectionStrings:JDBConnection` | PostgreSQL connection |
+| `Database:AutoMigrate` | apply pending migrations at startup (default `true`) |
 | `Jwt:Key` | ≥ 32 bytes; also the `/auth/login` shared secret |
 | `Jwt:Issuer`, `Jwt:Audience`, `Jwt:ExpirationInMinutes` | token settings |
 | `Notion:Token`, `Notion:Version` | Notion integration |
@@ -196,18 +201,23 @@ Each rule has a full explanation in `.github/rules/`.
 
 ## 8. Current state and known gaps (short version)
 
-- `Persistence` → `Application` project reference violates the dependency rule.
 - Domain entities are anemic: public setters, `partial`, `CreatedAt` on
   `TechStack`, no invariants on `Project`/`Recommendation.Description`.
 - Value objects (`Role`, `Company`, `Period`) are classes → reference equality.
 - Domain entities are serialized directly to clients (no DTO boundary).
-- All errors are `502` with a string; `catch (HttpRequestException)` wraps
-  database calls that cannot throw it.
+- All errors are `502` with a string.
 - `Period.FinishedAt` is always `null` after mapping → past roles report a
-  duration that grows daily.
-- Zero tests, zero logging, zero cancellation.
+  duration that grows daily. (The value object itself is correct; the mapping
+  is not.)
+- No logging, no global exception handler, zero cancellation.
 - Auth is effectively decorative: `RequireAuthorization()` is commented out on
   every portfolio and Notion endpoint, and absent entirely from `/skill`.
+
+Recently fixed: the `Persistence` → `Application` dependency violation, the
+dead code, the duplicated repository fields, the untracked read queries, the
+hardcoded user-secrets GUID, and the un-gated startup migration. Tests now
+exist but are thin — there is no mapping test project and no endpoint test
+project.
 
 Full reasoning and verification steps:
 [`.github/plans/001-clean-architecture-refactor.md`](.github/plans/001-clean-architecture-refactor.md).

@@ -4,7 +4,7 @@ Numbered refactor and debt plans. Each plan is a working checklist, not prose.
 
 | # | Plan | Status | Scope |
 |---|---|---|---|
-| 001 | [Clean Architecture & DDD Refactor](001-clean-architecture-refactor.md) | Proposed — awaiting verification | Whole solution |
+| 001 | [Clean Architecture & DDD Refactor](001-clean-architecture-refactor.md) | In progress — decisions D1–D4 resolved, item 1.1 complete | Whole solution |
 
 ## Conventions
 

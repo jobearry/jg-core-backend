@@ -1,33 +1,26 @@
 ﻿using JDB_Portfolio_API.Application.Common;
 using JDB_Portfolio_API.Domain.Entities;
 using JDB_Portfolio_API.Domain.Interfaces;
-using System;
 using System.Collections.Generic;
-using System.Text;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace JDB_Portfolio_API.Application.Services;
 
-public class PortfolioProjectService : BaseService<Project>
+public class PortfolioProjectService : PortfolioServiceBase<Project, IPortfolioProjectRepository>
 {
-    private readonly IPortfolioProjectRepository _projectRepo;
-    public PortfolioProjectService(IPortfolioProjectRepository projectRepo)
-        : base(projectRepo)
-    {
-        _projectRepo = projectRepo;
-    }
+    public PortfolioProjectService(IPortfolioProjectRepository repository)
+        : base(repository) { }
 
-    public async Task<Result<List<Project?>>> GetAllProjectsAsync(bool includeTools)
+    public async Task<Result<List<Project>>> GetAllProjectsAsync(bool includeTools)
     {
-        try
+        return await ExecuteAsync(async () =>
         {
-            List<Project?> projects = includeTools 
-                ? await _projectRepo.GetAllProjectsWithTechStacksAsync() 
-                : await _repo.GetAllAsync();
-            return Result<List<Project?>>.Success(projects.OrderBy(x => x.Id).ToList());
-        }
-        catch (HttpRequestException hre)
-        {
-            return Result<List<Project?>>.Failure("Failed to get portfolio project content: " + hre.Message);
-        }
+            var projects = includeTools
+                ? await Repository.GetAllProjectsWithTechStacksAsync()
+                : await Repository.GetAllAsync();
+
+            return projects.OrderBy(x => x.Id).ToList();
+        }, "get portfolio project content");
     }
 }

@@ -33,23 +33,23 @@ src/
 │   │                                    TechStackCategory, Recommendation,
 │   │                                    DashboardItem (misplaced, see plan 3.2)
 │   ├── ValueObjects/                    Role, Company, Period, NotionPage
-│   │                                    (misplaced), ExperienceId (unused)
+│   │                                    (misplaced)
 │   └── Interfaces/                      IRepository<T>, IPortfolio*Repository,
-│                                        INotionService (misplaced), IService<T>,
-│                                        IMapper<,,> (unused)
+│                                        INotionService (misplaced)
 │
 ├── JDB_Portfolio_API.Application/       ← core, references Domain
 │   ├── Common/Result.cs                 Result<T> (string error today)
 │   ├── Services/                        PortfolioService, PortfolioExperienceService,
 │   │                                    PortfolioProjectService,
 │   │                                    PortfolioRecommendationService,
-│   │                                    PortfolioSkillService, BaseService<T>
-│   ├── DTO/                             AuthDto, PortfolioNotionPage (unused)
+│   │                                    PortfolioSkillService,
+│   │                                    PortfolioServiceBase<T,TRepository>
+│   ├── DTO/                             AuthDto
 │   └── Settings/JwtOptions.cs
 │
 ├── JDB_Portfolio_API.Persistence/       ← infrastructure
 │   ├── Contexts/PortfolioContext.cs     DbContext + fluent config (partial, DB-first)
-│   ├── Contexts/PortfolioContextFactory.cs  design-time factory (hardcoded GUID)
+│   ├── Contexts/PortfolioContextFactory.cs  design-time factory (env-var user secrets id)
 │   ├── Entities/                        *Entity + ProjectTechStack join
 │   ├── Repositories/                    BasePortfolioRepository<TDomain,TEntity>
 │   │                                    + 4 concrete repositories

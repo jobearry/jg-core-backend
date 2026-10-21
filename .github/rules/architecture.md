@@ -26,9 +26,9 @@ Presentation    → Application, Persistence, ExternalService
 
 Violations to fix, not to copy:
 
-- `Persistence.csproj` references `Application` (plan 1.1).
-- `Persistence/Repositories/EfPortfolioExperienceRepository.cs` imports
-  `JDB_Portfolio_API.Application.Common` (same fix).
+- `Persistence.csproj` referencing `Application` — **fixed 2026-10-22**, plan 1.1.
+- `Persistence/Repositories/EfPortfolioExperienceRepository.cs` importing
+  `JDB_Portfolio_API.Application.Common` — **fixed 2026-10-22**, plan 1.1.
 
 ### Enforcement
 

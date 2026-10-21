@@ -8,7 +8,7 @@ How to run, configure, and deploy the API.
 |---|---|---|
 | .NET SDK | 10.0.x | 10.0.402 in use |
 | PostgreSQL | any recent | local install or container |
-| `dotnet-ef` | matching EF 10 | not installed; no tool manifest |
+| `dotnet-ef` | matching EF 10 | available via the root tool manifest — run `dotnet tool restore` |
 | Docker + Compose v2 | 20.10+ | optional, currently broken (see §4) |
 
 ## 2. Local development
@@ -42,7 +42,7 @@ dotnet run --project src/JDB_Portfolio_API
 | Swagger | http://localhost:5254/swagger |
 
 `Program.cs` also calls `Database.Migrate()` at startup, so a valid connection
-string is required just to boot.
+string is required just to boot. Set `Database__AutoMigrate=false` to skip it.
 
 ## 3. Configuration matrix
 
@@ -79,7 +79,8 @@ ConnectionStrings__JDBConnection=Host=host.docker.internal;Port=5432;Database=jg
 file maps that name on Linux as well as Docker Desktop. For a hosted database
 use its host and the SSL settings it requires. `Program.cs` calls
 `Database.Migrate()` at startup, so the API applies pending migrations itself
-and fails to boot if the database is unreachable.
+and fails to boot if the database is unreachable. Set `Database__AutoMigrate=false`
+to skip that step.
 
 Image build (works independently of compose):
 
@@ -106,7 +107,8 @@ The container listens on `8080` (`ASPNETCORE_URLS=http://+:8080`), runs as
    `AZURE_SUBSCRIPTION_ID`).
 4. `azure/webapps-deploy@v2` to app `jdb-portfolio-api`, `clean: true`.
 
-No test step exists (no tests). Add one with the first test project.
+No test step exists. Tests now live in `tests/` (two xUnit projects, 24 tests) —
+add a `dotnet test src/JDB_Portfolio_API.slnx` step to the workflow.
 
 Swagger is enabled only when `ASPNETCORE_ENVIRONMENT=Development`. Production
 should not set it.
@@ -117,8 +119,8 @@ should not set it.
 |---|---|---|
 | App fails at startup with an Npgsql connection error | `Migrate()` ran with a bad/missing connection string | check `ConnectionStrings__JDBConnection` |
 | `docker compose up` fails with "required variable ConnectionStrings__JDBConnection is missing" | `docker/.env` not created | `cp docker/.env.example docker/.env` and fill it in |
-| `dotnet ef` says "command not found" | tool not installed, no manifest | `dotnet tool install --global dotnet-ef` |
-| `dotnet ef` sees a null connection string | design-time factory GUID is machine-specific | pass `--connection` or use the startup project |
+| `dotnet ef` says "command not found" | the tool manifest was not restored | `dotnet tool restore` (from the repo root) |
+| `dotnet ef` sees a null connection string | no user-secrets id or connection string was supplied | set `JDB_USER_SECRETS_ID` and `ConnectionStrings__JDBConnection`, or use the startup project |
 | `/auth/login` returns 401 with the right key | whitespace, or the key was rotated | re-read `Jwt:Key` |
 | `/auth/me` returns `{}` | token has no `sub`, only a role claim | expected |
 | Collection endpoint returns 500 after a data import | an empty-string `role`/`career_position` | see `known-issues.md` |

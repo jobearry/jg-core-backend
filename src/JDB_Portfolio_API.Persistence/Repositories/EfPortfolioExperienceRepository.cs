@@ -1,5 +1,4 @@
 ﻿using AutoMapper;
-using JDB_Portfolio_API.Application.Common;
 using JDB_Portfolio_API.Domain.Entities;
 using JDB_Portfolio_API.Domain.Interfaces;
 using JDB_Portfolio_API.Domain.ValueObjects;
@@ -17,14 +16,16 @@ public class EfPortfolioExperienceRepository: BasePortfolioRepository<Experience
     public EfPortfolioExperienceRepository(PortfolioContext context, IMapper mapper)
         : base(context, mapper) { }
 
-    public async Task<List<Experience?>> GetAllExperienceWithProjectsAsync()
+    public async Task<List<Experience>> GetAllExperienceWithProjectsAsync()
     {
-        var experienceEntities = await _dbSet.Include(e => e.Projects)
+        var experienceEntities = await _dbSet.AsNoTracking()
+                                             .AsSplitQuery()
+                                             .Include(e => e.Projects)
                                              .ThenInclude(e => e.ProjectTechStacks)
                                              .ThenInclude(e => e.TechStack)
                                              .ThenInclude(e => e.TechStackCategory)
                                              .ToListAsync();
 
-        return _mapper.Map<List<Experience?>>(experienceEntities);
+        return _mapper.Map<List<Experience>>(experienceEntities);
     }
 }

@@ -7,8 +7,8 @@ description: Safely add an EF Core migration to the JDB Portfolio API — update
 
 ## Preconditions
 
-- `dotnet-ef` installed (`dotnet tool install --global dotnet-ef`) — there is no
-  local tool manifest.
+- `dotnet-ef` available — run `dotnet tool restore` from the repo root. The manifest
+  is `dotnet-tools.json` at the root and pins `dotnet-ef` 10.0.10.
 - A reachable PostgreSQL instance and a valid `ConnectionStrings:JDBConnection`.
 - You have approval: schema changes are on the "ask first" list.
 

@@ -46,6 +46,5 @@
 | `Experience.Duration` | A `Period` value object, not a `TimeSpan`. `Period.Duration` is the `TimeSpan`. |
 | `TechStack.Category` (string) | A denormalised category name; the table stores `tech_stack_category_id`. |
 | `Project.TechStacks` | A list of **entity** instances, not references. |
-| `PortfolioService` | Not a base service; it orchestrates overview and Notion, and does not inherit `BaseService`. |
+| `PortfolioService` | Not a base service; it orchestrates overview and Notion, and does not inherit `PortfolioServiceBase`. |
 | `INotionService` in `Domain` | A vendor port that does not belong in the domain. |
-| `ExperienceId` | An unused `Guid` record that contradicts `Experience.Id` (`int`). |

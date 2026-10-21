@@ -1,31 +1,24 @@
 ﻿using JDB_Portfolio_API.Application.Common;
 using JDB_Portfolio_API.Domain.Entities;
 using JDB_Portfolio_API.Domain.Interfaces;
-using System;
 using System.Collections.Generic;
-using System.Text;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace JDB_Portfolio_API.Application.Services;
 
-public class PortfolioSkillService:BaseService<TechStack>
+public class PortfolioSkillService : PortfolioServiceBase<TechStack, IPortfolioTechStackRepository>
 {
-    private readonly IPortfolioTechStackRepository _stackRepo;
-    public PortfolioSkillService(IPortfolioTechStackRepository stackRepo)
-        : base(stackRepo)
-    {
-        _stackRepo = stackRepo;
-    }
+    public PortfolioSkillService(IPortfolioTechStackRepository repository)
+        : base(repository) { }
 
-    public async Task<Result<List<TechStack?>>> GetAllTechStacksAsync()
+    public async Task<Result<List<TechStack>>> GetAllTechStacksAsync()
     {
-        try
+        return await ExecuteAsync(async () =>
         {
-            List<TechStack?> techStacks = await _stackRepo.GetAllTechStacksAsync() ?? await _repo.GetAllAsync();
-            return Result<List<TechStack?>>.Success(techStacks.OrderBy(x => x.Id).ToList());
-        }
-        catch (HttpRequestException hre)
-        {
-            return Result<List<TechStack?>>.Failure("Failed to get portfolio tech stack content: " + hre.Message);
-        }
+            var techStacks = await Repository.GetAllTechStacksAsync();
+
+            return techStacks.OrderBy(x => x.Id).ToList();
+        }, "get portfolio tech stack content");
     }
 }

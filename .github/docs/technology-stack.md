@@ -62,7 +62,7 @@ presentation project.
 
 | Tool | Status | Notes |
 |---|---|---|
-| `dotnet-ef` | **not installed, no local tool manifest** | `docker/README.md` says `dotnet tool restore`, but there is no `.config/dotnet-tools.json`. Install globally or add a manifest. |
+| `dotnet-ef` | **available via the root tool manifest** | `dotnet-tools.json` at the repo root pins `dotnet-ef` 10.0.10. Run `dotnet tool restore` once, then `dotnet ef ...` works. |
 | Docker / Compose v2 | available | Compose file currently invalid |
 | GitHub Actions | active | build + deploy only |
 | Azure CLI | via `azure/login@v2` | OIDC federated credentials |
@@ -74,7 +74,7 @@ approval (AGENTS.md §10).
 
 | Concern | Candidate | Why |
 |---|---|---|
-| Testing | `xunit`, `Microsoft.NET.Test.Sdk`, `Microsoft.AspNetCore.Mvc.Testing`, `Testcontainers.PostgreSql` | zero tests today |
+| Testing | `Microsoft.AspNetCore.Mvc.Testing`, `Testcontainers.PostgreSql` | `xunit` + `Microsoft.NET.Test.Sdk` are in place (24 tests), but there is no endpoint test project and no test database yet |
 | Assertions | `Shouldly` or `FluentAssertions` | optional; xUnit asserts are enough to start |
 | Validation | `FluentValidation.AspNetCore` or a hand-written endpoint filter | minimal APIs do not validate automatically |
 | Resilience | `Microsoft.Extensions.Http.Resilience` (Polly v8) | Notion call has no retry/timeout |
