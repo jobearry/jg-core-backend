@@ -273,7 +273,7 @@ Each returns only the declaration plus the base implementation that nothing call
 **What**
 
 - [ ] Stop hardcoding a developer's user-secrets GUID in `Persistence/Contexts/PortfolioContextFactory.cs:14`; read from an env var or rely on `dotnet ef --startup-project`
-- [ ] Gate `dbContext.Database.Migrate()` in `Program.cs:24` behind a config flag
+- [ ] Gate `dbContext.Database.Migrate()` in `Program.cs:26` behind a config flag
 
 **Why**
 
@@ -351,11 +351,13 @@ if (!result.IsSuccess) return Results.Problem(result.Error, statusCode: 502);
 **How to verify**
 
 ```bash
-docker compose -f docker/docker-compose.yml stop db
-curl -i http://localhost:<port>/api/v1/experience
+# Stop your PostgreSQL instance, or point the API at an unreachable host:
+ConnectionStrings__JDBConnection="Host=127.0.0.1;Port=1;Database=jg-portfolio;Username=u;Password=p" \
+  dotnet run --project src/JDB_Portfolio_API
+curl -i http://localhost:5254/api/v1/experience
 ```
 
-You will get an **unhandled 500** from the Npgsql exception, not the 502 the code implies — which also proves the `catch (HttpRequestException)` in the services is the wrong catch. Restart the DB afterwards.
+You will get an **unhandled 500** from the Npgsql exception, not the 502 the code implies — which also proves the `catch (HttpRequestException)` in the services is the wrong catch. Restart the database or the API afterwards.
 
 ---
 
@@ -425,7 +427,7 @@ Trigger the DB-down case from 2.2 and inspect the log output: ASP.NET's request 
 **What**
 
 - [ ] `PortfolioSkillEndpoints.cs:12` never checks `IsSuccess` and returns 200 with `null` on failure
-- [ ] Replace hand-spelled `"api/v1/..."` strings in five files with `app.MapGroup("api/v1")`
+- [ ] Replace hand-spelled `"api/v1/..."` strings in seven files with `app.MapGroup("api/v1")`
 - [ ] Add input validation for `AuthDto` (minimal APIs do not run model validation)
 - [ ] Move JWT issuance out of `AuthEndpoints.cs` into an `IAuthTokenService` in Application
 - [ ] Fix the `async` `/auth/me` lambda with no `await` (CS1998)

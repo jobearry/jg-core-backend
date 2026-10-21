@@ -119,7 +119,8 @@ namespace JDB_Portfolio_API.Persistence.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("tech_stack_id");
 
-                    b.HasKey("ProjectId", "TechStackId");
+                    b.HasKey("ProjectId", "TechStackId")
+                        .HasName("project_tech_stack_pkey");
 
                     b.HasIndex("TechStackId");
 
@@ -159,7 +160,7 @@ namespace JDB_Portfolio_API.Persistence.Migrations
                         .HasDefaultValueSql("CURRENT_TIMESTAMP");
 
                     b.HasKey("Id")
-                        .HasName("recommendations_pkey");
+                        .HasName("recommendation_pkey");
 
                     b.ToTable("recommendation", (string)null);
                 });

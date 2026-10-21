@@ -1,31 +1,35 @@
 # Docker Containerization
 
-This folder containerizes the **JDB Portfolio API** (a .NET 10 ASP.NET Core Web
-API) together with a **PostgreSQL** database, using Docker Compose.
+This folder containerizes the **JDB Portfolio API** (.NET 10 ASP.NET Core Web
+API) with Docker Compose.
+
+The stack runs the **API only**. PostgreSQL is external: point the API at a
+server you run yourself or a hosted one, through `docker/.env`.
 
 ## What's in here
 
-| File                  | Purpose                                                            |
-|-----------------------|--------------------------------------------------------------------|
-| `Dockerfile`          | Multi-stage build (build → publish) for the API image              |
-| `docker-compose.yml`  | Orchestrates the `api` and `db` (PostgreSQL) services              |
-| `.env.example`        | Template for environment variables (credentials/ports)             |
-| `../.dockerignore`    | Keeps `bin/`, `obj/`, `.vs/` out of the image build context        |
+| File                  | Purpose                                                     |
+|-----------------------|-------------------------------------------------------------|
+| `Dockerfile`          | Multi-stage build (build → publish) for the API image       |
+| `docker-compose.yml`  | Runs the `api` service                                      |
+| `.env.example`        | Template for environment variables (credentials, ports)     |
+| `../.dockerignore`    | Keeps `bin/`, `obj/`, `.vs/` out of the image build context |
 
 ## Prerequisites
 
 - [Docker Engine](https://docs.docker.com/engine/install/) 20.10+ with
   Docker Compose v2 (`docker compose`).
+- A reachable PostgreSQL instance.
 
 ## Quick start
 
-From the repository root (`../../..` relative to this folder):
+From the repository root:
 
 ```bash
-# 1. (Optional) create a local env file to customise things
+# 1. Create your env file and fill in the connection string
 cp docker/.env.example docker/.env
 
-# 2. Build and start both services
+# 2. Build and start
 docker compose -f docker/docker-compose.yml up --build -d
 
 # 3. Check status
@@ -37,64 +41,41 @@ docker compose -f docker/docker-compose.yml logs -f api
 
 ### What runs where
 
-| Component | Container          | Host URL                          |
-|-----------|--------------------|-----------------------------------|
-| API       | `jdb_portfolio_api`| http://localhost:8080             |
-| Swagger UI| `jdb_portfolio_api`| http://localhost:8080/swagger     |
-| PostgreSQL| `jdb_portfolio_db` | localhost:5432 (db: `jdb_portfolio`) |
+| Component  | Container           | Host URL                          |
+|------------|---------------------|-----------------------------------|
+| API        | `jdb_portfolio_api` | http://localhost:5254             |
+| Swagger UI | `jdb_portfolio_api` | http://localhost:5254/swagger     |
 
-The Swagger UI is available at `/swagger` because the compose file sets
-`ASPNETCORE_ENVIRONMENT=Development`. For a deployment you do **not** want to
-expose Swagger on, remove that line (or set it to `Production`).
+The Swagger UI appears because `ASPNETCORE_ENVIRONMENT=Development`. For a
+deployment you do not want to expose it — set the environment to `Production`
+in `docker/.env`.
 
 ## Configuration
 
-##### Database credentials
+### Database
 
-Defaults are suitable for local development (`postgres` / `postgres`,
-database `jdb_portfolio`). Override them by creating `docker/.env`:
+The connection string is passed through in full, with no `Host=db` shortcut,
+because there is no `db` service:
 
 ```ini
-POSTGRES_USER=postgres
-POSTGRES_PASSWORD=change-me
-POSTGRES_DB=jdb_portfolio
-POSTGRES_PORT=5454
-API_PORT=5254
+ConnectionStrings__JDBConnection=Host=host.docker.internal;Port=5432;Database=jg-portfolio;Username=postgres;Password=postgres;Ssl Mode=Disable
 ```
 
-The API's connection string is **built by `docker-compose.yml` from the
-`POSTGRES_*` variables** and always targets the `db` compose service over the
-internal `jdb_network`:
+`host.docker.internal` reaches a PostgreSQL running on the host — the compose
+file maps that name to the host gateway, which works on Linux as well as Docker
+Desktop. Inside a container `localhost` would be the API container itself.
 
-```
-Host=db;Port=5432;Database=jdb_portfolio;Username=postgres;Password=postgres
-```
+For a hosted database, use its host and whatever SSL settings it requires
+(for example `Ssl Mode=Require`).
 
-> The `db` before `Port=5432` NOT `localhost`: inside a container `localhost`
-> would be the API container itself. `POSTGRES_PORT` only affects the *host*-
-> facing port, so it doesn't matter to the API. Put another way: the API talks
-> to the containerized DB on `db:5432` regardless of the host port.
+`Program.cs` calls `Database.Migrate()` on startup, so the API applies pending
+migrations itself and will not boot if the connection string is unreachable.
 
-> Note: `appsettings.Development.json` contains a hardcoded connection string
-> (`Host=localhost;...`) intended for running the API directly on your machine
-> against a local Postgres. Inside Docker that value is **overridden** by the
-> env var set in the compose file, so it is ignored here.
+### JWT and Notion
 
-### Applying EF Core migrations
-
-The compose file starts the API only after the database reports healthy, but it
-does **not** auto-apply migrations. Apply them once the stack is up:
-
-```bash
-dotnet tool restore            # ensures the EF tools are available
-dotnet ef database update \
-  --project src/JDB_Portfolio_API.Persistence \
-  --startup-project src/JDB_Portfolio_API \
-  --connection "Host=localhost;Port=5432;Database=jdb_portfolio;Username=postgres;Password=postgres"
-```
-
-See `src/JDB_Portfolio_API.Persistence/Migrations/MIGRATION_GUIDE.md` for full
-migration commands.
+`Jwt__Key`, `Jwt__Issuer`, `Jwt__Audience`, `Notion__Token`, and
+`Notion__Version` bind the app's `Jwt:*` and `Notion:*` sections.
+`Jwt__Key` must be at least 32 bytes.
 
 ## Building / running without Compose
 
@@ -105,16 +86,19 @@ docker build -f docker/Dockerfile -t jdb-portfolio-api .
 # Run with an explicit connection string
 docker run --rm -p 8080:8080 \
   -e ASPNETCORE_ENVIRONMENT=Development \
-  -e "ConnectionStrings__JDBConnection=Host=<db-host>;Port=5432;Database=jdb_portfolio;Username=postgres;Password=postgres" \
+  -e "ConnectionStrings__JDBConnection=Host=<db-host>;Port=5432;Database=jg-portfolio;Username=postgres;Password=postgres" \
+  -e "Jwt__Key=<32+ bytes>" -e "Jwt__Issuer=jdb_api" -e "Jwt__Audience=PortfolioApiUsers" \
+  -e "Notion__Token=secret_…" \
   jdb-portfolio-api
 ```
 
-## Stopping & cleaning up
+## Stopping
 
 ```bash
-# Stop containers (data volume persists)
 docker compose -f docker/docker-compose.yml down
-
-# Stop containers AND delete the PostgreSQL data volume
-docker compose -f docker/docker-compose.yml down -v
 ```
+
+There is no data volume to remove: the database lives outside this stack.
+
+See `src/JDB_Portfolio_API.Persistence/Migrations/MIGRATION_GUIDE.md` for
+migration commands.

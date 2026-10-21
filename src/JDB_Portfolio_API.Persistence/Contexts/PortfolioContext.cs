@@ -27,7 +27,7 @@ public partial class PortfolioContext : DbContext
         // Configure the many-to-many relationship between ProjectEntity and TechStackEntity
         modelBuilder.Entity<ProjectTechStack>(e =>
         {
-            e.HasKey(pts => new { pts.ProjectId, pts.TechStackId });
+            e.HasKey(pts => new { pts.ProjectId, pts.TechStackId }).HasName("project_tech_stack_pkey");
             e.Property(e => e.ProjectId).HasColumnName("project_id");
             e.Property(e => e.TechStackId).HasColumnName("tech_stack_id");
             e.ToTable("project_tech_stack");
@@ -96,7 +96,7 @@ public partial class PortfolioContext : DbContext
 
         modelBuilder.Entity<RecommendationEntity>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("recommendations_pkey");
+            entity.HasKey(e => e.Id).HasName("recommendation_pkey");
 
             entity.ToTable("recommendation");
 
