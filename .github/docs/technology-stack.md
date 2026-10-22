@@ -25,7 +25,11 @@ table in sync when a package changes.
 
 ### Application — `JDB_Portfolio_API.Application`
 
-No package references. Only `Domain`.
+| Package | Version | Purpose |
+|---|---|---|
+| `Microsoft.Extensions.Logging.Abstractions` | 10.0.10 | `ILogger<T>` — the logging **contract** only. No provider, no EF, no ASP.NET, so the composition root still decides where output goes. Added in plan 2.4: without it the Application layer cannot report a failure at all, which is why a 503 used to reach the client with nothing on the server to explain it |
+
+The only other reference is `Domain`.
 
 ### Domain — `JDB_Portfolio_API.Domain`
 

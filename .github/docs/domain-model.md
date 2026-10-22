@@ -36,7 +36,7 @@ classDiagram
         +int Id
         +Company? Company
         +Period Duration
-        +Role Role
+        +Role? Role
         +string? Description
         +string? Responsibility
         +string? Type
@@ -64,7 +64,7 @@ classDiagram
         +int Id
         +string PersonName
         +string Description
-        +Role CareerPosition
+        +Role? CareerPosition
         +DateTime PostedAt
     }
 
@@ -82,15 +82,15 @@ as entity instances inside `Project`. See ADR-0003.
 
 | Entity | Identity | Constructor | Mutability | Invariants enforced |
 |---|---|---|---|---|
-| `Experience` | `int Id` (DB identity) | `(id, company, period, role)` | `Id`/`Company` get-only; `Duration`/`Role`/`Description`/`Responsibility`/`Type` private set; `Projects` **public set** | `Role` non-null; `Role`/`Company`/`Period` rules via VOs |
+| `Experience` | `int Id` (DB identity) | `(id, company, period, role)` | `Id`/`Company` get-only; `Duration`/`Role`/`Description`/`Responsibility`/`Type` private set; `Projects` **public set** | `Role` is **optional** — `null` means the role is deliberately undeclared; `Role`/`Company`/`Period` rules via VOs |
 | `Project` | `int Id` (public set) | `(id, projectName)` | everything public set | **none** — empty name, null name, null tech stacks all allowed. `Period` was removed on 2026-10-22: it had no column and no mapping, so it was always `null` |
 | `TechStack` | `int Id` (public set) | implicit | everything public set | **none** |
 | `TechStackCategory` | `int Id` (public set) | implicit | everything public set | **none** |
-| `Recommendation` | `int Id` (public set) | `(id, personName, description, careerPosition, postedAt)` | everything public set | `PersonName` non-null; `CareerPosition` non-null; `Description` **not validated** |
+| `Recommendation` | `int Id` (public set) | `(id, personName, description, careerPosition, postedAt)` | everything public set | `PersonName` non-null; `CareerPosition` is **optional** — `null` means it is deliberately not shown; `Description` **not validated** |
 
 Behaviour that exists:
 
-- `Experience.ChangeRole(Role)` — validates non-null.
+- `Experience.ChangeRole(Role?)` — sets or clears the role; `null` means "not declared".
 - `Experience.UpdateDescription(string)` — no validation.
 - Nothing else. `Responsibility`, `Type`, and `Company` cannot be changed after
   construction, and `Experience` cannot add/remove projects through behaviour.

@@ -6,6 +6,21 @@ namespace JDB_Portfolio_API.Persistence.Profiles;
 
 public class PortfolioMappingProfile : Profile
 {
+    /// <summary>
+    /// A blank role is not an error: it means the role is deliberately undeclared.
+    /// <see cref="Role"/> rightly refuses to hold an empty string, so the mapping
+    /// represents "undeclared" as the absence of a role. Without this, one blank
+    /// row throws inside AutoMapper and takes down the whole collection endpoint.
+    /// </summary>
+    private static Role? ToRole(string? value) =>
+        string.IsNullOrWhiteSpace(value) ? null : new Role(value);
+
+    /// <summary>
+    /// The reverse of <see cref="ToRole"/>. The columns are still <c>NOT NULL</c>,
+    /// so an undeclared role is stored as the empty string rather than <c>null</c>.
+    /// </summary>
+    private static string ToStoredRole(Role? role) => role?.Value ?? string.Empty;
+
     public PortfolioMappingProfile()
     {
         // TechStackEntity → TechStack
@@ -86,7 +101,7 @@ public class PortfolioMappingProfile : Profile
             .ForMember(dest => dest.CompanyName, opt => opt.MapFrom(src => src.Company != null ? src.Company.Name : null))
             .ForMember(dest => dest.StartedAt, opt => opt.MapFrom(src => src.Duration.StartedAt))
             .ForMember(dest => dest.FinishedAt, opt => opt.MapFrom(src => src.Duration.FinishedAt))
-            .ForMember(dest => dest.Role, opt => opt.MapFrom(src => src.Role));
+            .ForMember(dest => dest.Role, opt => opt.MapFrom(src => ToStoredRole(src.Role)));
 
         // ExperienceEntity → Experience
         CreateMap<ExperienceEntity, Experience>()
@@ -94,10 +109,13 @@ public class PortfolioMappingProfile : Profile
                 src.Id,
                 src.CompanyName != null ? new Company(src.CompanyName) : null,
                 new Period(src.StartedAt, src.FinishedAt),
-                new Role(src.Role)
+                ToRole(src.Role)
             ))
             .ForMember(dest => dest.Duration, opt => opt.Ignore())
             .ForMember(dest => dest.Projects, opt => opt.Ignore())
+            // Set by ConstructUsing via ToRole. Without the Ignore, AutoMapper maps
+            // string -> Role? by name afterwards and throws on a blank value.
+            .ForMember(dest => dest.Role, opt => opt.Ignore())
             .AfterMap((src, dest) =>
             {
                 // Map the Projects collection with their TechStacks
@@ -128,15 +146,17 @@ public class PortfolioMappingProfile : Profile
                 src.Id,
                 src.PersonName,
                 src.Description,
-                new Role(src.CareerPosition),
+                ToRole(src.CareerPosition),
                 src.PostedAt
-            ));
+            ))
+            // Set by ConstructUsing via ToRole, for the same reason as Experience.Role.
+            .ForMember(dest => dest.CareerPosition, opt => opt.Ignore());
 
         // Recommendation → RecommendationEntity
         CreateMap<Recommendation, RecommendationEntity>()
             .ForMember(dest => dest.PersonName, opt => opt.MapFrom(src => src.PersonName))
             .ForMember(dest => dest.Description, opt => opt.MapFrom(src => src.Description))
-            .ForMember(dest => dest.CareerPosition, opt => opt.MapFrom(src => src.CareerPosition))
+            .ForMember(dest => dest.CareerPosition, opt => opt.MapFrom(src => ToStoredRole(src.CareerPosition)))
             .ForMember(dest => dest.PostedAt, opt => opt.MapFrom(src => src.PostedAt));
     }
 }

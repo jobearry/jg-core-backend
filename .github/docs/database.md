@@ -77,13 +77,32 @@ erDiagram
 - **Singular, `snake_case`** table and column names.
 - Primary key `id` with `UseIdentityAlwaysColumn()` (PostgreSQL `GENERATED
   ALWAYS AS IDENTITY`).
-- Constraint names: `<table>_pkey`, `FK_<table>_<column>`.
+- Constraint names: `<table>_pkey`, `FK_<table>_<column>`, `ck_<table>_<rule>`.
 - Foreign key `project.experience_id` uses `ON DELETE SET NULL`, so deleting an
   experience detaches its projects rather than deleting them. This is a
   deliberate modelling choice that contradicts "Experience owns Project".
 - **Timestamps are `timestamp without time zone`.** Every value is written as
   UTC by convention only; the database does not enforce it. New columns should
   use `timestamptz`.
+- **The empty string is a sentinel, and it means "not disclosed".**
+  `experience.role` and `recommendation.career_position` are `NOT NULL`, but an
+  empty value is *valid data*: it means the owner would rather not state the role
+  or the career position. There is deliberately **no** `CHECK` constraint against
+  it — the plan originally proposed one and it was rejected, because it would make
+  a legitimate state impossible to express.
+  The translation happens in `PortfolioMappingProfile`:
+
+  - blank or whitespace in the database → `null` in the domain (`Role?`)
+  - `null` in the domain → `''` when written back
+
+  `Role` itself still refuses to hold an empty string. "Undeclared" is represented
+  by the *absence* of a `Role`, not by a `Role` containing nothing — which is why
+  one blank row no longer throws inside AutoMapper and 500s the collection.
+  Covered by `UndeclaredRoleMappingTests`.
+- Check constraints are *not* stored in the read-optimized runtime model.
+  Reading them from `context.Model` throws; use
+  `context.GetService<IDesignTimeModel>().Model` when a test needs to assert on
+  one.
 
 ## 4. Migration history
 
@@ -183,7 +202,6 @@ production without a migration.
 |---|---|---|
 | `experience.finished_at` exists but is **not backfilled** | past roles still report a growing duration until the end dates are filled in | 1.3 / D1 — data task |
 | `timestamp without time zone` everywhere | timezone bugs when the host TZ changes | 4.x |
-| No `CHECK` on `role` / `career_position` non-empty | empty strings crash the mapping | 1.5 |
 | No index on `project.experience_id` | sequential scan as data grows | — |
 | No unique constraint on `tech_stack.stack_name` | duplicates possible | — |
 | `project.updated_at` is never maintained | column is dead weight | — |

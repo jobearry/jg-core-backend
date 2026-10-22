@@ -38,8 +38,12 @@ JWT containing one `role=User` claim. There is no user store and no `sub` claim.
 
 - `UseHttpsRedirection()` is enabled. In containers, TLS terminates at the edge;
   do not remove the redirect without replacing it.
-- CORS is an explicit allow-list in `ConfigurationSettings.AddCorsOrigins`.
+- CORS is an explicit allow-list in configuration (`Cors:AllowedOrigins`, and
+  `Cors:DevelopmentOrigins` for localhost, which is applied only in Development).
   Adding an origin is a security review item.
+- `AllowCredentials()` is not enabled. Bearer tokens use the `Authorization` header, which
+  CORS treats as an ordinary header; re-enabling it is only justified by a cookie-based
+  flow, and that is a security review item.
 - Never combine `AllowAnyOrigin()` with `AllowCredentials()`.
 
 ## 4. Error responses

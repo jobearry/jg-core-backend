@@ -15,9 +15,9 @@ public class EfPortfolioRecommendationRepository:BasePortfolioRepository<Recomme
     public EfPortfolioRecommendationRepository(PortfolioContext context, IMapper mapper)
     : base(context, mapper) { }
 
-    public async Task<List<Recommendation>> GetAllRecommendationsAsync()
+    public async Task<List<Recommendation>> GetAllRecommendationsAsync(CancellationToken cancellationToken)
     {
-        var recommendationEntities = await _dbSet.AsNoTracking().ToListAsync();
+        var recommendationEntities = await _dbSet.AsNoTracking().ToListAsync(cancellationToken);
         return _mapper.Map<List<Recommendation>>(recommendationEntities);
     }
 }

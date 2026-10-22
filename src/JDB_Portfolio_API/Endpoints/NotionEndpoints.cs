@@ -1,4 +1,5 @@
-﻿using JDB_Portfolio_API.Application.Services;
+﻿using JDB_Portfolio_API.Application.DTO;
+using JDB_Portfolio_API.Application.Services;
 
 namespace JDB_Portfolio_API.Endpoints;
 
@@ -6,29 +7,32 @@ public static class NotionEndpoints
 {
     public static void MapNotionEndpoints(this IEndpointRouteBuilder routes)
     {
-        routes.MapGet("api/v1/notion/{pageId}", async (PortfolioService portfolioService, string pageId) =>
-        {
-            var result = await portfolioService.GetNotionPageAsync(pageId);
-            if (!result.IsSuccess)
-            {
-                return Results.Problem(result.Error, statusCode: 502);
-            }
-            return Results.Ok(result.Value);
-        })
-        .WithTags("ExternalServices - Notion");
-        // .RequireAuthorization();
-            
+        routes.MapGet("notion/{pageId}", async (
+            PortfolioService portfolioService,
+            string pageId,
+            CancellationToken cancellationToken) =>
+            (await portfolioService.GetNotionPageAsync(pageId, cancellationToken)).ToHttpResult())
+        .WithName("GetNotionPage")
+        .WithTags("ExternalServices - Notion")
+        .Produces<List<NotionPageDto>>(StatusCodes.Status200OK)
+        .ProducesProblem(StatusCodes.Status502BadGateway);
 
-        routes.MapGet("api/v1/notion/{pageId}/count", async (PortfolioService portfolioService, string pageId) =>
+
+        routes.MapGet("notion/{pageId}/count", async (
+            PortfolioService portfolioService,
+            string pageId,
+            CancellationToken cancellationToken) =>
         {
-            var result = await portfolioService.GetNotionPageAsync(pageId);
+            var result = await portfolioService.GetNotionPageAsync(pageId, cancellationToken);
             if (!result.IsSuccess)
             {
-                return Results.Problem(result.Error, statusCode: 502);
+                return result.ToHttpResult();
             }
             return Results.Ok(result.Value!.Count);
         })
-        .WithTags("ExternalServices - Notion");
-        // .RequireAuthorization();
+        .WithName("GetNotionPageCount")
+        .WithTags("ExternalServices - Notion")
+        .Produces<int>(StatusCodes.Status200OK)
+        .ProducesProblem(StatusCodes.Status502BadGateway);
     }
 }

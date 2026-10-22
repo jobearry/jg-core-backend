@@ -112,7 +112,12 @@ curl -s "http://localhost:5254/api/v1/<route>" | jq
 ## Anti-patterns to avoid
 
 - Returning `result.Value` without checking `IsSuccess`.
-- `statusCode: 502`.
+- Choosing a status code in the endpoint. Call `result.ToHttpResult()` — `ApiResult.cs`
+  is the only place that maps an `ErrorKind` to a status.
+- `statusCode: 502`. A database failure is `503`, an upstream failure is `502`, a bug is
+  `500`.
+- Adding a route prefix by hand — the pattern is relative to the `api/v1` group in
+  `Program.cs`.
 - Adding the method to `IRepository<T>` "for reuse" — generic repositories
   attract unrelated queries.
 - Putting `[FromServices]` on parameters.

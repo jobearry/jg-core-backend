@@ -16,7 +16,7 @@ public class EfPortfolioExperienceRepository: BasePortfolioRepository<Experience
     public EfPortfolioExperienceRepository(PortfolioContext context, IMapper mapper)
         : base(context, mapper) { }
 
-    public async Task<List<Experience>> GetAllExperienceWithProjectsAsync()
+    public async Task<List<Experience>> GetAllExperienceWithProjectsAsync(CancellationToken cancellationToken)
     {
         var experienceEntities = await _dbSet.AsNoTracking()
                                              .AsSplitQuery()
@@ -24,7 +24,7 @@ public class EfPortfolioExperienceRepository: BasePortfolioRepository<Experience
                                              .ThenInclude(e => e.ProjectTechStacks)
                                              .ThenInclude(e => e.TechStack)
                                              .ThenInclude(e => e.TechStackCategory)
-                                             .ToListAsync();
+                                             .ToListAsync(cancellationToken);
 
         return _mapper.Map<List<Experience>>(experienceEntities);
     }

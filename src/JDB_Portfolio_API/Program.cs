@@ -1,5 +1,6 @@
 using JDB_Portfolio_API;
 using JDB_Portfolio_API.Endpoints;
+using JDB_Portfolio_API.ErrorHandling;
 using JDB_Portfolio_API.Persistence.Contexts;
 using Microsoft.EntityFrameworkCore;
 
@@ -16,7 +17,12 @@ builder.Services.AddDatabase(builder.Configuration);
 builder.Services.AddExternalService(builder.Configuration);
 builder.Services.AddAuthentication(builder.Configuration);
 builder.Services.AddMapper(builder.Configuration);
-builder.Services.AddCorsOrigins();
+builder.Services.AddCorsOrigins(builder.Configuration, builder.Environment);
+
+// Anything that escapes an endpoint — including exceptions thrown outside a service,
+// which plan 2.2 could not classify — becomes the same application/problem+json shape.
+builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
+builder.Services.AddProblemDetails();
 
 var app = builder.Build();
 
@@ -29,7 +35,9 @@ if (app.Configuration.GetValue("Database:AutoMigrate", true))
     dbContext.Database.Migrate();
 }
 
-app.UseCors("AllowSPA");
+// First in the pipeline, so it sees everything the rest of the pipeline throws.
+app.UseExceptionHandler();
+app.UseCors(ConfigurationSettings.SpaCorsPolicy);
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
@@ -46,15 +54,31 @@ app.UseAuthorization();
 
 app.MapControllers();
 
+// One prefix, declared once. Endpoint files declare only the segment below it, so a
+// future /api/v2 is one edit here instead of a hunt through seven files.
+//
+// The portfolio read endpoints are deliberately anonymous: they feed a public CV site.
+// Only /auth/me requires a token. Adding .RequireAuthorization() to this group is a
+// breaking change for the frontend, not a hardening tweak — see docs/api-reference.md.
+var api = app.MapGroup("api/v1");
+
 //endpoints
-app.MapAuthEndpoints();
-app.MapNotionEndpoints();
+api.MapAuthEndpoints();
+api.MapNotionEndpoints();
 
 //portfolio endpoints
-app.MapPortfolioExperienceEndpoints();
-app.MapPortfolioProjectEndpoints();
-app.MapPortfolioRecommendationEndpoints();
-app.MapPortfolioSkillEndpoints();
-app.MapOverview();
+api.MapPortfolioExperienceEndpoints();
+api.MapPortfolioProjectEndpoints();
+api.MapPortfolioRecommendationEndpoints();
+api.MapPortfolioSkillEndpoints();
+api.MapOverview();
 
 app.Run();
+
+/// <summary>
+/// Exposed so that <c>WebApplicationFactory&lt;Program&gt;</c> in
+/// <c>tests/JDB_Portfolio_API.Api.Tests</c> can boot the real application. Top-level
+/// statements generate an internal <c>Program</c> class; this makes it public without
+/// adding any code to the startup path.
+/// </summary>
+public partial class Program { }

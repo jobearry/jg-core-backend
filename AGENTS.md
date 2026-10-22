@@ -23,9 +23,9 @@ Current status:
 - DDD/clean-architecture refactor is **in progress**, not complete. Do not treat
   the current code as the target design — see
   [`.github/plans/001-clean-architecture-refactor.md`](.github/plans/001-clean-architecture-refactor.md).
-- **Tests exist but are thin.** Three xUnit projects cover the Domain value objects,
-  the application services and the AutoMapper profile (32 tests). There is no
-  endpoint test project yet.
+- **Tests exist but are thin.** Four xUnit projects cover the Domain value objects,
+  the application services, the DTO mapping, the AutoMapper profile and the endpoint
+  contracts (112 tests).
 
 ---
 
@@ -67,7 +67,8 @@ Endpoint (minimal API)
     → Domain repository port   (IPortfolio*Repository)
       → EF Core query          (PortfolioContext)
         → AutoMapper           (Persistence entity → Domain entity)
-  → Results.Ok(domain entity)  ← domain leaks to the wire; DTOs are planned
+    → PortfolioDtoMapper       (Domain entity → DTO)
+  → Results.Ok(DTO)            ← the domain stops here
 ```
 
 ---
@@ -112,8 +113,9 @@ src/
   JDB_Portfolio_API/             Endpoints/ Program.cs ConfigurationSettings.cs
 tests/
   JDB_Portfolio_API.Domain.Tests/       value objects, entity invariants
-  JDB_Portfolio_API.Application.Tests/  services with hand-rolled fakes
+  JDB_Portfolio_API.Application.Tests/  services with hand-rolled fakes, DTO mapping
   JDB_Portfolio_API.Persistence.Tests/  the AutoMapper profile
+  JDB_Portfolio_API.Api.Tests/          endpoint contracts via WebApplicationFactory
 docker/                          Dockerfile, docker-compose.yml, .env.example
 ```
 
@@ -154,6 +156,7 @@ Required configuration (user-secrets in dev, env vars in prod):
 | `Jwt:Key` | ≥ 32 bytes; also the `/auth/login` shared secret |
 | `Jwt:Issuer`, `Jwt:Audience`, `Jwt:ExpirationInMinutes` | token settings |
 | `Notion:Token`, `Notion:Version` | Notion integration |
+| `Cors:AllowedOrigins`, `Cors:DevelopmentOrigins` | browser origins; the second is applied in Development only |
 
 ---
 
@@ -165,8 +168,9 @@ Each rule has a full explanation in `.github/rules/`.
    [architecture.md](.github/rules/architecture.md)
 2. **Domain purity** — no EF attributes, no `partial`, no `= null!`, no
    `CreatedAt`/`UpdatedAt`, no vendor types in Domain.
-3. **Endpoints return DTOs, not domain entities.** This is the target; the
-   current code violates it and is being fixed (plan 2.1).
+3. **Endpoints return DTOs, not domain entities.** Satisfied as of plan 2.1
+   (2026-10-22). No `Domain.Entities` or `Domain.ValueObjects` type may appear in
+   an endpoint signature or a response.
 4. **One repository per aggregate, one write entry point per aggregate.**
 5. **Value objects are `record`s with value equality and validating
    constructors.** No public setters on entities.
@@ -210,22 +214,32 @@ Each rule has a full explanation in `.github/rules/`.
 - Domain entities are anemic: public setters, `partial`, `CreatedAt` on
   `TechStack`, no invariants on `Project`/`Recommendation.Description`.
 - Value objects (`Role`, `Company`, `Period`) are classes → reference equality.
-- Domain entities are serialized directly to clients (no DTO boundary).
-- All errors are `502` with a string.
-- `Period.FinishedAt` is always `null` after mapping → past roles report a
-  duration that grows daily. (The value object itself is correct; the mapping
-  is not.)
-- No logging, no global exception handler, zero cancellation.
-- Auth is effectively decorative: `RequireAuthorization()` is commented out on
-  every portfolio and Notion endpoint, and absent entirely from `/skill`.
+- All errors used to be `502` with a leaked exception message; they are now typed
+  (`ErrorKind`) and mapped to `404/400/401/409/503/502/500` with a machine-readable
+  `code`, in one place (`Endpoints/ApiResult.cs`).
+- `Period.FinishedAt` is `null` in the mapping only when the column is `null`,
+  which correctly means the role is ongoing — **but the existing rows have not
+  been backfilled**, so past roles still report a growing duration.
+- No structured logging sink and no correlation id beyond `traceId`; failures do reach
+  `ILogger` now (2.4), and a global handler turns stray exceptions into
+  `ProblemDetails`.
+- Auth is a **service-token flow, not user authentication**: one shared key, a `sub`
+  of `portfolio-api`, and only `/auth/me` requires a token. The portfolio read
+  endpoints are anonymous **on purpose** (they feed a public CV site). Adding
+  `RequireAuthorization()` to them is a breaking change, not a hardening tweak.
 
 Recently fixed: the `Persistence` → `Application` dependency violation, the
 dead code, the duplicated repository fields, the untracked read queries, the
-hardcoded user-secrets GUID, and the un-gated startup migration. The
-`finished_at` column and its mapping were added, so a past role can report a
+hardcoded user-secrets GUID, the un-gated startup migration, and **the DTO
+boundary** — endpoints return DTOs, value objects are flattened, and
+`createdAt`/`experienceId`/the `TimeSpan` duration no longer reach the client.
+The `finished_at` column and its mapping were added, so a past role can report a
 frozen duration — **but the existing rows still need their end dates
-backfilled**. Tests now exist but are thin — there is no endpoint test project
-yet.
+backfilled**. Errors are typed and mapped to the right status in one place;
+`CancellationToken` runs end-to-end; unhandled exceptions become `ProblemDetails`;
+services log their failures. The CORS allow-list is configuration now, with localhost
+gated to Development, no credentials flag, and only `GET`/`POST`. Tests went from none
+to 112, including endpoint contracts and the CORS policy.
 
 Full reasoning and verification steps:
 [`.github/plans/001-clean-architecture-refactor.md`](.github/plans/001-clean-architecture-refactor.md).

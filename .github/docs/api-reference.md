@@ -9,12 +9,12 @@ OpenAPI: `/swagger` (Development only) · Document: `v1/swagger.json`
 |---|---|---|---|---|
 | `POST` | `/api/v1/auth/login` | none | body `{ "key": "..." }` | `{ "token": "<jwt>" }` |
 | `GET` | `/api/v1/auth/me` | **JWT** | — | claims grouped by type |
-| `GET` | `/api/v1/experience` | none* | `includeProjects` (bool, default `false`) | `Experience[]` |
-| `GET` | `/api/v1/project` | none* | `includeTools` (bool, default `false`) | `Project[]` |
-| `GET` | `/api/v1/recommendation` | none* | — | `Recommendation[]` |
-| `GET` | `/api/v1/skill` | none* | — | `TechStack[]` |
-| `GET` | `/api/v1/overview` | none* | — | `DashboardItem[]` |
-| `GET` | `/api/v1/notion/{pageId}` | none* | path `pageId` | `NotionPage[]` |
+| `GET` | `/api/v1/experience` | none* | `includeProjects` (bool, default `false`) | `ExperienceDto[]` |
+| `GET` | `/api/v1/project` | none* | `includeTools` (bool, default `false`) | `ProjectDto[]` |
+| `GET` | `/api/v1/recommendation` | none* | — | `RecommendationDto[]` |
+| `GET` | `/api/v1/skill` | none* | — | `TechStackDto[]` |
+| `GET` | `/api/v1/overview` | none* | — | `DashboardItemDto[]` |
+| `GET` | `/api/v1/notion/{pageId}` | none* | path `pageId` | `NotionPageDto[]` |
 | `GET` | `/api/v1/notion/{pageId}/count` | none* | path `pageId` | `number` |
 
 \* `RequireAuthorization()` is present but **commented out** on all portfolio and
@@ -25,10 +25,18 @@ convention for consistency; a rename is a breaking change.
 
 ## 2. Authentication
 
+**The portfolio read endpoints are public by design.** They feed a public CV site, so
+no `RequireAuthorization()` is applied anywhere except `/auth/me`. This is deliberate,
+not an oversight — do not "harden" it by uncommenting something without coordinating a
+frontend change.
+
+What exists is a **service-token flow**, not a user login: one shared key, no user store,
+and a token that says so.
+
 ### `POST /api/v1/auth/login`
 
 Compares `key` against `Jwt:Key` in constant time. On success returns a JWT with
-a single `role=User` claim, valid for `Jwt:ExpirationInMinutes`.
+`sub=portfolio-api` and `role=User`, valid for `Jwt:ExpirationInMinutes`.
 
 ```http
 POST /api/v1/auth/login
@@ -41,54 +49,63 @@ Content-Type: application/json
 { "token": "eyJhbGciOiJIUzI1NiIs..." }
 ```
 
-| Failure | Status |
-|---|---|
-| key mismatch | `401` |
-| configured key < 32 bytes | `500` (server misconfiguration) |
+| Failure | Status | `code` |
+|---|---|---|
+| blank key | `400` | `validation_failed` |
+| key mismatch | `401` | `invalid_credentials` |
+| configured key < 32 bytes | `500` | `server_misconfigured` |
 
-There is no `sub` claim, so `User.Identity.Name` is null. This is a service
-token, not user authentication.
+The wrong-key message never says which part was wrong, and the length check runs only
+*after* the key matches, so an anonymous caller cannot learn the length of the secret
+from the response.
+
+`sub` is the literal `portfolio-api`: the token represents the service, because there is
+one shared key rather than a person. `JwtBearer` is configured with
+`NameClaimType = "sub"` and `MapInboundClaims = false`, so `User.Identity.Name` is
+populated.
 
 ### `GET /api/v1/auth/me`
 
-Returns claims from the presented token, grouped by claim type:
+Requires a token. Returns claims from the presented token, grouped by claim type:
 
 ```json
-{ "http://schemas.microsoft.com/ws/2008/06/identity/claims/role": ["User"] }
+{
+  "sub": ["portfolio-api"],
+  "role": ["User"]
+}
 ```
 
 ## 3. Portfolio endpoints
 
+Responses are **DTOs** (`src/JDB_Portfolio_API.Application/DTO`), not domain
+entities (plan 2.1, ADR-0004). The domain model can now change without changing
+the wire contract.
+
 ### `GET /api/v1/experience?includeProjects=false`
 
 Returns roles, newest id first. With `includeProjects=true` it eagerly loads
-projects and their tech stacks (4-level include).
-
-Response item shape **today** (domain entity serialized directly):
+projects and their tech stacks.
 
 ```json
 [
   {
-    "id": 3,
-    "company": { "name": "Acme Corp" },
-    "duration": {
-      "startedAt": "2023-01-15T00:00:00",
-      "finishedAt": null,
-      "duration": "1234.05:06:07"
-    },
-    "description": null,
-    "role": { "value": "Senior Developer" },
-    "responsibility": null,
-    "type": null,
+    "id": 4,
+    "company": "Applied ICT Inc.",
+    "role": "Software Engineer",
+    "startedAt": "2026-06-25T00:00:00",
+    "finishedAt": null,
+    "durationMonths": 3,
+    "description": "Transitioned into Software Engineer role",
+    "responsibility": "Collaborate and/or maintain …",
+    "type": "Corporate",
     "projects": [
       {
         "id": 7,
-        "experienceId": 3,
         "projectName": "Portfolio API",
         "description": "…",
         "contribution": "…",
         "techStacks": [
-          { "id": 2, "stackName": "Angular", "imgSrc": "…", "createdAt": "…", "category": "Frontend" }
+          { "id": 2, "stackName": "Angular", "imgSrc": "…", "category": "Frontend" }
         ]
       }
     ]
@@ -98,16 +115,24 @@ Response item shape **today** (domain entity serialized directly):
 
 Notes:
 
+- `company` and `role` are **strings**. The value objects are flattened at the
+  boundary; the wire no longer carries `{ "name": … }` or `{ "value": … }`.
+- `role` is **nullable**. `"role": null` means the role is deliberately not
+  declared — it is not an error, and it does not affect the rest of the list.
+  (Before 2026-10-22 a blank role threw inside the mapper and returned `500` for
+  every experience; see plan item 1.5.)
+- `durationMonths` is whole **calendar** months, `int?`:
+  - between `startedAt` and `finishedAt` when the role has ended,
+  - between `startedAt` and *now* while the role is ongoing,
+  - `null` when `startedAt` is unknown.
+  A partial month at the end does not count, so `2020-01-31 → 2020-02-28` is `0`.
+  It replaces the old `duration` field, which serialized a `TimeSpan` as
+  `"1234.05:06:07"`.
 - `finishedAt` is `null` **only for a role that is still ongoing**. A role that has
-  ended carries its end date, and `duration` is then measured against it rather
-  than against today. The column was added on 2026-10-22 (migration
+  ended carries its end date. The column was added on 2026-10-22 (migration
   `20261022064321_AddExperienceFinishedAt`); the existing rows still need their
-  end dates backfilled.
-- Value objects appear as objects (`{ "value": … }`, `{ "name": … }`) — a direct
-  symptom of having no DTO layer.
-- `TimeSpan` serializes as a `c`-format string (`"1234.05:06:07"`).
-- `description`, `responsibility`, `type` are mapped by name and are populated —
-  covered by `Map_ExperienceEntity_To_Experience_PopulatesDescriptionResponsibilityAndType`.
+  end dates backfilled, which is why past roles currently show a growing
+  `durationMonths`.
 
 ### `GET /api/v1/project?includeTools=false`
 
@@ -116,9 +141,15 @@ and their categories.
 
 Response item: `{ id, projectName, description, contribution, techStacks[] }`.
 
-The `period` key is **gone** (2026-10-22, plan 1.4). `Project.Period` was a domain
-property with no column and no mapping, so it was always `null`; a project has no
-dates of its own — those belong to the role it sits under.
+Two keys are deliberately absent:
+
+- **`experienceId`** (removed 2026-10-22): a project is its own aggregate
+  (ADR-0003, decision D3), and the link back to the role is internal.
+- **`period`** (removed 2026-10-22, plan 1.4): it had no column and no mapping,
+  so it was always `null`. A project has no dates of its own — those belong to
+  the role it sits under.
+
+`techStacks[]` items are `{ id, stackName, imgSrc, category }` — no `createdAt`.
 
 ### `GET /api/v1/recommendation`
 
@@ -130,11 +161,15 @@ Returns testimonials ordered by id ascending.
     "id": 1,
     "personName": "Jane Doe",
     "description": "Great to work with.",
-    "careerPosition": { "value": "Engineering Manager" },
+    "careerPosition": "Engineering Manager",
     "postedAt": "2024-06-01T00:00:00"
   }
 ]
 ```
+
+`careerPosition` is a **string** and is **nullable**. `"careerPosition": null`
+means the recommender does not want their title published; it is a supported
+state, not missing data.
 
 ### `GET /api/v1/skill`
 
@@ -142,9 +177,12 @@ Returns tech stacks ordered by id ascending, including category name.
 
 ```json
 [
-  { "id": 1, "stackName": "C#", "imgSrc": "…", "createdAt": "…", "category": "Backend" }
+  { "id": 1, "stackName": "C#", "imgSrc": "…", "category": "Backend" }
 ]
 ```
+
+`createdAt` is **gone** (plan 2.1) — a persistence audit column no client asked
+for.
 
 **This endpoint does not check `IsSuccess`** — on failure it returns `200` with
 an empty body. Plan item 2.5.
@@ -152,7 +190,7 @@ an empty body. Plan item 2.5.
 ### `GET /api/v1/overview`
 
 Returns three dashboard widgets. Copy is hardcoded in
-`PortfolioService.GetOverview`.
+`PortfolioService.GetOverview`. Unchanged by the DTO work.
 
 ```json
 [
@@ -163,7 +201,31 @@ Returns three dashboard widgets. Copy is hardcoded in
 ```
 
 The three counts are fetched sequentially — three round trips that could be
-parallel or a single query.
+parallel or a single query. A fourth Notion tile is planned as item 2.6.
+
+### Breaking change — 2026-10-22 (plan 2.1)
+
+Every change a client has to absorb, in one place:
+
+| Key | Before | After | Endpoint |
+|---|---|---|---|
+| `company` | `{ "name": "…" }` | `"Applied ICT Inc."` | `/experience` |
+| `role` | `{ "value": "…" }` | `"Software Engineer"` | `/experience` |
+| `duration.startedAt` | nested in `duration` | **`startedAt`**, top level | `/experience` |
+| `duration.finishedAt` | nested in `duration` | **`finishedAt`**, top level | `/experience` |
+| `duration.duration` | `"1231.05:06:07"` | **removed** → use `durationMonths` | `/experience` |
+| `durationMonths` | — | **new**, `int?` calendar months | `/experience` |
+| `experienceId` | `3` | **removed** | `/project`, nested `projects[]` |
+| `period` | `null` | **removed** | `/project` |
+| `techStacks[].createdAt` | ISO timestamp | **removed** | `/project` |
+| `careerPosition` | `{ "value": "…" }` | `"Engineer"` | `/recommendation` |
+| `createdAt` | ISO timestamp | **removed** | `/skill` |
+
+Field **names** on `/overview` and `/notion/{pageId}` are unchanged.
+
+Nothing became non-nullable: every field that was previously absent or `null` is
+still optional. The disruptive part is the `duration` object being flattened.
+
 
 ## 4. Notion endpoints
 
@@ -183,50 +245,96 @@ with an optional `<mention-date start="…"/>`.
 
 Same call, returns just the array length as a bare number.
 
-Both endpoints fail with `502` if Notion errors or the parse throws.
+Both endpoints fail with `502` if Notion errors or the parse throws — with
+`code` set to `notion_unavailable` or `notion_invalid_response` (see §5).
 
 ## 5. Error behaviour
 
-Every failure path does:
-
-```csharp
-return Results.Problem(result.Error, statusCode: 502);
-```
-
-So the client receives:
+Every failure is a `ProblemDetails` produced in exactly one place —
+`Endpoints/ApiResult.cs`. Endpoints no longer pick a status code; they call
+`result.ToHttpResult()`. The response carries a **machine-readable `code`**
+alongside the human-readable `detail`:
 
 ```json
 {
-  "type": "https://tools.ietf.org/html/rfc9110#section-15.6.1",
-  "title": "Bad Gateway",
-  "status": 502,
-  "detail": "Failed to get portfolio experience content: <exception message>",
+  "type": "https://tools.ietf.org/html/rfc9110#section-15.6.11",
+  "title": "Service temporarily unavailable",
+  "status": 503,
+  "detail": "Failed to get portfolio experience content. Please try again later.",
+  "code": "database_unavailable",
   "traceId": "…"
 }
 ```
 
-Problems with this:
+Clients should branch on `status`, and use `code` to tell two failures with the
+same status apart.
 
-1. `502` is wrong for a database failure (`500`/`503`) and for "not found"
-   (`404`).
-2. The exception message is leaked to the client.
-3. There is no machine-readable error code.
-4. Unhandled exceptions (e.g. a mapping failure) bypass this entirely and
-   produce a bare `500`.
+### Status map
 
-**Status change (2026-10-22).** The four portfolio services now share
-`PortfolioServiceBase.ExecuteAsync`, which catches everything except
-cancellation. Previously the catch was `catch (HttpRequestException)`, which a
-database call never throws — so a database outage escaped as an unhandled `500`
-and the `502` path above was effectively dead for the portfolio endpoints. The
-`502` shape is now genuinely reachable, and the message format is unchanged.
+| `ErrorKind` | Status | `code` | When |
+|---|---|---|---|
+| `NotFound` | `404` | `not_found` | a record that was asked for does not exist |
+| `Validation` | `400` | `validation_failed` | the caller sent something invalid |
+| `Unauthorized` | `401` | `invalid_credentials`, `unauthorized` | a missing or wrong credential |
+| `Conflict` | `409` | `conflict` | the request conflicts with current state |
+| `Infrastructure` | `503` | `database_unavailable` | our own PostgreSQL is unreachable |
+| `Upstream` | `502` | `notion_unavailable`, `notion_invalid_response` | Notion failed, or returned something unreadable |
+| `Unexpected` | `500` | `unexpected_error` | a bug |
 
-Target: typed error kinds mapped in one place to `ProblemDetails` with correct
-status codes (plan 2.2).
+Why the two dependency kinds are different statuses: a database outage is
+**ours**, and `503` tells a client to retry later. Notion failing is an
+**upstream** problem, and `502 Bad Gateway` is literally what that code means.
+Collapsing them would lose the one distinction that changes a client's reaction.
+
+`Unexpected` is deliberately not `503`. A `NullReferenceException` is a defect;
+reporting it as an outage would teach clients to retry something that can never
+succeed.
+
+### Exception messages are not published
+
+`detail` never contains `exception.Message`. Npgsql messages can include host
+names, database names, usernames and SQL. The client gets a stable sentence plus
+a code; the diagnostic detail goes to the application log instead.
+
+This is a **change** from the previous behaviour, where the raw exception text
+was returned to the caller.
+
+### Unhandled exceptions
+
+Anything that escapes an endpoint — model binding, dependency injection, a bug the
+services did not classify — is caught by `GlobalExceptionHandler` and answered with
+the same shape and the same `500 → unexpected_error`. There is no path that returns a
+bodyless 500.
+
+One exception: if the **client disconnected** before the response was ready,
+`OperationCanceledException` is answered with `499 Client Closed Request` and logged at
+Debug, not Error. A client navigating away is not a server failure.
+
+The exception detail is written to the application log, where it belongs.
 
 ## 6. CORS
 
-Allowed origins: `http://localhost:4200`,
-`https://jgolimlim-portfolio.vercel.app`, `https://jgolimlim-web.vercel.app`.
-Any method, any header, credentials allowed. Adding an origin is a security
-change — ask first.
+An explicit allow-list, configured rather than hardcoded:
+
+| Key | Applied when | Default |
+|---|---|---|
+| `Cors:AllowedOrigins` | every environment | `https://jgolimlim-portfolio.vercel.app`, `https://jgolimlim-web.vercel.app` |
+| `Cors:DevelopmentOrigins` | `Development` only | `http://localhost:4200` |
+
+A new domain, or a Vercel preview deployment, is an environment variable —
+`Cors__AllowedOrigins__2=https://my-branch-git-team.vercel.app` — not a code edit and a
+redeploy. Adding an origin is still a security change: ask first.
+
+The policy is `GET, POST` and `Content-Type, Authorization`. There is **no
+`AllowCredentials()`**: bearer tokens travel in the `Authorization` header, which CORS
+treats as an ordinary request header, and nothing in this API sets a cookie. If the
+frontend ever moves to cookie auth or calls with `withCredentials: true`, that flag has
+to come back in the same change.
+
+Allowing localhost only in Development is deliberate: otherwise any page served from a
+local port could read the deployed API. The tests in `CorsPolicyTests` pin both that and
+the absence of the credentials flag.
+
+**CORS is not access control.** It tells *browsers* whether JS from an origin may read a
+response; `curl`, Postman and server-side clients ignore it entirely. What keeps the
+portfolio data public is the anonymity decision in §2, not this list.

@@ -117,8 +117,10 @@ sequenceDiagram
 Two things to notice:
 
 1. There is **no DTO step** — the domain object is the response.
-2. `Result<T>` is produced by a `try/catch` in the service, and the endpoint maps
-   any failure to `502`.
+2. `Result<T>` is produced by a `try/catch` in the service. Since plan 2.2 the
+   failure is a typed `Error` and `Endpoints/ApiResult.cs` maps its kind to a
+   status code (`503` for the database, `502` for Notion, `500` for a bug) in one
+   place. Before that, every endpoint hardcoded `502`.
 
 ### Target
 
@@ -139,17 +141,18 @@ builder.Services
   .AddSwaggerConfig(...)     → Swashbuckle, JWT security scheme
   .AddDatabase(...)          → DbContext + ALL repositories/services (misfiled)
   .AddExternalService(...)   → Notion HttpClient + INotionService
-  .AddAuthentication(...)    → JwtOptions + JwtBearer + AddAuthorization
+  .AddAuthentication(...)    → JwtOptions + JwtBearer + AddAuthorization + IAuthTokenService
   .AddMapper(...)            → AutoMapper profile
-  .AddCorsOrigins();         → "AllowSPA" policy
+  .AddCorsOrigins(configuration, environment)  → "AllowSPA" policy
 
 app
+  .UseExceptionHandler()     → ProblemDetails for anything that escapes
   .UseCors("AllowSPA")
   .UseHttpsRedirection()
   .UseAuthentication()
   .UseAuthorization()
-  .MapAuthEndpoints() / .MapNotionEndpoints() / .MapPortfolio*Endpoints()
-  .MapOverview()
+  app.MapGroup("api/v1") → .MapAuthEndpoints() / .MapNotionEndpoints() /
+                           .MapPortfolio*Endpoints() / .MapOverview()
 ```
 
 Issues:
@@ -164,10 +167,10 @@ Issues:
 
 | Concern | Today | Gap |
 |---|---|---|
-| Error handling | `try/catch` per service → `Result<T>` → `502` | no global handler, wrong status codes, wrong exception type |
-| Logging | default ASP.NET request logs | no `ILogger` in services, no context on failure |
+| Error handling | `try/catch` per service → `Result<T>` with a typed `Error` → one mapper in `ApiResult.cs` → `503`/`502`/`500` | no global handler for exceptions thrown outside a service, `/skill` ignores `IsSuccess` |
+| Logging | `ILogger` in the Application services — warning for a dependency failure, error for a bug — plus the default ASP.NET request log | no structured sink, no correlation id; the provider's exception detail lives only in the log |
 | Validation | none | `AuthDto` accepts anything |
-| Cancellation | none | no `CancellationToken` anywhere |
+| Cancellation | `CancellationToken` is a required parameter from endpoint → service → repository → `ToListAsync(ct)` / `HttpClient.GetAsync(ct)` | — |
 | Mapping | AutoMapper, entity → domain | no DTO mapping, broken reverse mappings |
 | Auth | JWT issued, not enforced | `RequireAuthorization()` commented out |
 | Observability | none | no health check, no metrics, no tracing |

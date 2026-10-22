@@ -9,6 +9,11 @@
   <ItemGroup>
     <PackageReference Include="AutoMapper" Version="16.2.0" />
     <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.10" />
+    <!-- Npgsql 10.0.3 pulls EF.Relational 10.0.4, while everything else here is
+         10.0.10. That skew produces MSB3277 in any project that references this one
+         (KI-039). Pinning Relational to the version the solution already uses keeps
+         the graph consistent; it is a version pin, not a new dependency. -->
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="10.0.10" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.10">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>

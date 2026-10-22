@@ -55,6 +55,13 @@ string is required just to boot. Set `Database__AutoMigrate=false` to skip it.
 | `Jwt:ExpirationInMinutes` | default 60 | `Jwt__ExpirationInMinutes` | optional |
 | `Notion:Token` | user-secrets | `Notion__Token` | App Service setting |
 | `Notion:Version` | default `2026-03-11` | `Notion__Version` | optional |
+| `Cors:AllowedOrigins` | `appsettings.json` | `Cors__AllowedOrigins__0`, `__1`, … | App Service setting |
+| `Cors:DevelopmentOrigins` | `appsettings.json` | applied only when `ASPNETCORE_ENVIRONMENT=Development` | ignored |
+
+Origins are configuration so that a new domain or a Vercel preview deployment
+(`https://demo-git-my-branch-team.vercel.app`) is an added setting rather than a code
+change and a redeploy. Adding one is still a security review item — see
+`docs/api-reference.md` §6.
 
 Note: `docker/.env.example` sets `Jwt__ExpirationInMinutes`, matching the key
 the app reads.
@@ -122,10 +129,12 @@ should not set it.
 | `dotnet ef` says "command not found" | the tool manifest was not restored | `dotnet tool restore` (from the repo root) |
 | `dotnet ef` sees a null connection string | no user-secrets id or connection string was supplied | set `JDB_USER_SECRETS_ID` and `ConnectionStrings__JDBConnection`, or use the startup project |
 | `/auth/login` returns 401 with the right key | whitespace, or the key was rotated | re-read `Jwt:Key` |
-| `/auth/me` returns `{}` | token has no `sub`, only a role claim | expected |
+| `/auth/login` returns 500 `server_misconfigured` | `Jwt:Key` is shorter than 32 bytes | HS256 needs a 256-bit key |
+| `/auth/me` returns 401 | missing or expired token, or the signing key changed | re-issue from `/auth/login` |
 | Collection endpoint returns 500 after a data import | an empty-string `role`/`career_position` | see `known-issues.md` |
-| `/skill` returns 200 with an empty body | missing `IsSuccess` check | known issue |
-| Every failure returns 502 | hardcoded `statusCode: 502` | known issue |
+| Collection endpoint returns 503 `database_unavailable` | the database is unreachable | check the connection string and the DB; the real exception is in the log |
+| A failure returns 502 `notion_*` | Notion is down, or returned something unreadable | distinguish by `code`; retry only `notion_unavailable` |
+| Browser reports a CORS error, `curl` works | the origin is not in `Cors:AllowedOrigins`, or it is a preview URL | add it as a setting; `Cors:DevelopmentOrigins` (localhost) applies only in Development |
 
 ## 7. Missing operational features
 

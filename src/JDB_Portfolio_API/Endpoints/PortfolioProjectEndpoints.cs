@@ -1,4 +1,5 @@
-﻿using JDB_Portfolio_API.Application.Services;
+﻿using JDB_Portfolio_API.Application.DTO;
+using JDB_Portfolio_API.Application.Services;
 using Microsoft.AspNetCore.Mvc;
 
 namespace JDB_Portfolio_API.Endpoints;
@@ -7,15 +8,14 @@ public static class PortfolioProjectEndpoints
 {
     public static void MapPortfolioProjectEndpoints(this IEndpointRouteBuilder routes)
     {
-        routes.MapGet("api/v1/project", async ([FromServices] PortfolioProjectService projectService, bool includeTools = false) =>
-        {
-            var result = await projectService.GetAllProjectsAsync(includeTools);
-            if (!result.IsSuccess)
-            {
-                return Results.Problem(result.Error, statusCode: 502);
-            }
-            return Results.Ok(result.Value);
-        }).WithTags("Portfolio");
-        //.RequireAuthorization();
+        routes.MapGet("project", async (
+            [FromServices] PortfolioProjectService projectService,
+            CancellationToken cancellationToken,
+            bool includeTools = false) =>
+            (await projectService.GetAllProjectsAsync(includeTools, cancellationToken)).ToHttpResult())
+        .WithName("GetPortfolioProjects")
+        .WithTags("Portfolio")
+        .Produces<List<ProjectDto>>(StatusCodes.Status200OK)
+        .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
     }
 }

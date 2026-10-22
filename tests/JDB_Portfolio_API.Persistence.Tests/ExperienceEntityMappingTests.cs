@@ -23,7 +23,7 @@ public class ExperienceEntityMappingTests : MappingTestBase
 
         Assert.Equal(3, experience.Id);
         Assert.Equal("Acme Corp", experience.Company?.Name);
-        Assert.Equal("Senior Developer", experience.Role.Value);
+        Assert.Equal("Senior Developer", experience.Role?.Value);
         Assert.Equal(StartedAt, experience.Duration.StartedAt);
     }
 

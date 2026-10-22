@@ -1,6 +1,6 @@
 # Plan 001 — Clean Architecture & DDD Refactor
 
-**Status:** In progress — decisions D1–D4 resolved; items 1.1, 1.2, 1.3, 1.4, 1.6, 1.7, 1.8, 2.3 and three test projects are complete
+**Status:** In progress — decisions D1–D4 resolved; items 1.1–1.8, 2.1–2.5 and 2.7 complete, plus the four test projects and Batch 2 phase 1–3 (DTO boundary + endpoint contracts). **Part 1 and Part 2 are done** (2.6 is a feature, not debt); next is Part 3, starting with 3.1
 **Scope:** `src/JDB_Portfolio_API.Domain`, `.Application`, `.Persistence`, `.ExternalService`, `JDB_Portfolio_API` (Presentation), `tests/`
 **Goal:** Bring the solution in line with clean architecture dependency rules and turn the Domain project into an actual domain model rather than a set of persistence shapes.
 
@@ -267,9 +267,61 @@ grep -n "Period" src/JDB_Portfolio_API.Persistence/Profiles/PortfolioMappingProf
 
 **What**
 
-- [ ] `PortfolioMappingProfile.cs:125` — `new Role(src.CareerPosition)` throws on `""` / whitespace
-- [ ] Same for `new Role(src.Role)` at line 93 (`Experience`)
-- [ ] Add `CHECK (career_position <> '')` / `CHECK (role <> '')` + clean existing data, **or** handle defensively in the mapping
+- [x] `PortfolioMappingProfile.cs:125` — `new Role(src.CareerPosition)` throws on `""` / whitespace
+- [x] Same for `new Role(src.Role)` at line 93 (`Experience`)
+- [x] Add `CHECK (career_position <> '')` / `CHECK (role <> '')` + clean existing data, **or** handle defensively in the mapping
+
+> **Resolved 2026-10-22 — in the mapping, and *not* with a constraint.**
+>
+> The plan offered two options and recommended the `CHECK` constraint. **That
+> recommendation was wrong for this domain, and it was withdrawn mid-implementation
+> after the owner described the intent:**
+>
+> > "I treat it as some experience that I don't want to declare my role, and some
+> > recommendations don't want their career position to show."
+>
+> A blank role is therefore **not bad data — it is a legitimate state.** A
+> `CHECK (btrim(role) <> '')` would have made a state the owner actually wants
+> impossible to express. The migration
+> (`20261022095530_AddNonBlankRoleConstraints`) was generated, then removed with
+> `dotnet ef migrations remove` before it was ever applied. No schema change.
+>
+> **What was built instead.** Blank is *interpreted*, not rejected:
+>
+> | Layer | Before | After |
+> |---|---|---|
+> | `experience.role` / `recommendation.career_position` | `NOT NULL`, `''` allowed | unchanged — `''` is the sentinel for "not disclosed" |
+> | `Experience.Role` / `Recommendation.CareerPosition` | `Role`, non-nullable, threw on null | `Role?` — absence means undeclared |
+> | Mapping, entity → domain | `new Role(src.Role)` → `ArgumentException` | blank/whitespace → `null` (`ToRole`) |
+> | Mapping, domain → entity | assigned a `Role` to a `string` and relied on AutoMapper | `null` → `''` (`ToStoredRole`) |
+>
+> `Role` itself is **unchanged and still strict** — it never holds an empty string.
+> "Undeclared" is the *absence* of a `Role`, which is a different and more honest
+> thing than a `Role` whose text happens to be empty. That distinction is what the
+> constraint would have destroyed.
+>
+> **A second latent bug was found and fixed on the way:** `Recommendation →
+> RecommendationEntity` assigned `src.CareerPosition` (a `Role`) to a `string`
+> property and left AutoMapper to convert it — the same class of defect as KI-011.
+> It is now an explicit `MapFrom(ToStoredRole(...))`, with a test.
+>
+> **And a third:** `Role` was convention-mapped by name *after* `ConstructUsing`
+> had already set it, so the explicit value was overwritten and a blank row still
+> threw. Same pattern as KI-040; fixed with an explicit `Ignore` on both maps.
+>
+> **Tests** — `UndeclaredRoleMappingTests`, 8 cases written red first. The red run
+> was the real bug: `System.ArgumentException : Role value cannot be empty.` at
+> `Role.cs:13`. Covered: blank/whitespace/whitespace-with-tab → `null`, for both
+> `Experience` and `Recommendation`; `null` → `''` on the way back; and a declared
+> role surviving the round trip unchanged.
+>
+> **No migration is needed and none is pending.** The change is entirely in the
+> domain model and the mapping; the EF model — and therefore the snapshot — is
+> untouched, which is why `experience.role` can stay `NOT NULL`.
+>
+> **Wire effect:** a role that is not declared now serializes as `"role": null`
+> instead of throwing a 500. Verified against the local database: all five
+> portfolio endpoints return 200 and the four existing roles are unchanged.
 
 **Why**
 
@@ -416,11 +468,13 @@ Design changes. Recommended, but agree with each before implementing.
 
 **What**
 
-- [ ] Add `Application/DTO/`: `ExperienceDto`, `ProjectDto`, `TechStackDto`, `RecommendationDto`, `DashboardItemDto`, `NotionPageDto`
-- [ ] Map domain → DTO inside the application services (or introduce query handlers)
-- [ ] Do **not** expose `CreatedAt`, `UpdatedAt`, `ExperienceId`, or EF-shaped fields
-- [ ] Update all endpoints to return DTOs
-- [ ] Add `.Produces<T>(200)` / `.ProducesProblem(...)` / `.WithName(...)` to each endpoint
+- [x] Add `Application/DTO/`: `ExperienceDto`, `ProjectDto`, `TechStackDto`, `RecommendationDto`, `DashboardItemDto`, `NotionPageDto`
+- [x] Map domain → DTO inside the application services (or introduce query handlers)
+- [x] Do **not** expose `CreatedAt`, `UpdatedAt`, `ExperienceId`, or EF-shaped fields
+- [x] Update all endpoints to return DTOs
+- [x] Add `.Produces<T>(200)` / `.ProducesProblem(...)` / `.WithName(...)` to each endpoint
+
+> **Done (2026-10-22) — clean cutover, no compatibility window.**
 
 **Why**
 
@@ -443,6 +497,71 @@ Six occurrences — that is the whole leak. Then look at the JSON from `/api/v1/
 
 **Acceptance:** no `Domain.Entities` or `Domain.ValueObjects` type appears in an endpoint signature or response.
 
+> **Done (2026-10-22) — clean cutover, no compatibility window.**
+>
+> **The DTOs.** Six `sealed record`s in `Application/DTO/`, plus
+> `PortfolioDtoMapper` — explicit extension methods (`project.ToDto()`), no
+> AutoMapper. ADR-0004 requires the mapping to be hand-written: the accidental
+> contract this replaces was produced by convention, and a second
+> convention-mapped layer would reproduce the same class of bug one level out.
+>
+> **The shapes.** `Company` and `Role` flattened to strings; `startedAt` /
+> `finishedAt` lifted out of the old `duration` object; `duration` (the
+> `TimeSpan` string) replaced by `durationMonths`. Removed: `experienceId`,
+> `period`, `techStacks[].createdAt`, `createdAt` on skills.
+>
+> **`durationMonths` is calendar months, not `TotalDays / 30`.** A 30-day
+> divisor drifts — 12 months becomes 11 or 13 depending on the year, and nobody
+> can explain the result. `2020-01-31 → 2020-02-28` is `0` (not a full month
+> yet), and an ongoing role counts to now. The mapper takes an optional `now`
+> so the ongoing case is deterministic in tests instead of clock-dependent.
+>
+> **Nullability is preserved, not introduced.** `role` and `careerPosition` stay
+> nullable end to end: blank in the database → `null` in the domain (item 1.5) →
+> `null` on the wire. Nothing became newly optional.
+>
+> **Verified against the real database,** which is the only check that matters
+> here. `/api/v1/experience` now returns
+> `"company": "Applied ICT Inc."`, `"role": "Software Engineer"`,
+> `"durationMonths": 3`, and top-level `startedAt`/`finishedAt`. All five
+> portfolio endpoints return 200; the four roles report 3, 41, 50 and 102 months.
+>
+> **Tests — 21, in `Application.Tests`.** Two kinds:
+>
+> - **Wire-shape guards** on the DTO types themselves (`DoesNotExposeCreatedAt`,
+>   `DoesNotExposeExperienceId`, `ReplacesTheDurationTimeSpanWithMonths`,
+>   `FlattensCompanyAndRoleToStrings`). These are the tests that stop a field
+>   creeping back.
+> - **One serialization test** that pins the exact camelCase key list and order
+>   for `ExperienceDto`, so the contract the frontend sees is asserted rather
+>   than assumed.
+>
+> **Endpoints** gained `.WithName(...)`, `.Produces<T>(200)` and
+> `.ProducesProblem(502)`. `/api/v1/skill` deliberately has **no**
+> `ProducesProblem`: it still does not check `IsSuccess`, so it never produces a
+> problem response. That inconsistency is item 2.5, not 2.1.
+>
+> **Two carve-outs, deliberate:**
+>
+> - `PortfolioService.GetOverview` still builds domain `DashboardItem`s and then
+>   maps them, and `GetNotionPageAsync` still receives `NotionPage` from
+>   `INotionService`. Both types leave the domain in item 3.2; collapsing them
+>   now would mean doing that work twice. **No domain type crosses the DTO
+>   boundary** — they are internal to Application.
+> - `Api.Tests` was split out of this item because it needs
+>   `Microsoft.AspNetCore.Mvc.Testing`, a new package. **It is now done** as Phase 3
+>   (11 contract tests, approved).
+>
+> **Finding, recorded not fixed:** `Experience.Responsibility` and `.Type` have
+> private setters and **no mutator at all**, so a test cannot populate them. One
+> test uses reflection with a comment pointing at 3.3. That is the first
+> concrete evidence for item 3.3 ("add behaviour or drop them").
+>
+> **Client impact:** breaking. The frontend was updated separately, by design.
+> `docs/api-reference.md` carries the full before/after key table; the disruptive
+> part is `startedAt`/`finishedAt` moving out of `duration`, which is a structural
+> change rather than a rename.
+
 ---
 
 ## 2.2 — Typed errors and correct status codes
@@ -451,9 +570,73 @@ Six occurrences — that is the whole leak. Then look at the JSON from `/api/v1/
 
 **What**
 
-- [ ] Replace `Result<T>.Failure(string)` with a typed error (`Error.NotFound` / `Validation` / `Infrastructure` / `Conflict`)
-- [ ] Add a single `Result → IResult` / `ProblemDetails` mapper in the API layer
-- [ ] Remove per-endpoint `statusCode: 502`
+- [x] Replace `Result<T>.Failure(string)` with a typed error (`Error.NotFound` / `Validation` / `Infrastructure` / `Conflict`)
+- [x] Add a single `Result → IResult` / `ProblemDetails` mapper in the API layer
+- [x] Remove per-endpoint `statusCode: 502`
+
+> **Done (2026-10-22).**
+>
+> **The types.** `Application/Common/Error.cs` — `ErrorKind`
+> (`NotFound` / `Validation` / `Conflict` / `Infrastructure` / `Upstream` /
+> `Unexpected`) and `Error(Kind, Code, Message)`. `Result<T>.Error` is now
+> `Error?` instead of a string. `Code` is the stable machine-readable half so a
+> client can branch without matching prose.
+>
+> **Classification** lives in one place, `ResultErrors`, and maps
+> `DbException → Infrastructure`, `HttpRequestException → Upstream`,
+> anything else `→ Unexpected`.
+>
+> **`DbException`, not `NpgsqlException`** — deliberately. `DbException` is in
+> `System.Data.Common`, i.e. the BCL, so the Application layer recognises a
+> database outage without taking a dependency on Npgsql or EF Core. That
+> assumption is load-bearing and invisible, so it is pinned by
+> `NpgsqlFailureTypeTests`: it opens a connection to a closed port and asserts the
+> exception is a `DbException`. Without that test, a provider change would
+> silently turn 503s into 500s.
+>
+> **Two real defects fixed, neither of which the plan named:**
+>
+> 1. `GetOverview` caught `HttpRequestException`, which these repositories never
+>    throw — so a genuine database failure escaped as an **unhandled 500**. That
+>    catch is gone; the method now classifies like everything else.
+> 2. `ExecuteAsync` caught every `Exception` and reported it as a dependency
+>    failure. A `NullReferenceException` was therefore indistinguishable from a
+>    dead database. Bugs are `Unexpected` now.
+>
+> **`OperationCanceledException` is rethrown**, never converted into a failure — a
+> cancelled request is the caller giving up, not an error to report. Covered by
+> `GetAllExperienceAsync_WhenOperationIsCancelled_PropagatesCancellation`.
+>
+> **One mapper, no per-endpoint codes.** `Endpoints/ApiResult.cs` owns the only
+> `ErrorKind → status` mapping in the solution. Every endpoint is now
+> `return result.ToHttpResult();`. Swagger metadata matches: `503` on the
+> portfolio endpoints, `502` on the Notion ones.
+>
+> **Exception text is no longer published.** `detail` is a stable sentence; the
+> provider's message (host names, database names, usernames, SQL) stays out of the
+> response. Diagnostics arrive with item 2.4 (logging). This is a **behaviour
+> change for clients** and is recorded in `docs/api-reference.md` §5.
+>
+> **Tests — 12 new.** `ResultErrorsTests` (6, plus a theory: the exception → kind
+> mapping, including that a bug is *not* infrastructure and that the exception
+> message never reaches the wire), three service-level cases (infrastructure,
+> unexpected, upstream), and 7 endpoint tests over HTTP: `503` +
+> `database_unavailable` on a database failure, `500` + `unexpected_error` on a
+> bug, `503` (not an unhandled 500) from `/overview`, and Notion `502` with
+> `notion_unavailable` vs `notion_invalid_response`.
+>
+> **The plan's own verification recipe does not work.** It says to point the API
+> at an unreachable host with `ConnectionStrings__JDBConnection=…`, but
+> `Program.cs` calls `AddUserSecrets<Program>()` *after* `CreateBuilder`, so user
+> secrets win over environment variables (KI-036). Attempting it silently connects
+> to the real database instead. The failure paths are therefore verified through
+> `Api.Tests`, which drive the real endpoints over HTTP with a faked port — and
+> through `NpgsqlFailureTypeTests` for the provider assumption. KI-036 is the
+> reason this recipe cannot be trusted in Development.
+>
+> **Not done here, by scope:** `/api/v1/skill` still ignores `IsSuccess` (2.5), and
+> an exception thrown *outside* a service — model binding, say — still produces a
+> bare 500 until 2.4 adds a global handler.
 
 **Why**
 
@@ -468,13 +651,20 @@ if (!result.IsSuccess) return Results.Problem(result.Error, statusCode: 502);
 **How to verify**
 
 ```bash
-# Stop your PostgreSQL instance, or point the API at an unreachable host:
-ConnectionStrings__JDBConnection="Host=127.0.0.1;Port=1;Database=jg-portfolio;Username=u;Password=p" \
-  dotnet run --project src/JDB_Portfolio_API
-curl -i http://localhost:5254/api/v1/experience
+dotnet test tests/JDB_Portfolio_API.Api.Tests   # 503 / 502 / 500 paths over HTTP
+dotnet test tests/JDB_Portfolio_API.Persistence.Tests --filter NpgsqlFailureTypeTests
 ```
 
-You will get an **unhandled 500** from the Npgsql exception, not the 502 the code implies — which also proves the `catch (HttpRequestException)` in the services is the wrong catch. Restart the database or the API afterwards.
+The original recipe — point the API at an unreachable host with
+`ConnectionStrings__JDBConnection=…` and `curl` it — **does not work**, and that is
+itself a finding. `Program.cs` calls `AddUserSecrets<Program>()` after
+`CreateBuilder`, so user secrets override environment variables (KI-036) and the
+application quietly connects to the real database. Do not trust that recipe until
+KI-036 is fixed.
+
+To see it live without touching configuration, the honest option is the endpoint
+tests: they boot the real application and exercise the same classification, with
+the failure injected at the repository port.
 
 ---
 
@@ -564,10 +754,62 @@ You will see the same instance stored twice per service. Then check each `_repo.
 
 **What**
 
-- [ ] Inject `ILogger<T>` into application services; log every failure with context
-- [ ] Add a global exception handler (`IExceptionHandler` / middleware) returning `ProblemDetails`
-- [ ] Thread `CancellationToken` end-to-end: endpoint → service → repository → `ToListAsync(ct)`
-- [ ] Remove the `catch (HttpRequestException)` around database calls (wrong exception type)
+- [x] Inject `ILogger<T>` into application services; log every failure with context
+- [x] Add a global exception handler (`IExceptionHandler` / middleware) returning `ProblemDetails`
+- [x] Thread `CancellationToken` end-to-end: endpoint → service → repository → `ToListAsync(ct)`
+- [x] Remove the `catch (HttpRequestException)` around database calls (wrong exception type)
+
+> **Done (2026-10-22).** The wrong catch was already gone as part of 2.2, so this item
+> was logging + the handler + cancellation.
+>
+> **Logging.** `Application` took its first package reference:
+> `Microsoft.Extensions.Logging.Abstractions` 10.0.10 — contracts only, no
+> implementation, so the composition root still decides where output goes. The level
+> is chosen by severity of consequence, not by convenience:
+>
+> - **Warning** for `Infrastructure` and `Upstream` — an outage is expected, it is
+>   already visible to the caller as 503/502, and logging it at Error would drown the
+>   failures that need a human.
+> - **Error** for `Unexpected` — a bug is the only kind that needs someone to act.
+>
+> Both carry the exception, which is the point: plan 2.2 stopped publishing the
+> provider's message, so the log is now the only place the diagnostic detail exists.
+> Verified live — a Notion failure produced
+> `Dependency failure while trying to query the Notion page (notion_unavailable).`
+>
+> **The handler.** `ErrorHandling/GlobalExceptionHandler.cs` implements
+> `IExceptionHandler`, registered before everything else in the pipeline. It closes the
+> gap 2.2 left open: an exception thrown *outside* a service (model binding, DI) used to
+> produce a bodyless 500. It now produces the same `ProblemDetails` with the same
+> `code`, so a client never special-cases it.
+>
+> The client-disconnect case is handled deliberately rather than lumped in:
+> `OperationCanceledException` **with** `RequestAborted` signalled answers **499** and
+> logs at Debug; a cancellation without that signal (a server-side timeout, a token
+> bug) is a real 500 and logs at Error. Treating every cancellation as a disconnect
+> would make those invisible.
+>
+> **Cancellation.** `CancellationToken` is a **required** parameter on every port and
+> service method — no default value, so a new call site cannot silently drop it.
+> `ExecuteAsync` hands the token to the operation (`Func<CancellationToken, Task<T>>`)
+> rather than letting the closure capture one, which is the shape that makes dropping
+> it a compile error instead of a habit. The token reaches `ToListAsync(ct)` and
+> `HttpClient.GetAsync(ct)`.
+>
+> **One defect fixed on the way: KI-037.** `NotionClientService` dereferenced a
+> possibly-null `ReadFromJsonAsync` result (the last build warning). It now checks and
+> throws an explicit `InvalidOperationException`, which the classifier maps to
+> `502 → notion_invalid_response`. The old `catch`/rethrow wrappers are also gone — they
+> discarded the original stack trace and inner exception to rebuild a message that no
+> longer goes anywhere. `dotnet build --no-incremental` is **0 warnings, 0 errors**.
+>
+> **Tests — 8 new (97 total).** Logging: a capturing logger proves a database failure is
+> logged at Warning with the original exception, and a bug at Error. Cancellation: the
+> exact token passed to the service is asserted to arrive at the port, plus an
+> endpoint-level check that `RequestAborted` is what flows. Handler: 500 + `code` +
+> `unexpected_error` with the exception text absent from the body, 499 for a real
+> disconnect, and 500 for a cancellation the client did not cause. Plus a registration
+> test — forgetting `AddExceptionHandler` is invisible otherwise.
 
 **Why**
 
@@ -578,9 +820,18 @@ You will see the same instance stored twice per service. Then check each `_repo.
 
 **How to verify**
 
-Trigger the DB-down case from 2.2 and inspect the log output: ASP.NET's request log appears, but no application-level context (which endpoint, which repository, what data). For cancellation: add a temporary `Task.Delay(10_000)`, cancel the request in the browser, and watch it run to completion server-side.
+```bash
+dotnet test tests/JDB_Portfolio_API.Api.Tests --filter GlobalExceptionHandlerTests
+dotnet test tests/JDB_Portfolio_API.Application.Tests --filter PortfolioExperienceServiceTests
+```
 
-**Priority:** handler + logging matter more than cancellation for a portfolio. Cancellation is a habit worth building.
+The original recipe — trigger the DB-down case and read the log — still works for the
+logger, and the live Notion failure above is the cheapest way to see a real warning.
+For cancellation, the temporary `Task.Delay(10_000)` trick is unnecessary: the token →
+port assertion owns it now, and a test is cheaper than a browser experiment.
+
+**Priority:** handler + logging matter more than cancellation for a portfolio.
+Cancellation is a habit worth building.
 
 ---
 
@@ -590,12 +841,64 @@ Trigger the DB-down case from 2.2 and inspect the log output: ASP.NET's request 
 
 **What**
 
-- [ ] `PortfolioSkillEndpoints.cs:12` never checks `IsSuccess` and returns 200 with `null` on failure
-- [ ] Replace hand-spelled `"api/v1/..."` strings in seven files with `app.MapGroup("api/v1")`
-- [ ] Add input validation for `AuthDto` (minimal APIs do not run model validation)
-- [ ] Move JWT issuance out of `AuthEndpoints.cs` into an `IAuthTokenService` in Application
-- [ ] Fix the `async` `/auth/me` lambda with no `await` (CS1998)
-- [ ] Decide whether auth is real: all `RequireAuthorization()` are commented out, the token has no `sub`, so `User.Identity.Name` is null
+- [x] `PortfolioSkillEndpoints.cs:12` never checks `IsSuccess` and returns 200 with `null` on failure
+- [x] Replace hand-spelled `"api/v1/..."` strings in seven files with `app.MapGroup("api/v1")`
+- [x] Add input validation for `AuthDto` (minimal APIs do not run model validation)
+- [x] Move JWT issuance out of `AuthEndpoints.cs` into an `IAuthTokenService` in Application
+- [x] Fix the `async` `/auth/me` lambda with no `await` (CS1998)
+- [x] Decide whether auth is real: all `RequireAuthorization()` are commented out, the token has no `sub`, so `User.Identity.Name` is null
+
+> **Done (2026-10-22).** All six, plus three defects that only showed up while doing it.
+>
+> **`/skill`.** It now goes through `ApiResult.ToHttpResult()` like its siblings. A
+> database failure returns `503 + database_unavailable` instead of a `200` that is
+> indistinguishable from "no tech stacks exist".
+>
+> **One prefix.** `Program.cs` owns `app.MapGroup("api/v1")` and every endpoint declares
+> only its own segment. Note the old spelling was inconsistent — five patterns had no
+> leading slash and `/skill` had one — which a group makes impossible.
+>
+> **Validation.** Explicit guard in the handler returning
+> `Error.Validation(...)` → `400 + validation_failed`, deliberately *not* .NET 10's
+> built-in `AddValidation()`: that would introduce a second error shape
+> (`ValidationProblemDetails` with `errors`, no `code`) next to the one 2.2 unified. One
+> DTO does not justify a second contract.
+>
+> **JWT out of the endpoint.** `IAuthTokenService` in Application, `JwtTokenService` in
+> Presentation. Application names the capability; the edge owns the crypto, because it
+> already references the JWT libraries. The wire shape `{ "token": "…" }` is unchanged
+> and now has a named DTO (`AuthTokenDto`) instead of an anonymous object, so Swagger
+> documents it and a test guards it.
+>
+> **Auth posture — a decision, not a fix.** The portfolio read endpoints are **public by
+> design**: they feed a public CV site, so requiring a token would break it. The
+> commented-out `RequireAuthorization()` lines are deleted (dead code that implied
+> security), the intent is documented in `Program.cs` and `docs/api-reference.md`, and
+> the token now carries `sub=portfolio-api` with `NameClaimType` reading it, so
+> `User.Identity.Name` is populated. It is a **service token**, not a user session — one
+> shared key, no user store.
+>
+> **Three defects found on the way:**
+>
+> 1. **The signing key was read twice.** `AddAuthentication` read `Jwt:Key` eagerly at
+>    registration and `JwtTokenService` read it again through `IOptions` when signing.
+>    Two reads of one setting is two sources of truth: any change between them produced
+>    tokens signed with one key and validated with another, and the symptom was a silent
+>    `401`. It surfaced as `/auth/me` rejecting a token `/auth/login` had just issued.
+>    `JwtBearerOptions` is now configured lazily from the same `JwtOptions` binding.
+> 2. **Swagger claimed the whole API needed a token.** A global
+>    `AddSecurityRequirement` marked every operation as `bearer`-protected, including
+>    the public CV endpoints — the opposite of the truth. `AuthorizeOperationFilter` now
+>    marks only operations carrying `IAuthorizeData`, so exactly `/auth/me` shows a lock.
+> 3. **`/auth/me` was `async` with nothing to await** (KI-026), and `Login` returned a
+>    bare `Results.Unauthorized()` instead of the shared ProblemDetails shape.
+>
+> **Tests — 10 new (107 total).** `JwtTokenServiceTests` (4, no HTTP): the service
+> subject/issuer/audience, a wrong key is `Unauthorized`, a blank key is `Validation`,
+> and a too-short configured key is `server_misconfigured` rather than a 401.
+> `AuthEndpointsTests` (5, over HTTP): login returns a JWT, blank → `400 +
+> validation_failed`, wrong → `401 + invalid_credentials`, `/auth/me` without a token →
+> `401`, and with one → the `sub` and role claims. Plus `/skill` failure → `503`.
 
 **Why**
 
@@ -609,14 +912,121 @@ Trigger the DB-down case from 2.2 and inspect the log output: ASP.NET's request 
 **How to verify**
 
 ```bash
-dotnet build                                  # CS1998 warning
-grep -rn "api/v1" src/JDB_Portfolio_API/Endpoints/   # 5 files
-grep -rn "RequireAuthorization" src/JDB_Portfolio_API/Endpoints/
+grep -rn "api/v1" src/JDB_Portfolio_API/Endpoints/   # no matches: the prefix lives in Program.cs
+grep -rn "RequireAuthorization" src/JDB_Portfolio_API/Endpoints/   # exactly one: /auth/me
+dotnet test tests/JDB_Portfolio_API.Api.Tests --filter AuthEndpointsTests
 ```
 
-Then `curl` the skill endpoint with the DB down → 200 with an empty body.
+Then open `/swagger`: only `GET /api/v1/auth/me` shows a padlock. The original recipe —
+`curl` the skill endpoint with the DB down — still cannot be done on a developer machine
+because of KI-036; `GetSkill_WhenTheDatabaseFails_Returns503NotAnEmpty200` is the
+substitute.
 
 ---
+
+## 2.6 — Notion entries on the dashboard overview
+
+`FEATURE` · **Risk:** medium (adds an external call to a currently DB-only endpoint) · **Effort:** 2–4 h
+
+> Raised 2026-10-22 while doing 2.1. Recorded, not implemented.
+
+**What**
+
+The dashboard overview returns three tiles — Projects, Skills, Recommendations — all
+counted from the database. A fourth tile for Notion entries is wanted.
+
+- [ ] Decide: a tile **inside** `/overview`, or a **separate** endpoint the frontend
+      calls in parallel
+- [ ] Decide where the Notion page id comes from: configuration, a query parameter,
+      or a fixed endpoint
+- [ ] Make the Notion call fail **independently** of the other tiles
+
+**Why it is not a five-line change**
+
+- **It is an outbound call on every page load.** `/overview` is three database
+  counts today — milliseconds, and entirely local. Notion is an HTTPS request
+  against a rate-limited API (a few requests per second). Folding it in makes the
+  dashboard as slow and as unreliable as the slowest external service.
+- **Failure would take the whole dashboard down.** `PortfolioService.GetOverview`
+  catches `HttpRequestException` and returns a failed `Result`, which the endpoint
+  turns into `502` for **all** the tiles. Plan 2.4 notes that this catch is aimed at
+  the wrong thing today; adding Notion makes it a live hazard. A Notion outage must
+  omit or zero the fourth tile, never blank the other three.
+- **The page id has nowhere to come from.** `/overview` has no route parameter, and
+  `NotionSettings` lives in `ExternalService`, which `Application` must not
+  reference. A config-driven id therefore needs a `NotionOptions` in
+  `Application/Settings` (bound in Presentation), or the id becomes a query
+  parameter.
+- **Caching is probably required.** One Notion call per page load is wasteful and
+  invites rate limiting.
+
+**Already available, no backend change**
+
+```bash
+GET /api/v1/notion/{pageId}/count     # → 7
+```
+
+The frontend can fetch this alongside `/overview` and render the tile itself. That
+is the cheapest path and keeps the dashboard independent of Notion. It may be the
+whole answer; if so, close this item rather than building it.
+
+**Related**
+
+- Plan 3.2 moves `NotionPage` out of Domain — do that before the DTO for entries is
+  fixed, or it will be done twice.
+
+## 2.7 — CORS policy (added 2026-10-22, prompted by a review of 2.5)
+
+`SECURITY` + `OPS` · **Risk:** low · **Effort:** 1 h
+
+**What**
+
+- [x] Move the origin list out of C# into `Cors:AllowedOrigins`
+- [x] Apply `http://localhost:4200` only in Development (`Cors:DevelopmentOrigins`)
+- [x] Drop `AllowCredentials()`
+- [x] Narrow to `GET, POST` and `Content-Type, Authorization`
+
+**Why**
+
+- **Hardcoded origins can't follow the deployment.** Vercel preview URLs
+  (`*-git-<branch>-<team>.vercel.app`) are not in a static list, so previewing a branch
+  fails with a CORS error — and the usual "fix" is `AllowAnyOrigin()`, which is far worse
+  than the thing it solves. As configuration, an origin is an App Service setting.
+- **Localhost was allowed in production.** Any page served from port 4200 could read the
+  deployed API. Harmless today because the API is anonymous, but it is the exact shape of
+  a hole the moment a cookie appears.
+- **`AllowCredentials()` had no purpose.** Bearer tokens travel in the `Authorization`
+  header, which CORS treats as an ordinary request header; nothing in the API sets a
+  cookie. The flag promised all three origins permission to send cookies that don't
+  exist, and it permanently rules out wildcards.
+- **`AllowAnyMethod()`/`AllowAnyHeader()`** described an API that accepts anything. Six
+  GETs and one POST do not.
+
+> **Done (2026-10-22).** `AddCorsOrigins(configuration, environment)` reads both keys,
+> trims whitespace and trailing slashes (the browser's `Origin` header never has one),
+> de-duplicates, and registers the policy under `ConfigurationSettings.SpaCorsPolicy` so
+> `Program.cs` cannot drift from the name. `appsettings.json` ships today's values as
+> defaults, so nothing is required to boot.
+>
+> **Verified live**, which is the only way to check this: preflight from a listed origin
+> → `204` with `Allow-Origin`/`Allow-Methods: GET,POST`/`Allow-Headers:
+> Content-Type,Authorization` and **no** `Allow-Credentials`; an unlisted origin → no
+> `Allow-Origin` at all; `localhost:4200` allowed in Development and silently ignored in
+> Production; a preview origin added by `Cors__AllowedOrigins__2=…` accepted without a
+> rebuild; and `401`/`400` responses still carry the CORS headers, because `UseCors` sits
+> inside `UseExceptionHandler`.
+>
+> **Tests — 5 new (112 total, `CorsPolicyTests`).** Policy asserted directly rather than
+> over HTTP, since only a browser enforces it: production excludes localhost, development
+> includes it, no credentials, no wildcards, and a pasted origin with a trailing slash
+> still matches.
+>
+> **Not changed:** `AddControllers()`/`MapControllers()` remain (plan 4.1), and the
+> single origin list still cannot express a wildcard subdomain — a preview URL is added
+> one at a time. A regex/exists policy would be the next step if previews become routine.
+
+---
+
 
 # Part 3 — The actual DDD work
 
@@ -763,20 +1173,24 @@ Answer "how do I create a project?" — there are two ways today. Two answers me
 
 - [x] `tests/JDB_Portfolio_API.Domain.Tests` (xUnit): VO equality, `Period` validation, entity invariants
 - [x] `tests/JDB_Portfolio_API.Application.Tests`: services with fake repositories
-- [ ] `tests/JDB_Portfolio_API.Api.Tests`: `WebApplicationFactory` smoke tests per endpoint
+- [x] `tests/JDB_Portfolio_API.Api.Tests`: `WebApplicationFactory` smoke tests per endpoint
 - [x] `tests/JDB_Portfolio_API.Persistence.Tests`: the AutoMapper profile
 
-> **Partially done (2026-10-22).** Three test projects exist and `dotnet test` is green
-> (32 tests). What they cover today:
+> **Partially done (2026-10-22).** Four test projects exist and `dotnet test` is green
+> (112 tests). What they cover today:
 >
 > - **Domain.Tests** — 19 tests over `Role`, `Company` and `Period`. These are
 >   *characterisation* tests: they lock in the value objects' current behaviour so that
 >   items 3.1 and 3.3 can change it deliberately.
-> - **Application.Tests** — 5 tests over `PortfolioExperienceService`, with a hand-rolled
->   `FakePortfolioExperienceRepository` in `Fakes/`. They cover the shared
->   `ExecuteAsync` behaviour introduced by item 2.3.
-> - **Persistence.Tests** — 8 tests over the AutoMapper profile. This is the
->   highest-risk file in the solution, and it now has:
+> - **Application.Tests** — 38 tests: 11 over `PortfolioExperienceService` with a
+>   hand-rolled `FakePortfolioExperienceRepository` in `Fakes/` (the shared
+>   `ExecuteAsync` behaviour from 2.3, plus the 2.4 logging levels and token threading),
+>   7 over `ResultErrors` (2.2), and 21 over `PortfolioDtoMapper` (2.1) — two-thirds of
+>   which are wire-shape guards on the DTO types themselves.
+> - **Persistence.Tests** — 18 tests: 9 over `Experience`, 2 over `TechStack`, 8 over the
+>   "undeclared role" mapping from 1.5, and `NpgsqlFailureTypeTests` (2.2), which pins
+>   the assumption that a provider failure is a `DbException` — the fact the 503 mapping
+>   silently depends on.
 >   - `MappingConfiguration_HasNoUnmappedMembers` — an `AssertConfigurationIsValid()`
 >     gate. It found **6 maps with unmapped destination members**, all now explicitly
 >     ignored or properly mapped.
@@ -785,6 +1199,16 @@ Answer "how do I create a project?" — there are two ways today. Two answers me
 >   - `PopulatesDescriptionResponsibilityAndType` — this **resolves KI-035**: the
 >     private-setter properties *are* populated by AutoMapper. The behaviour was never
 >     broken, only unverified.
+> - **Api.Tests** — 37 endpoint contract and policy tests over `WebApplicationFactory<Program>`.
+>   The real application boots in-process and the requests go over HTTP, so routing,
+>   model binding, status codes and serialization are all production code. Two things
+>   make that safe: the repository **ports** are replaced with in-memory fakes, so no
+>   database is involved and no real row can be touched, and `Database:AutoMigrate=false`
+>   keeps the startup migration out of the picture even though a connection string is
+>   configured. The strongest test asserts the **exact JSON key list and order** for
+>   `ExperienceDto` at the endpoint — the contract a client sees, not a proxy for it.
+>   The failure path is covered too: a throwing repository must produce `502` with
+>   `ProblemDetails`, not an unhandled exception.
 >
 > **Not covered yet, and deliberately so:**
 >
@@ -792,17 +1216,24 @@ Answer "how do I create a project?" — there are two ways today. Two answers me
 >   invariants yet. Writing those tests red-first is part of item 3.3.
 > - **VO equality** (3.1) is not tested, because `Role`/`Company`/`Period` are still
 >   classes with reference equality. Same reason.
-> - **Endpoint contracts** need `Api.Tests` plus `public partial class Program { }` in
->   the API project.
+> - **Auth** is not covered. `RequireAuthorization()` is commented out on every
+>   portfolio endpoint, so there is nothing to assert yet (2.5).
 >
 > Package baseline (approved): `xunit` 2.9.3, `xunit.runner.visualstudio` 3.1.4,
-> `Microsoft.NET.Test.Sdk` 17.14.1. The `coverlet.collector` that the template adds by
-> default was removed — coverage percentage is not a target.
+> `Microsoft.NET.Test.Sdk` 17.14.1, and `Microsoft.AspNetCore.Mvc.Testing` 10.0.13 for
+> `Api.Tests` (pinned to the installed ASP.NET Core shared framework). The
+> `coverlet.collector` that the template adds by default was removed — coverage
+> percentage is not a target.
 >
 > `Persistence.Tests` also pins `Microsoft.EntityFrameworkCore.Relational` 10.0.10 —
 > a version pin to what the solution already uses, not a new dependency. Without it,
 > `PrivateAssets="all"` on EF Design stops 10.0.10 flowing to the test project, NuGet
 > resolves Npgsql's lower 10.0.4, and MSBuild reports MSB3277.
+>
+> **Open:** resolved 2026-10-22 — the same `Relational` 10.0.10 pin was added to
+> `Persistence.csproj`, so `Api.Tests` (and every other consumer) inherits a consistent
+> graph and `MSB3277` no longer appears. The underlying Npgsql version gap is still
+> KI-039.
 
 **Why**
 
@@ -811,7 +1242,7 @@ Every change in Parts 1–3 is a refactor, and a refactor without tests is a rew
 **How to verify**
 
 ```bash
-dotnet test    # "no test projects found" — the current state
+dotnet test    # 112 tests, all green
 ```
 
 **Pragmatic order:** do not build all three. Start with one Domain test project covering 3.1 and 3.3. That is about an hour and protects the rest.
@@ -882,3 +1313,4 @@ If all seven confirm, the plan is accurate and Parts 1–3 are safe to schedule.
 |---|---|
 | 2026-10-21 | Initial plan (4 phases, checklist only) |
 | 2026-10-21 | Restructured into parts with Why / How to verify / Risk per item; added the four open decisions; **corrected** 1.5 — `career_position` is `NOT NULL`, the real risk is an empty string, not null |
+| 2026-10-22 | Added **2.7 — CORS policy** after a review question about the hardcoded origin list: origins moved to configuration, localhost gated to Development, `AllowCredentials()` dropped, methods/headers narrowed |

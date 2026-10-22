@@ -2,10 +2,12 @@
 using JDB_Portfolio_API.Application.DTO;
 using JDB_Portfolio_API.Domain.Entities;
 using JDB_Portfolio_API.Domain.Interfaces;
-using JDB_Portfolio_API.Domain.ValueObjects;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
-using System.Text;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace JDB_Portfolio_API.Application.Services;
 
@@ -15,42 +17,59 @@ public class PortfolioService
     private readonly IPortfolioProjectRepository _projectRepository;
     private readonly IPortfolioTechStackRepository _techStackRepository;
     private readonly IPortfolioRecommendationRepository _recommendationRepository;
+    private readonly ILogger<PortfolioService> _logger;
+
     public PortfolioService(
-        INotionService notionService, 
-        IPortfolioProjectRepository projectRepository, 
+        INotionService notionService,
+        IPortfolioProjectRepository projectRepository,
         IPortfolioTechStackRepository techStackRepository,
-        IPortfolioRecommendationRepository recommendationRepository)
+        IPortfolioRecommendationRepository recommendationRepository,
+        ILogger<PortfolioService> logger)
     {
         _notionService = notionService;
         _projectRepository = projectRepository;
         _techStackRepository = techStackRepository;
         _recommendationRepository = recommendationRepository;
+        _logger = logger;
     }
 
-    public async Task<Result<List<NotionPage>>> GetNotionPageAsync(string pageID)
+    public async Task<Result<List<NotionPageDto>>> GetNotionPageAsync(
+        string pageID,
+        CancellationToken cancellationToken)
     {
         try
         {
-            var page = await _notionService.QueryPageAsync(pageID);
-            return Result<List<NotionPage>>.Success(page);
-
-        }catch (HttpRequestException hre)
-        {
-           return Result<List<NotionPage>>.Failure("Failed to query Notion page markdown: " + hre.Message);
+            var page = await _notionService.QueryPageAsync(pageID, cancellationToken);
+            return Result<List<NotionPageDto>>.Success(
+                page.Select(notionPage => notionPage.ToDto()).ToList());
         }
-        catch (InvalidOperationException ioe)
+        catch (OperationCanceledException)
         {
-            return Result<List<NotionPage>>.Failure("Failed to deserialize Notion page markdown: " + ioe.Message);
+            throw;
+        }
+        catch (Exception ex)
+        {
+            // A failed request and an unreadable response are both the other side's
+            // problem, so both become 502 — but with different codes, so a client can
+            // tell "Notion is down" from "Notion changed its format".
+            var error = ResultErrors.FromExternalService(ex, "query the Notion page");
+            _logger.LogWarning(
+                ex,
+                "Dependency failure while trying to {Operation} ({ErrorCode}).",
+                "query the Notion page",
+                error.Code);
+
+            return Result<List<NotionPageDto>>.Failure(error);
         }
     }
 
-    public async Task<Result<List<DashboardItem>>> GetOverview()
+    public async Task<Result<List<DashboardItemDto>>> GetOverview(CancellationToken cancellationToken)
     {
         try
         {
-            var projects = await _projectRepository.GetAllProjectsWithTechStacksAsync();
-            var skills = await _techStackRepository.GetAllTechStacksAsync();
-            var recommendations = await _recommendationRepository.GetAllRecommendationsAsync();
+            var projects = await _projectRepository.GetAllProjectsWithTechStacksAsync(cancellationToken);
+            var skills = await _techStackRepository.GetAllTechStacksAsync(cancellationToken);
+            var recommendations = await _recommendationRepository.GetAllRecommendationsAsync(cancellationToken);
 
             var dashboardItems = new List<DashboardItem>
             {
@@ -77,11 +96,38 @@ public class PortfolioService
                 }
             };
 
-            return Result<List<DashboardItem>>.Success(dashboardItems);
-
-        }catch (HttpRequestException hre)
+            return Result<List<DashboardItemDto>>.Success(
+                dashboardItems.Select(item => item.ToDto()).ToList());
+        }
+        catch (OperationCanceledException)
         {
-           return Result<List<DashboardItem>>.Failure("Failed to query for dashboard overview: " + hre.Message);
+            throw;
+        }
+        catch (Exception ex)
+        {
+            // This used to catch HttpRequestException, which these repositories never
+            // throw — so a real database failure escaped as an unhandled 500. It is
+            // classified and logged properly now.
+            var error = ResultErrors.From(ex, "build the dashboard overview");
+
+            if (error.Kind == ErrorKind.Unexpected)
+            {
+                _logger.LogError(
+                    ex,
+                    "Unexpected failure while trying to {Operation} ({ErrorCode}).",
+                    "build the dashboard overview",
+                    error.Code);
+            }
+            else
+            {
+                _logger.LogWarning(
+                    ex,
+                    "Dependency failure while trying to {Operation} ({ErrorCode}).",
+                    "build the dashboard overview",
+                    error.Code);
+            }
+
+            return Result<List<DashboardItemDto>>.Failure(error);
         }
     }
 }

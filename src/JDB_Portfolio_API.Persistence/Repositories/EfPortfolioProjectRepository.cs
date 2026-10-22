@@ -15,14 +15,14 @@ public class EfPortfolioProjectRepository: BasePortfolioRepository<Project, Proj
     public EfPortfolioProjectRepository(PortfolioContext context, IMapper mapper)
         : base(context, mapper) { }
 
-    public async Task<List<Project>> GetAllProjectsWithTechStacksAsync()
+    public async Task<List<Project>> GetAllProjectsWithTechStacksAsync(CancellationToken cancellationToken)
     {
         var projectEntities = await _dbSet.AsNoTracking()
                                           .AsSplitQuery()
                                           .Include(p => p.ProjectTechStacks)
                                           .ThenInclude(pt => pt.TechStack)
                                           .ThenInclude(ts => ts.TechStackCategory)
-                                          .ToListAsync();
+                                          .ToListAsync(cancellationToken);
         return _mapper.Map<List<Project>>(projectEntities);
     }
 }

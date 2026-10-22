@@ -111,9 +111,11 @@ non-empty.
 
 ## 9. CORS
 
-Allow-list is explicit in `ConfigurationSettings.AddCorsOrigins`. Adding an
-origin is a security change — ask first. Never `AllowAnyOrigin()` together with
-`AllowCredentials()`.
+The allow-list is configuration (`Cors:AllowedOrigins`, plus `Cors:DevelopmentOrigins`
+which is applied only in Development), read by `ConfigurationSettings.AddCorsOrigins`.
+Adding an origin is a security change — ask first. Never `AllowAnyOrigin()` together with
+`AllowCredentials()`, and do not add `AllowCredentials()` back without a cookie-based flow
+that needs it.
 
 ## 10. Checklist for a new endpoint
 

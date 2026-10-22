@@ -3,6 +3,7 @@ using JDB_Portfolio_API.Domain.Interfaces;
 using JDB_Portfolio_API.Persistence.Contexts;
 using Microsoft.EntityFrameworkCore;
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace JDB_Portfolio_API.Persistence.Repositories;
@@ -22,9 +23,9 @@ public abstract class BasePortfolioRepository<TDomain, TEntity> : IRepository<TD
         _dbSet = context.Set<TEntity>();
     }
 
-    public async Task<List<TDomain>> GetAllAsync()
+    public async Task<List<TDomain>> GetAllAsync(CancellationToken cancellationToken)
     {
-        var entities = await _dbSet.AsNoTracking().ToListAsync();
+        var entities = await _dbSet.AsNoTracking().ToListAsync(cancellationToken);
 
         return _mapper.Map<List<TDomain>>(entities);
     }
