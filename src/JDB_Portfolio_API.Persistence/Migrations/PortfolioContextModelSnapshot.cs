@@ -40,6 +40,10 @@ namespace JDB_Portfolio_API.Persistence.Migrations
                         .HasColumnType("text")
                         .HasColumnName("description");
 
+                    b.Property<DateTime?>("FinishedAt")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("finished_at");
+
                     b.Property<string>("Responsibility")
                         .HasColumnType("text")
                         .HasColumnName("responsibility");

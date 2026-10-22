@@ -13,29 +13,26 @@ public class PortfolioMappingProfile : Profile
             .ForMember(dest => dest.StackName, opt => opt.MapFrom(src => src.StackName))
             .ForMember(dest => dest.ImgSrc, opt => opt.MapFrom(src => src.ImgSrc))
             .ForMember(dest => dest.CreatedAt, opt => opt.MapFrom(src => src.CreatedAt))
-            .ConstructUsing(dest => new TechStack
+            .ForMember(dest => dest.Category, opt => opt.MapFrom(src =>
+                src.TechStackCategory == null ? null : src.TechStackCategory.Category))
+            .ConstructUsing(src => new TechStack
             {
-                Id = dest.Id,
-                StackName = dest.StackName,
-                ImgSrc = dest.ImgSrc,
-                CreatedAt = dest.CreatedAt,
-                Category = dest.TechStackCategory != null ? dest.TechStackCategory.Category : null
-            })
-            .AfterMap((src, dest) =>
-            {
-                // Map the TechStackCategoryId to the Category property
-                if (src.TechStackCategory != null)
-                {
-                    dest.Category = src.TechStackCategory.Category;
-                }
+                Id = src.Id,
+                StackName = src.StackName,
+                ImgSrc = src.ImgSrc,
+                CreatedAt = src.CreatedAt
             });
 
         // TechStack → TechStackEntity
+        // The category is stored as an id and is resolved by a lookup when a write
+        // path exists. It is never converted from the category name.
         CreateMap<TechStack, TechStackEntity>()
             .ForMember(dest => dest.StackName, opt => opt.MapFrom(src => src.StackName))
             .ForMember(dest => dest.ImgSrc, opt => opt.MapFrom(src => src.ImgSrc))
             .ForMember(dest => dest.CreatedAt, opt => opt.MapFrom(src => src.CreatedAt))
-            .ForMember(dest => dest.TechStackCategoryId, opt => opt.MapFrom(src => src.Category));
+            .ForMember(dest => dest.TechStackCategoryId, opt => opt.Ignore())
+            .ForMember(dest => dest.TechStackCategory, opt => opt.Ignore())
+            .ForMember(dest => dest.ProjectTechStacks, opt => opt.Ignore());
 
         // TechStackCategoryEntity → TechStackCategory
         CreateMap<TechStackCategoryEntity, TechStackCategory>()
@@ -45,13 +42,15 @@ public class PortfolioMappingProfile : Profile
         // TechStackCategory → TechStackCategoryEntity
         CreateMap<TechStackCategory, TechStackCategoryEntity>()
             .ForMember(dest => dest.Category, opt => opt.MapFrom(src => src.Category))
-            .ForMember(dest => dest.CreatedAt, opt => opt.MapFrom(src => src.CreatedAt));
+            .ForMember(dest => dest.CreatedAt, opt => opt.MapFrom(src => src.CreatedAt))
+            .ForMember(dest => dest.TechStacks, opt => opt.Ignore());
 
         // ProjectEntity → Project
         CreateMap<ProjectEntity, Project>()
             .ForMember(dest => dest.ExperienceId, opt => opt.MapFrom(src => src.ExperienceId))
             .ForMember(dest => dest.Description, opt => opt.MapFrom(src => src.Description))
             .ForMember(dest => dest.Contribution, opt => opt.MapFrom(src => src.Contribution))
+            .ForMember(dest => dest.TechStacks, opt => opt.Ignore())
             .ConstructUsing(src => new Project(
                 src.Id,
                 src.ProjectName
@@ -76,12 +75,17 @@ public class PortfolioMappingProfile : Profile
             .ForMember(dest => dest.ProjectName, opt => opt.MapFrom(src => src.ProjectName))
             .ForMember(dest => dest.ExperienceId, opt => opt.MapFrom(src => src.ExperienceId))
             .ForMember(dest => dest.Description, opt => opt.MapFrom(src => src.Description))
-            .ForMember(dest => dest.Contribution, opt => opt.MapFrom(src => src.Contribution));
+            .ForMember(dest => dest.Contribution, opt => opt.MapFrom(src => src.Contribution))
+            .ForMember(dest => dest.CreatedAt, opt => opt.Ignore())
+            .ForMember(dest => dest.UpdatedAt, opt => opt.Ignore())
+            .ForMember(dest => dest.Experience, opt => opt.Ignore())
+            .ForMember(dest => dest.ProjectTechStacks, opt => opt.Ignore());
 
         // Experience → ExperienceEntity
         CreateMap<Experience, ExperienceEntity>()
             .ForMember(dest => dest.CompanyName, opt => opt.MapFrom(src => src.Company != null ? src.Company.Name : null))
             .ForMember(dest => dest.StartedAt, opt => opt.MapFrom(src => src.Duration.StartedAt))
+            .ForMember(dest => dest.FinishedAt, opt => opt.MapFrom(src => src.Duration.FinishedAt))
             .ForMember(dest => dest.Role, opt => opt.MapFrom(src => src.Role));
 
         // ExperienceEntity → Experience
@@ -89,9 +93,11 @@ public class PortfolioMappingProfile : Profile
             .ConstructUsing(src => new Experience(
                 src.Id,
                 src.CompanyName != null ? new Company(src.CompanyName) : null,
-                new Period(src.StartedAt, null),
+                new Period(src.StartedAt, src.FinishedAt),
                 new Role(src.Role)
             ))
+            .ForMember(dest => dest.Duration, opt => opt.Ignore())
+            .ForMember(dest => dest.Projects, opt => opt.Ignore())
             .AfterMap((src, dest) =>
             {
                 // Map the Projects collection with their TechStacks
@@ -124,11 +130,7 @@ public class PortfolioMappingProfile : Profile
                 src.Description,
                 new Role(src.CareerPosition),
                 src.PostedAt
-            ))
-            .AfterMap((src, dest) =>
-            {
-                // Additional mapping logic if needed
-            });
+            ));
 
         // Recommendation → RecommendationEntity
         CreateMap<Recommendation, RecommendationEntity>()

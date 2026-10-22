@@ -1,5 +1,4 @@
-﻿using JDB_Portfolio_API.Domain.ValueObjects;
-using System;
+﻿using System;
 using System.Collections.Generic;
 
 namespace JDB_Portfolio_API.Domain.Entities;
@@ -15,8 +14,6 @@ public partial class Project
     public string? Description { get; set; }
 
     public string? Contribution { get; set; }
-
-    public Period? Period { get; set; }
 
     public ICollection<TechStack> TechStacks { get; set; } = new List<TechStack>();
 

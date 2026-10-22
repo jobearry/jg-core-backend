@@ -13,5 +13,6 @@
   <Folder Name="/4.0 Tests/">
     <Project Path="../tests/JDB_Portfolio_API.Application.Tests/JDB_Portfolio_API.Application.Tests.csproj" />
     <Project Path="../tests/JDB_Portfolio_API.Domain.Tests/JDB_Portfolio_API.Domain.Tests.csproj" />
+    <Project Path="../tests/JDB_Portfolio_API.Persistence.Tests/JDB_Portfolio_API.Persistence.Tests.csproj" />
   </Folder>
 </Solution>

@@ -23,8 +23,8 @@ Current status:
 - DDD/clean-architecture refactor is **in progress**, not complete. Do not treat
   the current code as the target design — see
   [`.github/plans/001-clean-architecture-refactor.md`](.github/plans/001-clean-architecture-refactor.md).
-- **Tests exist but are thin.** Two xUnit projects cover the Domain value objects and
-  the application services (24 tests). There is no mapping test project and no
+- **Tests exist but are thin.** Three xUnit projects cover the Domain value objects,
+  the application services and the AutoMapper profile (32 tests). There is no
   endpoint test project yet.
 
 ---
@@ -113,6 +113,7 @@ src/
 tests/
   JDB_Portfolio_API.Domain.Tests/       value objects, entity invariants
   JDB_Portfolio_API.Application.Tests/  services with hand-rolled fakes
+  JDB_Portfolio_API.Persistence.Tests/  the AutoMapper profile
 docker/                          Dockerfile, docker-compose.yml, .env.example
 ```
 
@@ -179,6 +180,11 @@ Each rule has a full explanation in `.github/rules/`.
 10. **Never edit an applied migration.** Add a new one.
 11. **No new NuGet package without asking.** Every dependency is a long-term
     liability.
+12. **Terminal commands are supervised.** Read-only and local commands are
+    routine. Anything that writes to a database, changes git history, deletes
+    work, installs outside the project, or starts a long-running process needs
+    the owner's go-ahead first. Approval to write a migration is not approval
+    to apply it. [terminal-commands.md](.github/rules/terminal-commands.md)
 
 ---
 
@@ -215,9 +221,11 @@ Each rule has a full explanation in `.github/rules/`.
 
 Recently fixed: the `Persistence` → `Application` dependency violation, the
 dead code, the duplicated repository fields, the untracked read queries, the
-hardcoded user-secrets GUID, and the un-gated startup migration. Tests now
-exist but are thin — there is no mapping test project and no endpoint test
-project.
+hardcoded user-secrets GUID, and the un-gated startup migration. The
+`finished_at` column and its mapping were added, so a past role can report a
+frozen duration — **but the existing rows still need their end dates
+backfilled**. Tests now exist but are thin — there is no endpoint test project
+yet.
 
 Full reasoning and verification steps:
 [`.github/plans/001-clean-architecture-refactor.md`](.github/plans/001-clean-architecture-refactor.md).
@@ -248,6 +256,11 @@ Stop and ask the user before:
 - adding or upgrading a NuGet package;
 - adding a **write endpoint** (there is no `IUnitOfWork` yet);
 - changing the database schema, or editing a migration;
+- **applying a migration** (`dotnet ef database update`) or writing to a
+  database with any other means;
+- running a terminal command that changes git history, deletes work, installs
+  outside the project, or starts a long-running process
+  ([terminal-commands.md](.github/rules/terminal-commands.md));
 - changing the auth model, CORS allow-list, or any secret handling;
 - choosing an aggregate boundary or introducing a new project;
 - deleting a domain type that is referenced by a migration or a published API

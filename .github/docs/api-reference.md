@@ -87,7 +87,6 @@ Response item shape **today** (domain entity serialized directly):
         "projectName": "Portfolio API",
         "description": "…",
         "contribution": "…",
-        "period": null,
         "techStacks": [
           { "id": 2, "stackName": "Angular", "imgSrc": "…", "createdAt": "…", "category": "Frontend" }
         ]
@@ -99,21 +98,27 @@ Response item shape **today** (domain entity serialized directly):
 
 Notes:
 
-- `finishedAt` is **always null** (the mapping discards it), so `duration` grows
-  every day for past roles. Plan item 1.3.
+- `finishedAt` is `null` **only for a role that is still ongoing**. A role that has
+  ended carries its end date, and `duration` is then measured against it rather
+  than against today. The column was added on 2026-10-22 (migration
+  `20261022064321_AddExperienceFinishedAt`); the existing rows still need their
+  end dates backfilled.
 - Value objects appear as objects (`{ "value": … }`, `{ "name": … }`) — a direct
   symptom of having no DTO layer.
 - `TimeSpan` serializes as a `c`-format string (`"1234.05:06:07"`).
-- `description`, `responsibility`, `type` are not explicitly mapped; their
-  population depends on AutoMapper's private-setter behaviour and is untested.
+- `description`, `responsibility`, `type` are mapped by name and are populated —
+  covered by `Map_ExperienceEntity_To_Experience_PopulatesDescriptionResponsibilityAndType`.
 
 ### `GET /api/v1/project?includeTools=false`
 
 Returns projects ordered by id ascending. `includeTools=true` loads tech stacks
 and their categories.
 
-Response item: `{ id, experienceId, projectName, description, contribution, period, techStacks[] }`.
-`period` is always `null` (no column, no mapping).
+Response item: `{ id, projectName, description, contribution, techStacks[] }`.
+
+The `period` key is **gone** (2026-10-22, plan 1.4). `Project.Period` was a domain
+property with no column and no mapping, so it was always `null`; a project has no
+dates of its own — those belong to the role it sits under.
 
 ### `GET /api/v1/recommendation`
 

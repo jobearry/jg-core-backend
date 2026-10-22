@@ -48,7 +48,6 @@ classDiagram
         +string ProjectName
         +string? Description
         +string? Contribution
-        +Period? Period
         +ICollection~TechStack~ TechStacks
     }
     class TechStack {
@@ -84,7 +83,7 @@ as entity instances inside `Project`. See ADR-0003.
 | Entity | Identity | Constructor | Mutability | Invariants enforced |
 |---|---|---|---|---|
 | `Experience` | `int Id` (DB identity) | `(id, company, period, role)` | `Id`/`Company` get-only; `Duration`/`Role`/`Description`/`Responsibility`/`Type` private set; `Projects` **public set** | `Role` non-null; `Role`/`Company`/`Period` rules via VOs |
-| `Project` | `int Id` (public set) | `(id, projectName)` | everything public set | **none** — empty name, null name, null tech stacks all allowed |
+| `Project` | `int Id` (public set) | `(id, projectName)` | everything public set | **none** — empty name, null name, null tech stacks all allowed. `Period` was removed on 2026-10-22: it had no column and no mapping, so it was always `null` |
 | `TechStack` | `int Id` (public set) | implicit | everything public set | **none** |
 | `TechStackCategory` | `int Id` (public set) | implicit | everything public set | **none** |
 | `Recommendation` | `int Id` (public set) | `(id, personName, description, careerPosition, postedAt)` | everything public set | `PersonName` non-null; `CareerPosition` non-null; `Description` **not validated** |

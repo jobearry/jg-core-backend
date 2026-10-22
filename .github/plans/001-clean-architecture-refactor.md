@@ -1,6 +1,6 @@
 # Plan 001 — Clean Architecture & DDD Refactor
 
-**Status:** In progress — decisions D1–D4 resolved; items 1.1, 1.6, 1.7, 1.8, 2.3 and the first two test projects are complete
+**Status:** In progress — decisions D1–D4 resolved; items 1.1, 1.2, 1.3, 1.4, 1.6, 1.7, 1.8, 2.3 and three test projects are complete
 **Scope:** `src/JDB_Portfolio_API.Domain`, `.Application`, `.Persistence`, `.ExternalService`, `JDB_Portfolio_API` (Presentation), `tests/`
 **Goal:** Bring the solution in line with clean architecture dependency rules and turn the Domain project into an actual domain model rather than a set of persistence shapes.
 
@@ -114,8 +114,27 @@ dotnet build   # after removal
 
 **What**
 
-- [ ] `PortfolioMappingProfile.cs:38` — `.ForMember(dest => dest.TechStackCategoryId, opt => opt.MapFrom(src => src.Category))`
-- [ ] Either resolve the category id via a lookup, or **delete the reverse mapping** (see D2)
+- [x] `PortfolioMappingProfile.cs:38` — `.ForMember(dest => dest.TechStackCategoryId, opt => opt.MapFrom(src => src.Category))`
+- [x] Either resolve the category id via a lookup, or **delete the reverse mapping** (see D2)
+
+> **Done (2026-10-22), with a deviation from D2's wording.** The bad assignment is gone.
+> Instead of deleting the whole `CreateMap<TechStack, TechStackEntity>`, the category id is
+> explicitly ignored:
+>
+> ```csharp
+> .ForMember(dest => dest.TechStackCategoryId, opt => opt.Ignore())
+> ```
+>
+> **Why not delete the map:** a deleted map and a broken map both throw
+> `AutoMapperMappingException`, so a test cannot tell them apart. With the explicit
+> ignore the test is a clean red→green one — the id must be `0`, never garbage — and a
+> future write path fails loudly on the missing category rather than writing a wrong id.
+>
+> `tests/JDB_Portfolio_API.Persistence.Tests/TechStackEntityMappingTests.cs` proves it.
+> The test was written first and failed with
+> `FormatException: The input string 'Frontend' was not in a correct format`.
+>
+> The category id is resolved by a lookup when a write path exists.
 
 **Why**
 
@@ -143,9 +162,38 @@ Note: `AssertConfigurationIsValid()` will **not** catch this. It validates that 
 
 **What**
 
-- [ ] `PortfolioMappingProfile.cs:92` — `new Period(src.StartedAt, null)` hardcodes `FinishedAt` to `null`
-- [ ] `ExperienceEntity` has no `FinishedAt` column at all
-- [ ] Fix per D1: add the column, or remove `FinishedAt` from `Period`
+- [x] `PortfolioMappingProfile.cs:92` — `new Period(src.StartedAt, null)` hardcodes `FinishedAt` to `null`
+- [x] `ExperienceEntity` has no `FinishedAt` column at all
+- [x] Fix per D1: add the column, or remove `FinishedAt` from `Period`
+
+> **Done (2026-10-22).** Decision D1 (a): the column was added.
+>
+> - `ExperienceEntity.FinishedAt` (`DateTime?`) and the `finished_at` column,
+>   `timestamp without time zone` — matching every other timestamp in the schema.
+> - New migration `20261022064321_AddExperienceFinishedAt`. One nullable column, no
+>   default, no data statement. Applied to the local database.
+> - The mapping now reads `new Period(src.StartedAt, src.FinishedAt)`, and the reverse
+>   map carries `FinishedAt` too.
+> - Regression tests in `tests/JDB_Portfolio_API.Persistence.Tests`:
+>   `CarriesFinishedAt` and `WithFinishedAt_MeasuresDurationToTheEndDate`.
+>
+> **The schema change alone does not fix the reported behaviour.** A `NULL`
+> `finished_at` means *the role is ongoing* — that is the correct meaning, and the
+> current role must stay `NULL`. The past roles need their **end dates backfilled**,
+> which is data work, not code work. Until that happens the API still reports growing
+> durations for those roles.
+>
+> **A second, larger fix is still owed: the columns are `timestamp without time
+> zone` (KI-019).** A `DateTime` with no offset is ambiguous — `new Date(...)` in
+> JavaScript reads `"2024-06-01T00:00:00"` as *local* time, and the same string with
+> a `Z` is *UTC*. The duration arithmetic is only correct as long as both ends are
+> interpreted the same way. Migrating to `timestamptz` is a separate item and is
+> **not** part of this one.
+>
+> Verified against the real database: all four roles returned
+> `finishedAt: null` with durations of 119, 1269, 1530 and 3115 days — the bug,
+> reproduced on demand. After the backfill the same endpoint reports the frozen
+> duration for each past role.
 
 **Why**
 
@@ -180,9 +228,21 @@ var p = new Period(new DateTime(2020, 1, 1), null);
 
 **What**
 
-- [ ] `Domain/Entities/Project.cs:19` — `public Period? Period { get; set; }`
-- [ ] `ProjectEntity` has no period columns; the profile has no rule for it
-- [ ] Delete it, or add the columns
+- [x] `Domain/Entities/Project.cs:19` — `public Period? Period { get; set; }`
+- [x] `ProjectEntity` has no period columns; the profile has no rule for it
+- [x] Delete it, or add the columns
+
+> **Done (2026-10-22) — deleted.** The domain property is gone from
+> `Domain/Entities/Project.cs`, along with the now-unused `ValueObjects` import.
+>
+> No columns were added, because the field was never displayed: the DTO layer
+> (item 2.1) drops it from the wire shape anyway, and it was always `null` in every
+> response. A `Project` has no dates of its own — a project's dates belong to the
+> role it sits under.
+>
+> **Wire effect:** the `"period": null` key no longer appears in
+> `GET /api/v1/project`. It was always `null`, so no client could have rendered
+> anything from it.
 
 **Why**
 
@@ -704,9 +764,10 @@ Answer "how do I create a project?" — there are two ways today. Two answers me
 - [x] `tests/JDB_Portfolio_API.Domain.Tests` (xUnit): VO equality, `Period` validation, entity invariants
 - [x] `tests/JDB_Portfolio_API.Application.Tests`: services with fake repositories
 - [ ] `tests/JDB_Portfolio_API.Api.Tests`: `WebApplicationFactory` smoke tests per endpoint
+- [x] `tests/JDB_Portfolio_API.Persistence.Tests`: the AutoMapper profile
 
-> **Partially done (2026-10-22).** Two test projects exist and `dotnet test` is green
-> (24 tests). What they cover today:
+> **Partially done (2026-10-22).** Three test projects exist and `dotnet test` is green
+> (32 tests). What they cover today:
 >
 > - **Domain.Tests** — 19 tests over `Role`, `Company` and `Period`. These are
 >   *characterisation* tests: they lock in the value objects' current behaviour so that
@@ -714,6 +775,16 @@ Answer "how do I create a project?" — there are two ways today. Two answers me
 > - **Application.Tests** — 5 tests over `PortfolioExperienceService`, with a hand-rolled
 >   `FakePortfolioExperienceRepository` in `Fakes/`. They cover the shared
 >   `ExecuteAsync` behaviour introduced by item 2.3.
+> - **Persistence.Tests** — 8 tests over the AutoMapper profile. This is the
+>   highest-risk file in the solution, and it now has:
+>   - `MappingConfiguration_HasNoUnmappedMembers` — an `AssertConfigurationIsValid()`
+>     gate. It found **6 maps with unmapped destination members**, all now explicitly
+>     ignored or properly mapped.
+>   - Runtime map tests for both directions of the `Experience` and `TechStack` maps —
+>     the only way to catch a bad type conversion, which the validity gate cannot.
+>   - `PopulatesDescriptionResponsibilityAndType` — this **resolves KI-035**: the
+>     private-setter properties *are* populated by AutoMapper. The behaviour was never
+>     broken, only unverified.
 >
 > **Not covered yet, and deliberately so:**
 >
@@ -721,16 +792,17 @@ Answer "how do I create a project?" — there are two ways today. Two answers me
 >   invariants yet. Writing those tests red-first is part of item 3.3.
 > - **VO equality** (3.1) is not tested, because `Role`/`Company`/`Period` are still
 >   classes with reference equality. Same reason.
-> - **Mapping** is not tested. The mapping profile lives in `Persistence`, so it needs a
->   `tests/JDB_Portfolio_API.Persistence.Tests` project that does not exist yet. The
->   testing rules make mapping tests mandatory, and item 1.2 (the `string` → `int`
->   reverse mapping) is the first thing that needs one.
 > - **Endpoint contracts** need `Api.Tests` plus `public partial class Program { }` in
 >   the API project.
 >
 > Package baseline (approved): `xunit` 2.9.3, `xunit.runner.visualstudio` 3.1.4,
 > `Microsoft.NET.Test.Sdk` 17.14.1. The `coverlet.collector` that the template adds by
 > default was removed — coverage percentage is not a target.
+>
+> `Persistence.Tests` also pins `Microsoft.EntityFrameworkCore.Relational` 10.0.10 —
+> a version pin to what the solution already uses, not a new dependency. Without it,
+> `PrivateAssets="all"` on EF Design stops 10.0.10 flowing to the test project, NuGet
+> resolves Npgsql's lower 10.0.4, and MSBuild reports MSB3277.
 
 **Why**
 

@@ -11,6 +11,8 @@ public partial class ExperienceEntity
 
     public DateTime? StartedAt { get; set; }
 
+    public DateTime? FinishedAt { get; set; }
+
     public string? Description { get; set; }
 
     public string Role { get; set; } = null!;

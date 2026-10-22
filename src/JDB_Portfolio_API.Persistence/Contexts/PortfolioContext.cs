@@ -60,6 +60,9 @@ public partial class PortfolioContext : DbContext
             entity.Property(e => e.StartedAt)
                 .HasColumnType("timestamp without time zone")
                 .HasColumnName("started_at");
+            entity.Property(e => e.FinishedAt)
+                .HasColumnType("timestamp without time zone")
+                .HasColumnName("finished_at");
             entity.Property(e => e.Type)
                 .HasMaxLength(20)
                 .HasColumnName("type");

@@ -15,9 +15,9 @@ None known.
 
 | ID | Issue | Evidence | Plan |
 |---|---|---|---|
-| KI-003 | ~~No tests at all~~ **PARTIALLY RESOLVED 2026-10-22** | `tests/JDB_Portfolio_API.Domain.Tests` (19 tests) and `tests/JDB_Portfolio_API.Application.Tests` (5 tests) now exist; `dotnet test` is green. **Still missing:** `Persistence.Tests` (mapping — mandatory per the testing rules), `Api.Tests` (endpoint contracts), and the entity-invariant / VO-equality tests that belong to 3.1 and 3.3 | 3.5 |
+| KI-003 | ~~No tests at all~~ **PARTIALLY RESOLVED 2026-10-22** | three xUnit projects now exist — `Domain.Tests` (19), `Application.Tests` (5), `Persistence.Tests` (8) — and `dotnet test` is green (32 tests). **Still missing:** `Api.Tests` (endpoint contracts) and the entity-invariant / VO-equality tests that belong to 3.1 and 3.3 | 3.5 |
 | KI-004 | Domain entities are the public API contract | `Results.Ok(result.Value)` in 6 endpoints | 2.1 |
-| KI-005 | `Period.FinishedAt` is always null after mapping, so `Duration` grows daily for past roles | `PortfolioMappingProfile.cs:92` `new Period(src.StartedAt, null)`; no `finished_at` column. **The value object itself is correct** — `Period.Duration` stops at `FinishedAt` when it is set, proven by `PeriodTests.Duration_WhenFinishedAtIsSet_StopsAtFinishedAt`. The defect is in the mapping only | 1.3 / D1 |
+| KI-005 | `Period.FinishedAt` was always null after mapping, so `Duration` grew daily for past roles | **code fixed 2026-10-22** — `finished_at` column added (migration `20261022064321_AddExperienceFinishedAt`), entity + context + mapping updated, regression tests added. **Still open: the data.** Existing rows have `finished_at IS NULL`, which now correctly means *ongoing*. The past roles need their end dates backfilled by hand | 1.3 / D1 |
 | KI-006 | `/api/v1/skill` returns `200` with `null` on failure | `PortfolioSkillEndpoints.cs:12-13` — no `IsSuccess` check | 2.5 |
 | KI-007 | Every failure returns `502` and leaks the exception message | `Results.Problem(result.Error, statusCode: 502)` in all endpoints | 2.2 |
 | KI-008 | `Role`, `Company`, `Period` have reference equality | no `Equals`/`GetHashCode`/`record` in `Domain/ValueObjects` | 3.1 |
@@ -28,8 +28,8 @@ None known.
 
 | ID | Issue | Evidence | Plan |
 |---|---|---|---|
-| KI-011 | TechStack reverse mapping maps `string` → `int`; will throw on the first write | `PortfolioMappingProfile.cs:38` | 1.2 / D2 |
-| KI-012 | `Project.Period` has no column and no mapping; value is silently discarded | `Project.cs:19`, `ProjectEntity` has no period columns | 1.4 |
+| KI-011 | ~~TechStack reverse mapping maps `string` → `int`~~ **RESOLVED 2026-10-22** | the bad `.ForMember(TechStackCategoryId, MapFrom(src => src.Category))` is gone; the id is now explicitly ignored and resolved by a lookup at write time. Proven by `Map_TechStack_To_TechStackEntity_LeavesTheCategoryIdUnset` | 1.2 / D2 |
+| KI-012 | ~~`Project.Period` has no column and no mapping~~ **RESOLVED 2026-10-22** | the domain property was deleted. The `"period": null` key no longer appears in `GET /api/v1/project` | 1.4 |
 | KI-013 | Empty-string `role` / `career_position` throws inside AutoMapper and 500s the whole collection | `new Role(src.CareerPosition)`; `NOT NULL` permits `''` | 1.5 |
 | KI-014 | Services catch `HttpRequestException` around database calls; that type never occurs there | **partially fixed 2026-10-22** — the four portfolio services now use the shared `PortfolioServiceBase.ExecuteAsync`, which catches everything except cancellation. `PortfolioService` (overview/Notion) still has `catch (HttpRequestException)` around its three **database** calls; its catch is correct for the Notion call only | 2.4 |
 | KI-015 | No `CancellationToken` anywhere; abandoned requests keep querying | all repository/service/endpoint signatures. The new base explicitly does **not** swallow `OperationCanceledException`, so cancellation will propagate once tokens are threaded through | 2.4 |
@@ -38,6 +38,8 @@ None known.
 | KI-036 | User secrets silently override environment variables | `Program.cs:9` calls `AddUserSecrets<Program>()` **after** `CreateBuilder(args)`, so the secrets file is added last and wins over env vars and command-line args. `ConnectionStrings__JDBConnection=...` is therefore ignored on a developer machine, and a `secrets.json` present on the server would override production configuration | 4.x |
 | KI-037 | The only remaining build warning is in `ExternalService` | `NotionClientService.cs:39` — `result.Markdown` dereferences a possibly-null `result` from `ReadFromJsonAsync<T>()`. CS8602. Pre-existing; unrelated to the cleanups | 4.6 |
 | KI-038 | Deployment relies on startup migration; CI has no migration step | `.github/workflows/main_jdb-portfolio-api.yml` builds, publishes and deploys only. `Database:AutoMigrate` now exists and is honoured, but it **defaults to `true`** precisely because of this — turning it off would stop migrations being applied in production. The multi-replica race (old KI-018) is therefore controllable, not fixed | 1.8 / 4.x |
+| KI-039 | EF Core version skew: Npgsql 10.0.3 targets EF Core 10.0.4, the solution uses 10.0.10 | `Npgsql.EntityFrameworkCore.PostgreSQL` 10.0.3 declares `Microsoft.EntityFrameworkCore.Relational >= 10.0.4`, so NuGet resolves 10.0.4 where EF Design's 10.0.10 does not flow (`PrivateAssets="all"`). Visible as `MSB3277` in `Persistence.Tests` until the version is pinned there. **The root fix is upgrading Npgsql to 10.0.10 so the whole solution aligns** — a dependency upgrade, so it needs approval | 4.x |
+| KI-040 | `Experience.Projects` is mapped by convention before the hand-built `AfterMap` overwrites it | `PortfolioMappingProfile` — `ExperienceEntity → Experience` maps `Projects` (entity) from `Projects` (domain) by name, which would build detached entities, and only then does `AfterMap` replace the collection. Now explicitly ignored. The same pattern remains on `Experience → ExperienceEntity` | 3.3 |
 
 ## P3 — cleanup and polish
 
@@ -51,7 +53,7 @@ None known.
 | KI-030 | `/overview` hardcodes display copy and runs three counts sequentially | `PortfolioService.GetOverview` | 4.8 |
 | KI-033 | `opencode.json` is committed and points at `127.0.0.1` | repo root | decide |
 | KI-034 | No health-check endpoint; nothing to probe in Azure | `Program.cs` | 4.x |
-| KI-035 | `Experience.Description`/`Responsibility`/`Type` are not explicitly mapped; population is implicit and untested | `PortfolioMappingProfile.cs:88-117` | 3.3 |
+| KI-035 | ~~`Experience.Description`/`Responsibility`/`Type` are not explicitly mapped~~ **RESOLVED 2026-10-22** | they are name-mapped and AutoMapper **does** write to the private setters. Proven by `Map_ExperienceEntity_To_Experience_PopulatesDescriptionResponsibilityAndType` in `Persistence.Tests`. The behaviour was never broken — only unverified | 3.3 |
 
 ## Resolved
 
