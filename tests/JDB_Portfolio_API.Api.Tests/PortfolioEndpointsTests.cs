@@ -353,12 +353,10 @@ public class PortfolioEndpointsTests : IClassFixture<PortfolioApiFactory>
         _factory.Recommendations.Recommendations.Clear();
         _factory.Notion.Pages.Clear();
 
-        _factory.Notion.Pages.Add(new JDB_Portfolio_API.Domain.ValueObjects.NotionPage
-        {
-            Url = "https://notion.so/page",
-            Date = "2026-06-27",
-            Title = "About me"
-        });
+        _factory.Notion.Pages.Add(new JDB_Portfolio_API.Application.Models.PageContent(
+            "https://notion.so/page",
+            "2026-06-27",
+            "About me"));
 
         var techStack = new TechStack(2, "C#", "https://example.test/csharp.svg", "Backend");
         _factory.TechStacks.TechStacks.Add(techStack);

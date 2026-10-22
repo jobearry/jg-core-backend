@@ -1,4 +1,6 @@
 ﻿using JDB_Portfolio_API.Application.Settings;
+using JDB_Portfolio_API.Application.Abstractions;
+using JDB_Portfolio_API.Adapters;
 using JDB_Portfolio_API.Domain.Entities;
 using JDB_Portfolio_API.Domain.Interfaces;
 using JDB_Portfolio_API.Persistence.Contexts;
@@ -58,7 +60,7 @@ namespace JDB_Portfolio_API
                     client.BaseAddress = new Uri("https://api.notion.com");
                 });
 
-            services.AddScoped<INotionService>(sp => sp.GetRequiredService<NotionClientService>());
+            services.AddScoped<IPageContentReader, NotionPageContentReader>();
         }
         public static void AddMapper(this IServiceCollection services, IConfiguration configuration)
         {

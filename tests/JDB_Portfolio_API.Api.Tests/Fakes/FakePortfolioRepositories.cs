@@ -1,3 +1,5 @@
+using JDB_Portfolio_API.Application.Abstractions;
+using JDB_Portfolio_API.Application.Models;
 using JDB_Portfolio_API.Domain.Entities;
 using JDB_Portfolio_API.Domain.Interfaces;
 using JDB_Portfolio_API.Domain.ValueObjects;
@@ -85,17 +87,18 @@ public sealed class FakeRecommendationRepository : IPortfolioRecommendationRepos
 }
 
 /// <summary>
-/// Stands in for the Notion HTTP client so the upstream failure path can be tested
-/// without a network call.
+/// Stands in for the page reader so the upstream failure path can be tested without a
+/// network call. It implements the application port, which is what the endpoint depends
+/// on (plan 3.2 / KI-045) — not the Notion client, which the test project cannot mirror.
 /// </summary>
-public sealed class FakeNotionService : INotionService
+public sealed class FakePageContentReader : IPageContentReader
 {
-    public List<NotionPage> Pages { get; } = new();
+    public List<PageContent> Pages { get; } = new();
 
     public Exception? Failure { get; set; }
 
-    public Task<List<NotionPage>> QueryPageAsync(string pageId, CancellationToken cancellationToken) =>
+    public Task<IReadOnlyList<PageContent>> ReadPageAsync(string pageId, CancellationToken cancellationToken) =>
         Failure is null
-            ? Task.FromResult(Pages)
-            : Task.FromException<List<NotionPage>>(Failure);
+            ? Task.FromResult<IReadOnlyList<PageContent>>(Pages)
+            : Task.FromException<IReadOnlyList<PageContent>>(Failure);
 }

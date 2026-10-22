@@ -336,14 +336,9 @@ public class PortfolioDtoMapperTests
     }
 
     [Fact]
-    public void MapsNotionPage()
+    public void MapsPageContent()
     {
-        var page = new NotionPage
-        {
-            Url = "https://notion.so/page",
-            Date = "2026-06-27",
-            Title = "About me"
-        };
+        var page = new PageContent("https://notion.so/page", "2026-06-27", "About me");
 
         var dto = page.ToDto();
 

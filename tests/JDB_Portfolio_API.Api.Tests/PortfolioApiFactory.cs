@@ -1,4 +1,5 @@
 using JDB_Portfolio_API.Api.Tests.Fakes;
+using JDB_Portfolio_API.Application.Abstractions;
 using JDB_Portfolio_API.Domain.Interfaces;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -31,7 +32,7 @@ public sealed class PortfolioApiFactory : WebApplicationFactory<Program>
 
     public FakeRecommendationRepository Recommendations { get; } = new();
 
-    public FakeNotionService Notion { get; } = new();
+    public FakePageContentReader Notion { get; } = new();
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
@@ -65,13 +66,13 @@ public sealed class PortfolioApiFactory : WebApplicationFactory<Program>
             services.RemoveAll<IPortfolioProjectRepository>();
             services.RemoveAll<IPortfolioTechStackRepository>();
             services.RemoveAll<IPortfolioRecommendationRepository>();
-            services.RemoveAll<INotionService>();
+            services.RemoveAll<IPageContentReader>();
 
             services.AddSingleton<IPortfolioExperienceRepository>(Experience);
             services.AddSingleton<IPortfolioProjectRepository>(Projects);
             services.AddSingleton<IPortfolioTechStackRepository>(TechStacks);
             services.AddSingleton<IPortfolioRecommendationRepository>(Recommendations);
-            services.AddSingleton<INotionService>(Notion);
+            services.AddSingleton<IPageContentReader>(Notion);
         });
     }
 }

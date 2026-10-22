@@ -23,7 +23,6 @@ accounts, contact form, analytics, CMS.
 | **TechStackCategory** | Grouping for tech stacks (e.g. frontend, backend). |
 | **Recommendation** | A testimonial: person, position, text, date. |
 | **DashboardItem** | A UI widget count (projects/skills/recommendations). Not a domain concept. |
-| **NotionPage** | A card parsed from a Notion markdown page. Not a domain concept. |
 | **Role** | A job title value object (non-empty, ≤ 50 chars). |
 | **Company** | An employer name value object (non-empty, ≤ 255 chars). Required on every experience. |
 | **Period** | A time range with an optional end. |
@@ -111,7 +110,6 @@ Behaviour that exists (plan 3.3 replaced public setters with these):
 | `Company` | `sealed record` | non-empty, ≤ 255 | **value** | never absent: "not disclosed" is not a thing for an employer, so there is no `Company?` (3.1a). The empty-string concept is gone (plan 3.1) |
 | `Period` | `sealed record` | no `default` dates; `FinishedAt >= StartedAt`; `StartedAt` not in the future | **value** | `FinishedAt == null` means *ongoing* — see `IsOngoing` |
 | `TechStackRef` | `sealed record` | non-blank name; non-blank category when present | **value** | A project's citation of a shared stack (3.4): identified by `Id`, immutable, so mutating one project's stack cannot reach another project |
-| `NotionPage` | `class` | none | reference | not a value object — vendor DTO, plan 3.2 |
 
 Since 3.1 these hold:
 
@@ -158,15 +156,17 @@ enforced on the read path until a write path exists to validate it earlier.
 | Type | Where it is | Should be | Status |
 |---|---|---|---|
 | `DashboardItem` | `Application/Models` | — | **moved 2026-10-22** (3.2). A read model with no invariant; only `PortfolioService` and `PortfolioDtoMapper` ever touched it |
-| `NotionPage` | `Domain/ValueObjects` | `Application` | **deferred** — moving it requires `ExternalService` to reference `Application`, which rule 2 forbids. See KI-045 |
-| `INotionService` | `Domain/Interfaces` | `Application/Abstractions` | **deferred** — same cause, same decision |
+| `NotionPage` | `ExternalService/Notion/Models` (vendor) · `Application/Models/PageContent` (core) | — | **resolved 2026-10-23** (3.2, ADR-0005). The vendor model stays with the vendor client; the application reads `PageContent` through `IPageContentReader` |
+| `INotionService` | `Application/Abstractions/IPageContentReader` | — | **resolved 2026-10-23** (3.2, ADR-0005). The Notion client implements nothing; `Presentation/Adapters/NotionPageContentReader` bridges the two |
 | `ExperienceId` | deleted | — | resolved during the 1.x dead-code pass |
 | `IService<T>` / `IMapper<,,>` | deleted | — | resolved during the 1.x dead-code pass |
 
-The Notion pair is a **deliberate** deferral, not an oversight: `ExternalService`
-implements the port and builds the payload type, so the port can only live in Domain
-unless an infrastructure project is allowed to reference `Application`. That rule
-reversal is recorded as a decision for later (KI-045), not as forgotten debt.
+Everything in this table is now resolved. The Notion pair needed a bridge rather than a
+move: `Application` owns the port and cannot reference `ExternalService`, and
+`ExternalService` implements the vendor call and cannot reference `Application`
+(AGENTS §6 rule 2). The composition root is the only project that sees both, so the
+adapter lives there — a deliberate, documented exception to "no behaviour in
+Presentation", not a bent rule. See ADR-0005.
 
 ## 8. Domain events
 

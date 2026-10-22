@@ -1,6 +1,6 @@
 # Plan 001 — Clean Architecture & DDD Refactor
 
-**Status:** In progress — decisions D1–D4 resolved; items 1.1–1.8, 2.1–2.5, 2.7, 3.1, 3.1a, 3.2, 3.3 and 3.4 complete, plus the four test projects and Batch 2 phase 1–3 (DTO boundary + endpoint contracts). **Part 1 and Part 2 are done** (2.6 is a feature, not debt); Part 3 is now complete apart from 3.2's Notion half, deliberately deferred (KI-045). `20261022150752_RequireCompanyName` is **applied to the local dev database** (2026-10-23) and still pending for any other environment — see 3.1a.
+**Status:** In progress — decisions D1–D4 resolved; items 1.1–1.8, 2.1–2.5, 2.7, 3.1, 3.1a, 3.2, 3.3 and 3.4 complete, plus the four test projects and Batch 2 phase 1–3 (DTO boundary + endpoint contracts). **Part 1 and Part 2 are done** (2.6 is a feature, not debt); **Part 3 is complete** (3.2's Notion half closed 2026-10-23, ADR-0005). `20261022150752_RequireCompanyName` is **applied to the local dev database** (2026-10-23) and still pending for any other environment — see 3.1a.
 **Scope:** `src/JDB_Portfolio_API.Domain`, `.Application`, `.Persistence`, `.ExternalService`, `JDB_Portfolio_API` (Presentation), `tests/`
 **Goal:** Bring the solution in line with clean architecture dependency rules and turn the Domain project into an actual domain model rather than a set of persistence shapes.
 
@@ -1192,8 +1192,8 @@ above.
 **What**
 
 - [x] `Domain/Entities/DashboardItem.cs` → Application (it is a read model)
-- [ ] `Domain/ValueObjects/NotionPage.cs` → Application DTO (integration concept) — **deferred, KI-045**
-- [ ] `Domain/Interfaces/INotionService.cs` → `Application/Abstractions/INotionReader`, expressed in application terms — **deferred, KI-045**
+- [x] `Domain/ValueObjects/NotionPage.cs` → vendor model in `ExternalService`, `PageContent` in `Application` (ADR-0005)
+- [x] `Domain/Interfaces/INotionService.cs` → `Application/Abstractions/IPageContentReader`, bridged by `Presentation/Adapters/NotionPageContentReader`
 - [x] Keep in Domain only ports that describe domain needs (the `IPortfolio*Repository` interfaces)
 
 > **Partially done (2026-10-22).** `DashboardItem` moved to `Application/Models`;
@@ -1220,6 +1220,21 @@ above.
 > Two bullets the plan no longer needed: `IService<T>`/`IMapper<,,>` and the `ExperienceId`
 > VO were already deleted in the 1.x dead-code pass. `IRepository<T>` stays in Domain — it
 > is a genuine port, constrained on by `PortfolioServiceBase`.
+>
+> **Completed 2026-10-23 — the rule was not relaxed.** `IPageContentReader` and
+> `PageContent` live in `Application`; `NotionPage` moved to
+> `ExternalService/Notion/Models`; `NotionClientService` implements nothing; and
+> `Presentation/Adapters/NotionPageContentReader` bridges the two, because the composition
+> root is the only project that references both. AGENTS §6 rule 2 is unchanged and no
+> csproj reference moved. ADR-0005 records the decision, the rejected alternatives and why
+> the adapter is in Presentation.
+>
+> The wire is unchanged: same route, same `NotionPageDto` keys, same
+> `notion_unavailable` / `notion_invalid_response` codes, verified live. The adapter is the
+> one seam the endpoint tests cannot reach (they replace the port), so
+> `NotionPageContentReaderTests` runs the real chain — stub `HttpMessageHandler` → parser →
+> vendor model → adapter → `PageContent` — and pins that an upstream failure escapes with
+> its original type. `Domain` is now vendor-free.
 
 **Why**
 

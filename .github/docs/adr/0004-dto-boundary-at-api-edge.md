@@ -55,7 +55,10 @@ Domain types stop at the application boundary. Persistence types never cross it.
 
 - Remove `Domain.Entities.DashboardItem` and `Domain.ValueObjects.NotionPage`
   once DTOs exist (plan 3.2). **`DashboardItem` removed 2026-10-22** (now
-  `Application/Models`); `NotionPage` deferred with its port — see KI-045.
+  `Application/Models`); **`NotionPage` removed 2026-10-23** — the vendor model
+  moved to `ExternalService`, the core reads `Application.Models.PageContent`
+  through `IPageContentReader`, and `Presentation/Adapters` bridges the two
+  (ADR-0005).
 - Add `.ProducesProblem(...)` and contract tests per endpoint.
 
 ## Alternatives considered

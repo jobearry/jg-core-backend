@@ -1,4 +1,5 @@
-﻿using JDB_Portfolio_API.Application.Common;
+﻿using JDB_Portfolio_API.Application.Abstractions;
+using JDB_Portfolio_API.Application.Common;
 using JDB_Portfolio_API.Application.DTO;
 using JDB_Portfolio_API.Application.Models;
 using JDB_Portfolio_API.Domain.Entities;
@@ -14,20 +15,20 @@ namespace JDB_Portfolio_API.Application.Services;
 
 public class PortfolioService
 {
-    private readonly INotionService _notionService;
+    private readonly IPageContentReader _pageContentReader;
     private readonly IPortfolioProjectRepository _projectRepository;
     private readonly IPortfolioTechStackRepository _techStackRepository;
     private readonly IPortfolioRecommendationRepository _recommendationRepository;
     private readonly ILogger<PortfolioService> _logger;
 
     public PortfolioService(
-        INotionService notionService,
+        IPageContentReader pageContentReader,
         IPortfolioProjectRepository projectRepository,
         IPortfolioTechStackRepository techStackRepository,
         IPortfolioRecommendationRepository recommendationRepository,
         ILogger<PortfolioService> logger)
     {
-        _notionService = notionService;
+        _pageContentReader = pageContentReader;
         _projectRepository = projectRepository;
         _techStackRepository = techStackRepository;
         _recommendationRepository = recommendationRepository;
@@ -40,7 +41,7 @@ public class PortfolioService
     {
         try
         {
-            var page = await _notionService.QueryPageAsync(pageID, cancellationToken);
+            var page = await _pageContentReader.ReadPageAsync(pageID, cancellationToken);
             return Result<List<NotionPageDto>>.Success(
                 page.Select(notionPage => notionPage.ToDto()).ToList());
         }

@@ -30,7 +30,7 @@
 | **TechStackCategory** | Grouping of technologies (frontend, backend, …). |
 | **Recommendation** | A testimonial with person, position, text, and date. |
 | **Overview / DashboardItem** | Aggregated counts for the CV landing page. A read model, not a domain concept. |
-| **NotionPage** | A card parsed from a Notion markdown page. An integration concept. |
+| **NotionPage** | The vendor's page shape, held in `ExternalService`; the core sees `PageContent` (ADR-0005). |
 | **Service token** | The JWT issued by `/auth/login`: a single shared key, one role claim, no user identity. |
 | **`Result<T>`** | Application-layer return type carrying success/failure plus a value or an error string. |
 | **`ProblemDetails`** | RFC 7807 error response shape returned by ASP.NET. |
@@ -45,6 +45,5 @@
 |---|---|
 | `Experience.Duration` | A `Period` value object, not a `TimeSpan`. `Period.Duration` is the `TimeSpan`. |
 | `TechStack.Category` (string) | A denormalised category name; the table stores `tech_stack_category_id`. |
-| `Project.TechStacks` | A list of **entity** instances, not references. |
-| `PortfolioService` | Not a base service; it orchestrates overview and Notion, and does not inherit `PortfolioServiceBase`. |
-| `INotionService` in `Domain` | A vendor port that does not belong in the domain. |
+| `Project.TechStacks` | A list of `TechStackRef` **value objects**, not entity instances (3.4). |
+| `PortfolioService` | Not a base service; it orchestrates overview and page content, and does not inherit `PortfolioServiceBase`. |

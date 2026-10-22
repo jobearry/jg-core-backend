@@ -84,11 +84,11 @@ public static class PortfolioDtoMapper
             dashboardItem.Count,
             dashboardItem.Description);
 
-    public static NotionPageDto ToDto(this NotionPage notionPage) =>
+    public static NotionPageDto ToDto(this PageContent pageContent) =>
         new(
-            notionPage.Url,
-            notionPage.Date,
-            notionPage.Title);
+            pageContent.Url,
+            pageContent.Date,
+            pageContent.Title);
 
     /// <summary>
     /// Whole calendar months between two dates — what a CV actually displays.

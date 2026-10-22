@@ -1,5 +1,4 @@
-﻿using JDB_Portfolio_API.Domain.Interfaces;
-using JDB_Portfolio_API.ExternalService.Notion.Settings;
+﻿using JDB_Portfolio_API.ExternalService.Notion.Settings;
 using JDB_Portfolio_API.ExternalService.Notion.Utils;
 using JDB_Portfolio_API.ExternalService.Notion.DTO;
 using Microsoft.Extensions.Options;
@@ -9,11 +8,16 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Threading;
 using System.Threading.Tasks;
-using JDB_Portfolio_API.Domain.ValueObjects;
+using JDB_Portfolio_API.ExternalService.Notion.Models;
 
 namespace JDB_Portfolio_API.ExternalService.Notion.Services;
 
-public class NotionClientService : INotionService
+/// <summary>
+/// The Notion call itself. Deliberately implements no interface: the application's port
+/// (<c>IPageContentReader</c>) is bridged to this class in the composition root, so this
+/// project keeps referencing <c>Domain</c> only (plan 3.2 / KI-045, ADR-0005).
+/// </summary>
+public class NotionClientService
 {
     private readonly HttpClient _httpClient;
     private readonly NotionSettings _opts;

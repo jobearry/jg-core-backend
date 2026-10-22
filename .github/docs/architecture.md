@@ -31,20 +31,20 @@ src/
 ├── JDB_Portfolio_API.Domain/            ← core, no dependencies
 │   ├── Entities/                        Experience, Project, TechStack,
 │   │                                    TechStackCategory, Recommendation
-│   ├── ValueObjects/                    Role, Company, Period, NotionPage
-│   │                                    (misplaced — plan 3.2, deferred, KI-045)
-│   └── Interfaces/                      IRepository<T>, IPortfolio*Repository,
-│                                        INotionService (misplaced — same decision)
+│   ├── ValueObjects/                    Role, Company, Period, TechStackRef
+│   └── Interfaces/                      IRepository<T>, IPortfolio*Repository
+│                                        (ports only — no vendor types; 3.2, ADR-0005)
 │
 ├── JDB_Portfolio_API.Application/       ← core, references Domain
 │   ├── Common/Result.cs                 Result<T> (string error today)
-│   ├── Models/DashboardItem.cs          read model for the overview tiles (3.2)
+│   ├── Abstractions/                    IPageContentReader (3.2, ADR-0005)
+│   ├── Models/                          DashboardItem, PageContent
 │   ├── Services/                        PortfolioService, PortfolioExperienceService,
 │   │                                    PortfolioProjectService,
 │   │                                    PortfolioRecommendationService,
 │   │                                    PortfolioSkillService,
 │   │                                    PortfolioServiceBase<T,TRepository>
-│   ├── DTO/                             AuthDto
+│   ├── DTO/                             the published contracts (AuthDto, *Dto)
 │   └── Settings/JwtOptions.cs
 │
 ├── JDB_Portfolio_API.Persistence/       ← infrastructure
@@ -57,10 +57,14 @@ src/
 │   └── Migrations/                      6 migrations + snapshot
 │
 ├── JDB_Portfolio_API.ExternalService/   ← infrastructure
-│   └── Notion/                          NotionClientService, parser, settings, DTO
+│   └── Notion/                          NotionClientService, parser, settings, DTO,
+│                                        Models/NotionPage (vendor shape)
 │
 └── JDB_Portfolio_API/                   ← presentation / composition root
     ├── Program.cs                       builder, middleware, endpoint mapping
+    ├── ConfigurationSettings.cs         DI composition (AddDatabase, AddExternalService, …)
+    ├── Adapters/                        NotionPageContentReader — bridges the Application
+    │                                    port to the Notion client (ADR-0005)
     ├── ConfigurationSettings.cs         DI extensions (all in one class)
     └── Endpoints/                       7 static classes, one per area
 ```
@@ -140,7 +144,7 @@ kind, and one mapper turns it into `ProblemDetails`.
 builder.Services
   .AddSwaggerConfig(...)     → Swashbuckle, JWT security scheme
   .AddDatabase(...)          → DbContext + ALL repositories/services (misfiled)
-  .AddExternalService(...)   → Notion HttpClient + INotionService
+  .AddExternalService(...)   → Notion HttpClient + IPageContentReader (adapter in Adapters/)
   .AddAuthentication(...)    → JwtOptions + JwtBearer + AddAuthorization + IAuthTokenService
   .AddMapper(...)            → AutoMapper profile
   .AddCorsOrigins(configuration, environment)  → "AllowSPA" policy

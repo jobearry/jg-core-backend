@@ -1,4 +1,4 @@
-﻿using JDB_Portfolio_API.Domain.ValueObjects;
+﻿using JDB_Portfolio_API.ExternalService.Notion.Models;
 using JDB_Portfolio_API.ExternalService.Notion.DTO;
 using System;
 using System.Xml.Linq;
