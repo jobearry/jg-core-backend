@@ -1,6 +1,6 @@
 # Plan 001 — Clean Architecture & DDD Refactor
 
-**Status:** In progress — decisions D1–D4 resolved; items 1.1–1.8, 2.1–2.5 and 2.7 complete, plus the four test projects and Batch 2 phase 1–3 (DTO boundary + endpoint contracts). **Part 1 and Part 2 are done** (2.6 is a feature, not debt); next is Part 3, starting with 3.1
+**Status:** In progress — decisions D1–D4 resolved; items 1.1–1.8, 2.1–2.5, 2.7, 3.1, 3.1a, 3.2, 3.3 and 3.4 complete, plus the four test projects and Batch 2 phase 1–3 (DTO boundary + endpoint contracts). **Part 1 and Part 2 are done** (2.6 is a feature, not debt); Part 3 is now complete apart from 3.2's Notion half, deliberately deferred (KI-045). `20261022150752_RequireCompanyName` is **applied to the local dev database** (2026-10-23) and still pending for any other environment — see 3.1a.
 **Scope:** `src/JDB_Portfolio_API.Domain`, `.Application`, `.Persistence`, `.ExternalService`, `JDB_Portfolio_API` (Presentation), `tests/`
 **Goal:** Bring the solution in line with clean architecture dependency rules and turn the Domain project into an actual domain model rather than a set of persistence shapes.
 
@@ -41,8 +41,8 @@ The project boundaries are already clean-architecture-shaped: Domain has zero pr
 | Area | Grade | One-liner |
 |---|---|---|
 | Project layout / dependency direction | B+ | One real violation, otherwise correct |
-| Domain model (DDD) | D+ | Anemic, no invariants, no aggregate boundaries |
-| Value objects | C | Classes with reference equality |
+| Domain model (DDD) | B− | Entities validate (3.3); boundary settled (3.4) |
+| Value objects | B+ | `record`s with value equality and validating constructors (3.1) |
 | Application layer | C | Pass-through services, no DTO boundary |
 | Persistence | B− | Right idea (entity ≠ domain), broken mappings |
 | API / minimal APIs | B− | Good endpoint splitting, weak contracts |
@@ -1038,31 +1038,150 @@ This is the part that answers "am I doing DDD?". Everything here is a design cho
 
 **What**
 
-- [ ] `public sealed record Role`
-- [ ] `public sealed record Company`
-- [ ] `public sealed record Period`
-- [ ] `Company` maps `null`/whitespace to `""` — either reject it (`ArgumentException`) or make it optional at the aggregate level and remove the empty-string concept
-- [ ] `Period` invariants: `StartedAt` not in the future, `FinishedAt >= StartedAt` (already present), and settle what `FinishedAt == null` means
+- [x] `public sealed record Role`
+- [x] `public sealed record Company`
+- [x] `public sealed record Period`
+- [x] `Company` maps `null`/whitespace to `""` — either reject it (`ArgumentException`) or make it optional at the aggregate level and remove the empty-string concept
+- [x] `Period` invariants: `StartedAt` not in the future, `FinishedAt >= StartedAt` (already present), and settle what `FinishedAt == null` means
+
+> **Done (2026-10-22).** All five, and two of them were decisions rather than edits.
+>
+> **Equality.** The three are `sealed record`s now, so `new Role("Developer") ==
+> new Role("Developer")` is `true` and they work as dictionary keys. Each property is
+> `get`-only, which is what makes the record safe: a generated `with` expression cannot
+> change a value and skip the constructor's validation. `ToString()` overrides are kept
+> (records would otherwise print `Role { Value = Developer }`), so nothing that relied on
+> the old output changes.
+>
+> **`Company` blank → rejected.** The empty string is gone rather than formalised. The
+> old type collapsed `null` and `"   "` into `Name == ""`, so the model carried a value
+> that meant "nothing" and every caller would have had to test both `Name == ""` and
+> `null`. "Not disclosed" is now the absence of a company, matching how `Role` already
+> worked after 1.5. The choice had to move somewhere, so it moved to
+> `PortfolioMappingProfile.ToCompany` — the same `IsNullOrWhiteSpace → null` rule as
+> `ToRole`, which also keeps a blank column from throwing inside AutoMapper and taking
+> down the collection (the 1.5 failure mode). The reverse map writes `null`, not `""`:
+> `company_name` is nullable, unlike `role`. **Superseded by 3.1a** — the column became
+> required the same day, `ToCompany` was deleted, and the mapping no longer has a
+> "blank means not disclosed" branch to make.
+>
+> **`FinishedAt == null` means ongoing.** Named as `Period.IsOngoing`, true only when
+> there is a start and no end. `StartedAt == null && FinishedAt == null` is *unknown*, not
+> ongoing — the two are different facts and the mapper treats them differently.
+>
+> **`StartedAt` not in the future** — compared by `.Date`, so the time of day and the
+> caller's timezone can never decide it. Worth knowing the cost: the mapper builds a
+> `Period` for every row, so a future-dated row now throws inside AutoMapper and returns
+> `500` for the whole collection instead of rendering a nonsense duration. Accepted
+> deliberately — a `2062` typo should be loud — but it is read-path enforcement until a
+> write endpoint exists to check it earlier. Verified against the live data: no
+> future-dated rows, `/experience` still `200`.
+>
+> **Tests — 20 new (132 total).** Domain: equality, `==`, `GetHashCode` and
+> dictionary-key behaviour for all three; `Company` rejects `null`/`""`/whitespace;
+> `Period` rejects a future start and accepts today; `IsOngoing` for ongoing, finished and
+> unknown. Persistence: a blank or null `company_name` mapped to `null` and did not throw,
+> a declared name survived, and the reverse map wrote `null` — **all three superseded by
+> 3.1a**, which made that state unrepresentable instead of tolerated.
 
 **Why**
 
-A value object is *defined by its value*. Yours are classes with no `Equals` override, so equality is reference-based:
+A value object is *defined by its value*. They were classes with no `Equals` override, so equality was reference-based:
 
 ```csharp
-new Role("Developer") == new Role("Developer")   // false today
+new Role("Developer") == new Role("Developer")   // false before 3.1, true now
 ```
 
-That means you cannot write `if (experience.Role == Role.Developer)`, cannot use them as dictionary keys, and cannot compare a mapped-from-DB role to a constructed one. You have validation wrappers, not value objects.
+That meant you could not write `if (experience.Role == Role.Developer)`, could not use them as dictionary keys, and could not compare a mapped-from-DB role to a constructed one. They were validation wrappers, not value objects.
 
 **How to verify**
 
-No test needed — there is no `Equals`/`GetHashCode`/`operator ==` in any of the three files:
-
 ```bash
-grep -n "Equals\|GetHashCode\|record" src/JDB_Portfolio_API.Domain/ValueObjects/*.cs
+grep -n "record" src/JDB_Portfolio_API.Domain/ValueObjects/*.cs   # three records, one vendor DTO
+dotnet test tests/JDB_Portfolio_API.Domain.Tests --filter ValueObjects
 ```
 
 **Why `record class`, not `record struct`:** `record class` keeps `null` meaningful for `Company?` and gives `with` expressions. `record struct` removes allocation but changes nullability semantics. For three types on a portfolio API, `record class` is correct. `Period` has `DateTime?` members, so its generated equality is right.
+
+---
+
+## 3.1a — A role always names a company
+
+`SCHEMA` (make the rule enforceable) · **Risk:** medium at deploy · **Effort:** 45 min ·
+**Written 2026-10-22, migration not applied**
+
+**What**
+
+- [x] `ExperienceEntity.CompanyName` → `string` (`= null!`), `.IsRequired()`
+- [x] `PortfolioContext` — `ToTable("experience", t => t.HasCheckConstraint(...))`
+- [x] `Experience.Company` and `ExperienceDto.Company` non-nullable
+- [x] `ToCompany` helper deleted; the reverse map is `src.Company.Name`
+- [x] Migration `20261022150752_RequireCompanyName` — `SET NOT NULL` + `CHECK (btrim(company_name) <> '')`
+- [x] `RequiredCompanyMappingTests` replaces `UnnamedCompanyMappingTests`
+
+> **Done (2026-10-22).** 3.1 left the domain forbidding a nameless company and the
+> schema permitting one, and after 3.1 the *mapping* was the thing deciding that a blank
+> column meant "no company". Three layers, three answers. This item collapses them into
+> one and puts the answer where it cannot be bypassed: the database.
+>
+> **Why `NOT NULL` alone was not enough.** It reproduces exactly the `role` situation — a
+> column that insists on a value, filled with `''` when there is not one — so the
+> constraint is `btrim(company_name) <> ''` as well. `btrim` also rejects all-whitespace.
+> Note that `NULL` *passes* a `CHECK` (the predicate is unknown, not false), which is why
+> both constraints are needed; either one alone leaves a hole.
+>
+> **The asymmetry with `role` is deliberate and documented in `database.md` §3.**
+> "Not disclosed" is a plausible answer for a role; a role with no employer is not a role.
+> Anything that genuinely cannot be named gets a truthful stand-in — `"Self-employed"`,
+> `"Contract — NDA"` — rather than a blank. Do not add a `CHECK` to `role` to "match", and
+> do not relax this one to match `role`.
+>
+> **`defaultValue: ""` was scaffolded and then removed by hand.** EF invented it so the
+> `SET NOT NULL` would not fail on a `NULL` row — but it would have written an empty
+> company that the new `CHECK` rejects anyway, i.e. data invented and then refused. With
+> the default gone, a dirty row makes the migration fail loudly, which is the correct
+> outcome. Editing a migration in place is normally forbidden (rule 10); it is allowed
+> here because the migration has never been applied to any database.
+>
+> **Deploy risk, stated plainly.** `Database:AutoMigrate` defaults to `true` (KI-038), so
+> this runs on the next deploy. `SET NOT NULL` aborts if a `NULL` row exists. Local data is
+> clean — 4 rows, all named — but that does not prove production is, and `dotnet ef` cannot
+> reach the production database from here. Run the check in `database.md` §4 against
+> production before deploying; a failure is a data fix, not a reason to add a default.
+>
+> **Tests — 129 total (was 132).** Net −3 because the state under test was removed: two
+> persistence tests asserted that a null/blank column became `null` and one mapper test
+> asserted that a missing company became a `null` DTO field. Added:
+> `Map_Experience_WithACompany_WritesItsName` (the reverse direction, which had no test)
+> and `Map_ExperienceEntity_WithABlankCompany_FailsLoudly` — a corrupt row now throws
+> instead of being reinterpreted, which documents the boundary rather than the happy path.
+>
+> **Not done, on purpose:** no `Trim()`. `" Acme"` and `"Acme "` are still distinct values
+> under value equality; the `CHECK` rejects all-whitespace but not surrounding whitespace.
+> Recorded as KI-044.
+
+**Why**
+
+The cheapest place to enforce "a role names a company" is the place every writer must go
+through. There is no write endpoint yet, so the alternative — validating in the API — is a
+promise about code that does not exist. The constraint is also stable across the 3.4
+decision: if `Company` later becomes an entity, the rule becomes `company_id NOT NULL` and
+this column disappears with its constraint.
+
+**How to verify**
+
+```bash
+dotnet ef migrations has-pending-model-changes --project src/JDB_Portfolio_API.Persistence \
+  --startup-project src/JDB_Portfolio_API        # "No changes … since the last migration"
+grep -n "ck_experience_company_name_not_blank" \
+  src/JDB_Portfolio_API.Persistence/Contexts/PortfolioContext.cs \
+  src/JDB_Portfolio_API.Persistence/Migrations/*RequireCompanyName.cs
+dotnet test tests/JDB_Portfolio_API.Persistence.Tests --filter RequiredCompanyMappingTests
+```
+
+The constraint itself cannot be exercised by the test suite — Persistence tests use
+AutoMapper without a database. It is verified by the migration SQL and by the data check
+above.
 
 ---
 
@@ -1072,10 +1191,35 @@ grep -n "Equals\|GetHashCode\|record" src/JDB_Portfolio_API.Domain/ValueObjects/
 
 **What**
 
-- [ ] `Domain/Entities/DashboardItem.cs` → Application (it is a read model)
-- [ ] `Domain/ValueObjects/NotionPage.cs` → Application DTO (integration concept)
-- [ ] `Domain/Interfaces/INotionService.cs` → `Application/Abstractions/INotionReader`, expressed in application terms
-- [ ] Keep in Domain only ports that describe domain needs (the `IPortfolio*Repository` interfaces)
+- [x] `Domain/Entities/DashboardItem.cs` → Application (it is a read model)
+- [ ] `Domain/ValueObjects/NotionPage.cs` → Application DTO (integration concept) — **deferred, KI-045**
+- [ ] `Domain/Interfaces/INotionService.cs` → `Application/Abstractions/INotionReader`, expressed in application terms — **deferred, KI-045**
+- [x] Keep in Domain only ports that describe domain needs (the `IPortfolio*Repository` interfaces)
+
+> **Partially done (2026-10-22).** `DashboardItem` moved to `Application/Models`;
+> it was referenced by exactly two types (`PortfolioService`, `PortfolioDtoMapper`) and
+> one test, so the move changed one namespace and three `using` lines. No dependency edge
+> moved, nothing at runtime changed.
+>
+> The other two bullets are **deferred on purpose**, and the reason is not effort — it is
+> a rule conflict the plan did not account for. `ExternalService` implements the port and
+> constructs the payload (`NotionClientService : INotionService`,
+> `NotionPageParserUtility.Parse`), so an `Application`-owned port requires
+> `ExternalService → Application`. AGENTS §6 rule 2 and plan line 1400 both forbid that
+> edge, and ADR-0001's follow-up went the other way (it removed `Persistence → Application`
+> precisely because of the rule). Domain is the only project both sides already see, which
+> is why the vendor type landed there.
+>
+> Both placements work; only the invariant differs. Relaxing the rule to its meaningful
+> form — *`Application` must not reference any infrastructure project; infrastructure may
+> reference `Application` only to implement its ports* — is the textbook arrangement, but
+> doing it while nothing enforces the edges trades a rule that already caught one real
+> violation for one trusted to review. Recorded as KI-045, to be revisited once the
+> architecture test exists. **No code outside `DashboardItem` changed.**
+>
+> Two bullets the plan no longer needed: `IService<T>`/`IMapper<,,>` and the `ExperienceId`
+> VO were already deleted in the 1.x dead-code pass. `IRepository<T>` stays in Domain — it
+> is a genuine port, constrained on by `PortfolioServiceBase`.
 
 **Why**
 
@@ -1103,14 +1247,52 @@ grep -rn "DashboardItem" src/JDB_Portfolio_API.Domain/
 
 **What**
 
-- [ ] `Project`: private setters, validating constructor/factory, non-empty name
-- [ ] `Recommendation`: validate `Description` in the constructor (currently unvalidated while `PersonName` and `CareerPosition` are)
-- [ ] `TechStack`: validate name and category; remove `CreatedAt`
-- [ ] Remove `partial` and `= null!` from domain entities — those are EF-entity idioms
-- [ ] Remove `CreatedAt` / `UpdatedAt` from domain entities (persistence audit columns)
-- [ ] `Experience.Projects` has a public setter — make it a read-only collection
-- [ ] `Experience.Responsibility` / `.Type` have no mutators — add behaviour or drop them
-- [ ] Resolve the identity mismatch: `Experience.Id` is constructor-only, `Project.Id` is a public setter
+- [x] `Project`: private setters, validating constructor/factory, non-empty name
+- [x] `Recommendation`: validate `Description` in the constructor (currently unvalidated while `PersonName` and `CareerPosition` are)
+- [x] `TechStack`: validate name and category; remove `CreatedAt`
+- [x] Remove `partial` and `= null!` from domain entities — those are EF-entity idioms
+- [x] Remove `CreatedAt` / `UpdatedAt` from domain entities (persistence audit columns)
+- [x] `Experience.Projects` has a public setter — make it a read-only collection
+- [x] `Experience.Responsibility` / `.Type` have no mutators — add behaviour or drop them
+- [x] Resolve the identity mismatch: `Experience.Id` is constructor-only, `Project.Id` is a public setter
+
+> **Done (2026-10-22).** Every entity now validates at construction and exposes behaviour
+> instead of setters. The read path was verified first: no blank `project_name`,
+> `person_name`, `description` or `stack_name` in the data, so the new guards cannot turn a
+> working endpoint into a `500`. 39 new Domain tests; total went 129 → 168.
+>
+> **`private set` alone would have been theatre.** The plan's caveat says private setters
+> force construction through the factories. AutoMapper writes private setters through
+> reflection — `Experience.Description`/`.Responsibility`/`.Type` had exactly that shape
+> and were populated in production — so the *Ignore* is what gives the constructor
+> authority, not the access modifier. The profile now states that explicitly, and
+> `MappingConfiguration_HasNoUnmappedMembers` caught the one place it did not:
+> removing `CreatedAt` from the domain left it unmapped on the two reverse maps, where it is
+> now ignored on purpose (a write path leaves the audit column to the database).
+>
+> **`Experience.Projects` and `Project.TechStacks` are `IReadOnlyList` + `Replace…`.** The
+> setter allowed a caller to swap the collection while the aggregate believed nothing had
+> changed; the method also copies the argument, so a caller cannot keep a handle on it.
+> Verified by test (`ReplaceProjects_CopiesTheList`).
+>
+> **`Project.Id` is get-only**, settling the identity mismatch: identity is assigned once,
+> at construction, for every entity.
+>
+> **`Responsibility` and `Type` got mutators** rather than being dropped — they are real
+> columns and real API fields; the defect was that the aggregate had no way to express them,
+> while AutoMapper wrote them anyway. `Recommendation` got the validation it half-had:
+> `PersonName` now rejects whitespace (KI-041) and `Description` is required.
+>
+> **`TechStack.Category` stays nullable.** The mapper has a live branch for a missing
+> category navigation, so the rule is "blank is rejected, absence is allowed" — requiring it
+> would have been a read-path `500` waiting for the first query that does not include the
+> navigation.
+>
+> **Not done, deliberately:** no `CHECK` constraints. 3.1a set that precedent for
+> `company_name`; extending it to four more columns is a second migration and another deploy
+> risk, and it is not what this item is about. Recorded in `database.md` §3 as the remaining
+> asymmetry. KI-044 (no trimming) is also still open — `btrim` rejects an all-whitespace
+> name but says nothing about surrounding spaces.
 
 **Why**
 
@@ -1141,13 +1323,44 @@ After the change both throw.
 
 **What**
 
-- [ ] Choose D3: **Experience owns Project for writes** (recommended), or **Project is an independent aggregate** referenced by a typed `ExperienceId`
-- [ ] Enforce it: exactly one repository is the write entry point for the boundary
-- [ ] `Project.TechStacks` holds `TechStack` **entities** — replace with ids or a small `TechStackRef` value object
-- [ ] Remove `Project.Period` or map it (see 1.4)
-- [ ] Add `FinishedAt` to `ExperienceEntity` or drop `Period.FinishedAt` from the read path (see 1.3)
+- [x] Choose D3: **Experience owns Project for writes** (recommended), or **Project is an independent aggregate** referenced by a typed `ExperienceId`
+- [x] Enforce it: exactly one repository is the write entry point for the boundary
+- [x] `Project.TechStacks` holds `TechStack` **entities** — replace with ids or a small `TechStackRef` value object
+- [x] Remove `Project.Period` or map it (see 1.4)
+- [x] Add `FinishedAt` to `ExperienceEntity` or drop `Period.FinishedAt` from the read path (see 1.3)
+
+> **Done (2026-10-23).** Three of the five bullets had already been settled by the time
+> this item was reached: D3 was decided on 2026-10-22 (option **b**, Project is an
+> independent aggregate — ADR-0003), `Project.Period` was deleted in 2.1, and `finished_at`
+> was added in 3.1a. What remained was enforcement and `TechStackRef`.
+>
+> **"How do I create a project?" — zero ways today.** The item was written when the
+> answer was two. Every repository derives from `IRepository<T>`, whose only member is
+> `GetAllAsync`; `AddNewAsync` is gone. So "exactly one write entry point" cannot be
+> enforced by removing the second one — it is enforced by *shape* until 4.4 adds
+> `IUnitOfWork`: `Experience.Projects` is a read-only projection, `Project.ExperienceId`
+> changes only through `AttachToExperience`, and `Project.TechStacks` cannot be assigned.
+> ADR-0003 now names `IPortfolioProjectRepository` as the future write entry point and
+> says explicitly that adding a second one is the thing to refuse.
+>
+> **`Project.TechStacks` is `IReadOnlyList<TechStackRef>`.** A `record` carrying id,
+> name, image and category — the same four fields the nested payload already published,
+> so the change is invisible to clients (verified live: the nested key list is unchanged).
+> Including the category was the deciding detail: `TechStackRef` with only id+name+image
+> would have silently dropped `category` from every project's stacks, which is a contract
+> change, not a refactor. Two `TechStackEntity → TechStackRef` conversions in the profile
+> replace the entity construction; `TechStack` itself is untouched and still serves
+> `/api/v1/skill`.
+>
+> **`TechStackRef` got its own value-equality tests** (9 of them) — a reference that does
+> not compare by value is not a reference, it is a copy with extra steps.
+>
+> Tests went 168 → 177; no schema change; no migration.
 
 **Why**
+
+> *(Written before 2.1/3.1a/3.3. The three overlapping boundaries described below no
+> longer exist — see the Done note above.)*
 
 An aggregate is a *consistency boundary*: the unit you load and save together, and the only thing a repository should return. You currently have three overlapping boundaries:
 
@@ -1177,9 +1390,9 @@ Answer "how do I create a project?" — there are two ways today. Two answers me
 - [x] `tests/JDB_Portfolio_API.Persistence.Tests`: the AutoMapper profile
 
 > **Partially done (2026-10-22).** Four test projects exist and `dotnet test` is green
-> (112 tests). What they cover today:
+> (132 tests). What they cover today:
 >
-> - **Domain.Tests** — 19 tests over `Role`, `Company` and `Period`. These are
+> - **Domain.Tests** — 33 tests over `Role`, `Company` and `Period`. These are
 >   *characterisation* tests: they lock in the value objects' current behaviour so that
 >   items 3.1 and 3.3 can change it deliberately.
 > - **Application.Tests** — 38 tests: 11 over `PortfolioExperienceService` with a
@@ -1187,7 +1400,7 @@ Answer "how do I create a project?" — there are two ways today. Two answers me
 >   `ExecuteAsync` behaviour from 2.3, plus the 2.4 logging levels and token threading),
 >   7 over `ResultErrors` (2.2), and 21 over `PortfolioDtoMapper` (2.1) — two-thirds of
 >   which are wire-shape guards on the DTO types themselves.
-> - **Persistence.Tests** — 18 tests: 9 over `Experience`, 2 over `TechStack`, 8 over the
+> - **Persistence.Tests** — 24 tests: 9 over `Experience`, 2 over `TechStack`, 8 over the
 >   "undeclared role" mapping from 1.5, and `NpgsqlFailureTypeTests` (2.2), which pins
 >   the assumption that a provider failure is a `DbException` — the fact the 503 mapping
 >   silently depends on.
@@ -1214,10 +1427,11 @@ Answer "how do I create a project?" — there are two ways today. Two answers me
 >
 > - **Entity invariants** (3.3) are not tested, because the entities do not have
 >   invariants yet. Writing those tests red-first is part of item 3.3.
-> - **VO equality** (3.1) is not tested, because `Role`/`Company`/`Period` are still
->   classes with reference equality. Same reason.
-> - **Auth** is not covered. `RequireAuthorization()` is commented out on every
->   portfolio endpoint, so there is nothing to assert yet (2.5).
+> - **VO equality** (3.1) is now covered — equal values, `==`, `GetHashCode` and
+>   dictionary-key use — and `Company`'s blank-name rejection and `Period`'s future-start
+>   rule are tested too.
+> - **Auth** is not covered beyond `/auth/me`; the portfolio endpoints are anonymous on
+>   purpose, so there is nothing else to assert (2.5).
 >
 > Package baseline (approved): `xunit` 2.9.3, `xunit.runner.visualstudio` 3.1.4,
 > `Microsoft.NET.Test.Sdk` 17.14.1, and `Microsoft.AspNetCore.Mvc.Testing` 10.0.13 for
@@ -1242,7 +1456,7 @@ Every change in Parts 1–3 is a refactor, and a refactor without tests is a rew
 **How to verify**
 
 ```bash
-dotnet test    # 112 tests, all green
+dotnet test    # 132 tests, all green
 ```
 
 **Pragmatic order:** do not build all three. Start with one Domain test project covering 3.1 and 3.3. That is about an hour and protects the rest.

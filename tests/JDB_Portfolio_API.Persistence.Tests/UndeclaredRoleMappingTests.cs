@@ -74,7 +74,7 @@ public class UndeclaredRoleMappingTests : MappingTestBase
     {
         var experience = new Domain.Entities.Experience(
             7,
-            null,
+            new Domain.ValueObjects.Company("Acme Corp"),
             new Domain.ValueObjects.Period(null, null),
             null);
 

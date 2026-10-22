@@ -25,7 +25,7 @@ Current status:
   [`.github/plans/001-clean-architecture-refactor.md`](.github/plans/001-clean-architecture-refactor.md).
 - **Tests exist but are thin.** Four xUnit projects cover the Domain value objects,
   the application services, the DTO mapping, the AutoMapper profile and the endpoint
-  contracts (112 tests).
+  contracts (132 tests).
 
 ---
 
@@ -140,6 +140,9 @@ dotnet ef migrations add <Name> \
 dotnet ef database update \
   --project src/JDB_Portfolio_API.Persistence \
   --startup-project src/JDB_Portfolio_API
+# EF uses PortfolioContextFactory, not the app host, so it needs the id:
+#   export JDB_USER_SECRETS_ID=<id from src/JDB_Portfolio_API/*.csproj>
+# Without it every EF command reports a null connection string (docs/database.md §5).
 
 # Docker (API only; set ConnectionStrings__JDBConnection in docker/.env)
 docker compose -f docker/docker-compose.yml up --build
@@ -211,9 +214,16 @@ Each rule has a full explanation in `.github/rules/`.
 
 ## 8. Current state and known gaps (short version)
 
-- Domain entities are anemic: public setters, `partial`, `CreatedAt` on
-  `TechStack`, no invariants on `Project`/`Recommendation.Description`.
-- Value objects (`Role`, `Company`, `Period`) are classes → reference equality.
+- Domain entities now validate what they hold (plan 3.3): `Project`, `Recommendation`,
+  `TechStack` and `TechStackCategory` have validating constructors, no `partial`, no
+  `= null!`, no audit columns, and `Experience.Projects` is a read-only collection.
+  `Project.Id` is get-only. The aggregate boundary is **settled** (3.4, ADR-0003):
+  `Project` is the root, `Experience.Projects` is a read-only projection, and
+  `Project.TechStacks` holds `TechStackRef` records rather than shared entities. Only
+  remaining debt here: `Company`/`Role` do not trim, so `" Acme"` and `"Acme"` are
+  different values (KI-044).
+- Value objects (`Role`, `Company`, `Period`) are `record`s with value equality and
+  validating constructors; `Period.IsOngoing` names what `FinishedAt == null` means.
 - All errors used to be `502` with a leaked exception message; they are now typed
   (`ErrorKind`) and mapped to `404/400/401/409/503/502/500` with a machine-readable
   `code`, in one place (`Endpoints/ApiResult.cs`).

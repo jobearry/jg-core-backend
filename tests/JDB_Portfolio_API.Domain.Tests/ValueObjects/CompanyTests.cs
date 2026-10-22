@@ -12,20 +12,19 @@ public class CompanyTests
         Assert.Equal("Acme", company.Name);
     }
 
-    [Fact]
-    public void Constructor_WithNullName_MapsToEmptyString()
+    /// <summary>
+    /// Plan 3.1: the empty-string representation is gone. "Not disclosed" is the
+    /// absence of a <see cref="Company"/> (<c>Company?</c> in the aggregate), not a
+    /// company whose name happens to be blank — which is a value that cannot exist.
+    /// The mapping applies the same rule it applies to <c>Role</c>.
+    /// </summary>
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void Constructor_WithNoName_Throws(string? name)
     {
-        var company = new Company(null);
-
-        Assert.Equal("", company.Name);
-    }
-
-    [Fact]
-    public void Constructor_WithBlankName_MapsToEmptyString()
-    {
-        var company = new Company("   ");
-
-        Assert.Equal("", company.Name);
+        Assert.Throws<ArgumentException>(() => new Company(name!));
     }
 
     [Fact]
@@ -42,5 +41,19 @@ public class CompanyTests
         var company = new Company("Acme");
 
         Assert.Equal("Acme", company.ToString());
+    }
+
+    [Fact]
+    public void TwoCompaniesWithTheSameName_AreEqual()
+    {
+        Assert.Equal(new Company("Acme"), new Company("Acme"));
+        Assert.True(new Company("Acme") == new Company("Acme"));
+        Assert.NotEqual(new Company("Acme"), new Company("Other"));
+    }
+
+    [Fact]
+    public void TwoCompaniesWithTheSameName_ShareAHashCode()
+    {
+        Assert.Equal(new Company("Acme").GetHashCode(), new Company("Acme").GetHashCode());
     }
 }

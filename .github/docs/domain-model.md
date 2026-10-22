@@ -25,7 +25,7 @@ accounts, contact form, analytics, CMS.
 | **DashboardItem** | A UI widget count (projects/skills/recommendations). Not a domain concept. |
 | **NotionPage** | A card parsed from a Notion markdown page. Not a domain concept. |
 | **Role** | A job title value object (non-empty, ≤ 50 chars). |
-| **Company** | An employer name value object (≤ 255 chars, empty allowed). |
+| **Company** | An employer name value object (non-empty, ≤ 255 chars). Required on every experience. |
 | **Period** | A time range with an optional end. |
 
 ## 3. Aggregate map (current)
@@ -34,13 +34,13 @@ accounts, contact form, analytics, CMS.
 classDiagram
     class Experience {
         +int Id
-        +Company? Company
+        +Company Company
         +Period Duration
         +Role? Role
         +string? Description
         +string? Responsibility
         +string? Type
-        +List~Project~? Projects
+        +IReadOnlyList~Project~ Projects
     }
     class Project {
         +int Id
@@ -48,7 +48,7 @@ classDiagram
         +string ProjectName
         +string? Description
         +string? Contribution
-        +ICollection~TechStack~ TechStacks
+        +IReadOnlyList~TechStackRef~ TechStacks
     }
     class TechStack {
         +int Id
@@ -68,51 +68,74 @@ classDiagram
         +DateTime PostedAt
     }
 
-    Experience "1" --> "0..*" Project : owns (in memory)
-    Project "*" --> "*" TechStack : references entities
+    Experience "1" --> "0..*" Project : links (read-only projection)
+    Project "*" --> "*" TechStackRef : references by id
+    TechStackRef ..> TechStack : immutable snapshot of
     TechStack "*" --> "1" TechStackCategory : belongs to
 ```
 
-**The boundary is ambiguous.** `Experience` contains `Project`s, and `Project`
-is *also* exposed as its own aggregate root through
-`IPortfolioProjectRepository`. `TechStack` is shared reference data but is held
-as entity instances inside `Project`. See ADR-0003.
+**The boundary is settled (ADR-0003, 3.4).** `Project` is the aggregate root and the
+only thing that owns the relationship: a project may exist with no experience, and
+`Experience.Projects` is a read-only projection of the projects that point at it.
+`TechStack` is shared reference data, so a project cites a `TechStackRef` (id + name +
+image + category) rather than holding the entity — one project cannot mutate a stack
+every other project cites. No write endpoint exists yet, so the rule is currently
+enforced by shape (read-only collections, `AttachToExperience`, no write methods on any
+repository), not by a transaction.
 
 ## 4. Entities
 
 | Entity | Identity | Constructor | Mutability | Invariants enforced |
 |---|---|---|---|---|
-| `Experience` | `int Id` (DB identity) | `(id, company, period, role)` | `Id`/`Company` get-only; `Duration`/`Role`/`Description`/`Responsibility`/`Type` private set; `Projects` **public set** | `Role` is **optional** — `null` means the role is deliberately undeclared; `Role`/`Company`/`Period` rules via VOs |
-| `Project` | `int Id` (public set) | `(id, projectName)` | everything public set | **none** — empty name, null name, null tech stacks all allowed. `Period` was removed on 2026-10-22: it had no column and no mapping, so it was always `null` |
-| `TechStack` | `int Id` (public set) | implicit | everything public set | **none** |
-| `TechStackCategory` | `int Id` (public set) | implicit | everything public set | **none** |
-| `Recommendation` | `int Id` (public set) | `(id, personName, description, careerPosition, postedAt)` | everything public set | `PersonName` non-null; `CareerPosition` is **optional** — `null` means it is deliberately not shown; `Description` **not validated** |
+| `Experience` | `int Id` (DB identity) | `(id, company, period, role)` | `Id`/`Company` get-only; `Duration`/`Role`/`Description`/`Responsibility`/`Type` private set; `Projects` `IReadOnlyList` + `ReplaceProjects` | `Company` is **required** (3.1a); `Role` is **optional** — `null` means the role is deliberately undeclared; `Role`/`Company`/`Period` rules via VOs |
+| `Project` | `int Id` (get-only) | `(id, projectName)` or `(id, experienceId, projectName, description, contribution, techStacks)` | id/name get-only; the rest private set through `Update…`/`AttachToExperience`/`ReplaceTechStacks` | **name non-blank** (3.3); holds `IReadOnlyList<TechStackRef>`, never `TechStack` entities (3.4). `Period` was removed on 2026-10-22: it had no column and no mapping, so it was always `null` |
+| `TechStack` | `int Id` (get-only) | `(id, stackName, imgSrc, category)` | name/img get-only; category private via `SetCategory` | **name non-blank**; **category non-blank when present**, `null` allowed (3.3) |
+| `TechStackCategory` | `int Id` (get-only) | `(id, category)` | both get-only | **name non-blank** (3.3) |
+| `Recommendation` | `int Id` (get-only) | `(id, personName, description, careerPosition, postedAt)` | name/description/postedAt get-only; `CareerPosition` via `ChangeCareerPosition` | `PersonName` and `Description` **non-blank** (3.3, closes KI-041); `CareerPosition` is **optional** — `null` means it is deliberately not shown |
 
-Behaviour that exists:
+Behaviour that exists (plan 3.3 replaced public setters with these):
 
 - `Experience.ChangeRole(Role?)` — sets or clears the role; `null` means "not declared".
-- `Experience.UpdateDescription(string)` — no validation.
-- Nothing else. `Responsibility`, `Type`, and `Company` cannot be changed after
-  construction, and `Experience` cannot add/remove projects through behaviour.
+- `Experience.UpdateDescription` / `UpdateResponsibility` / `UpdateType` — the last two were added by 3.3; before, the entity could not express its own fields and AutoMapper wrote them by reflection.
+- `Experience.ReplaceProjects(IEnumerable<Project>?)` — copies the argument; `null` means none.
+- `Project.AttachToExperience`, `UpdateDescription`, `UpdateContribution`, `ReplaceTechStacks`.
+- `Recommendation.ChangeCareerPosition(Role?)`.
+- `TechStack.SetCategory(string?)` — rejects blank, allows `null`.
+- Nothing else. `Id`, `ProjectName`, `StackName`, `Category`, `PersonName`, `Description` and `PostedAt` cannot be changed after construction.
 
 ## 5. Value objects
 
 | VO | Type | Validation | Equality | Notes |
 |---|---|---|---|---|
-| `Role` | `class` | non-empty, ≤ 50 | reference | should be `record` |
-| `Company` | `class` | ≤ 255; null/whitespace → `""` | reference | should be `record`; empty-string concept is questionable |
-| `Period` | `sealed class` | no `default` dates; `FinishedAt >= StartedAt` | reference | should be `record` |
-| `NotionPage` | `class` | none | reference | not a value object — vendor DTO |
+| `Role` | `sealed record` | non-empty, ≤ 50 | **value** | "not disclosed" is `Role? == null`, never `""` |
+| `Company` | `sealed record` | non-empty, ≤ 255 | **value** | never absent: "not disclosed" is not a thing for an employer, so there is no `Company?` (3.1a). The empty-string concept is gone (plan 3.1) |
+| `Period` | `sealed record` | no `default` dates; `FinishedAt >= StartedAt`; `StartedAt` not in the future | **value** | `FinishedAt == null` means *ongoing* — see `IsOngoing` |
+| `TechStackRef` | `sealed record` | non-blank name; non-blank category when present | **value** | A project's citation of a shared stack (3.4): identified by `Id`, immutable, so mutating one project's stack cannot reach another project |
+| `NotionPage` | `class` | none | reference | not a value object — vendor DTO, plan 3.2 |
 
-Because `Role`, `Company`, and `Period` do not override equality, this is
-currently false:
+Since 3.1 these hold:
 
 ```csharp
-new Role("Developer") == new Role("Developer")   // false
+new Role("Developer") == new Role("Developer")        // true
+new Company("Acme")    == new Company("Acme")         // true
+new Period(start)      == new Period(start)           // true
 ```
 
-That is the single clearest signal that these are validation wrappers rather
-than value objects.
+and the three can be dictionary keys. Records generate `Equals`/`GetHashCode`/`==`
+over every instance field, and each property is `get`-only, so the invariants hold:
+a `with` expression cannot change a value and skip validation.
+
+`Period.IsOngoing` names a fact that used to be folklore: it is true only when there
+is a start date and no end date. `StartedAt == null && FinishedAt == null` is
+"unknown", not "ongoing" — the two are different, and the mapper treats them
+differently.
+
+**One consequence to know about.** `Period` refuses a start date in the future
+(compared by date, so time of day never decides). The mapping constructs a `Period`
+for every row, so a future-dated row in the database now throws inside AutoMapper and
+returns `500` for the whole collection rather than rendering a nonsense duration. That
+is deliberate — a typo such as `2062` should be loud — but it means the invariant is
+enforced on the read path until a write path exists to validate it earlier.
 
 ## 6. Invariants: current vs intended
 
@@ -120,23 +143,30 @@ than value objects.
 |---|---|---|
 | A project has a non-empty name | not enforced | constructor/factory throws |
 | A project belongs to at most one experience | not modelled | enforced by aggregate root |
-| A tech stack has a non-empty name | not enforced | constructor throws |
-| A tech stack has a valid category | not enforced (`string?`) | category id / `TechStackRef` |
-| A recommendation has a description | not enforced | constructor throws |
+| A project has a non-empty name | **enforced (3.3)** | constructor throws |
+| A tech stack has a non-empty name | **enforced (3.3)** | constructor throws |
+| A tech stack category is non-blank when present | **enforced (3.3)** | `null` allowed; blank throws |
+| A recommendation has a person and a description | **enforced (3.3)** | constructor throws |
 | `Period.FinishedAt >= StartedAt` | enforced | enforced |
 | `Role` non-empty and ≤ 50 | enforced | enforced |
-| A role cannot be in the future | not enforced | decide |
-| Audit fields are not part of the domain | violated (`TechStack.CreatedAt`, `TechStackCategory.CreatedAt`) | removed |
+| `Company` non-empty and ≤ 255 | **enforced (3.1)** | enforced, plus `NOT NULL` + non-blank `CHECK` (3.1a) |
+| A role cannot start in the future | **enforced (3.1)** | enforced |
+| Audit fields are not part of the domain | **enforced (3.3)** | removed from `TechStack`/`TechStackCategory`; the columns stay on the entities |
 
 ## 7. Types in the wrong layer
 
-| Type | Currently | Should be | Why |
+| Type | Where it is | Should be | Status |
 |---|---|---|---|
-| `DashboardItem` | `Domain/Entities` | `Application/DTO` | read model for a UI widget, zero behaviour |
-| `NotionPage` | `Domain/ValueObjects` | `Application/DTO` | vendor shape |
-| `INotionService` | `Domain/Interfaces` | `Application/Abstractions` | named after the vendor |
-| `ExperienceId` | `Domain/ValueObjects` | deleted | unused, wrong type |
-| `IService<T>` / `IMapper<,,>` | `Domain/Interfaces` | deleted | unused application concepts |
+| `DashboardItem` | `Application/Models` | — | **moved 2026-10-22** (3.2). A read model with no invariant; only `PortfolioService` and `PortfolioDtoMapper` ever touched it |
+| `NotionPage` | `Domain/ValueObjects` | `Application` | **deferred** — moving it requires `ExternalService` to reference `Application`, which rule 2 forbids. See KI-045 |
+| `INotionService` | `Domain/Interfaces` | `Application/Abstractions` | **deferred** — same cause, same decision |
+| `ExperienceId` | deleted | — | resolved during the 1.x dead-code pass |
+| `IService<T>` / `IMapper<,,>` | deleted | — | resolved during the 1.x dead-code pass |
+
+The Notion pair is a **deliberate** deferral, not an oversight: `ExternalService`
+implements the port and builds the payload type, so the port can only live in Domain
+unless an infrastructure project is allowed to reference `Application`. That rule
+reversal is recorded as a decision for later (KI-045), not as forgotten debt.
 
 ## 8. Domain events
 

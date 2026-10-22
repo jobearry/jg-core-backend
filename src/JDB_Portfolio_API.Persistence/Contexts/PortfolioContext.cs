@@ -44,13 +44,20 @@ public partial class PortfolioContext : DbContext
         {
             entity.HasKey(e => e.Id).HasName("experience_pkey");
 
-            entity.ToTable("experience");
+            entity.ToTable("experience", table =>
+                // Plan 3.1a. NOT NULL alone would still allow an empty string, which is
+                // the same loophole `role` has — a column that demands a value, filled
+                // with "" when there is not one. btrim also rejects all-whitespace.
+                table.HasCheckConstraint(
+                    "ck_experience_company_name_not_blank",
+                    "btrim(company_name) <> ''"));
 
             entity.Property(e => e.Id)
                 .UseIdentityAlwaysColumn()
                 .HasColumnName("id");
             entity.Property(e => e.CompanyName)
                 .HasMaxLength(255)
+                .IsRequired()
                 .HasColumnName("company_name");
             entity.Property(e => e.Description).HasColumnName("description");
             entity.Property(e => e.Responsibility).HasColumnName("responsibility");

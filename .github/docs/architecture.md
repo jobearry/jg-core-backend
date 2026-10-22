@@ -30,15 +30,15 @@ background jobs, no identity provider.
 src/
 ├── JDB_Portfolio_API.Domain/            ← core, no dependencies
 │   ├── Entities/                        Experience, Project, TechStack,
-│   │                                    TechStackCategory, Recommendation,
-│   │                                    DashboardItem (misplaced, see plan 3.2)
+│   │                                    TechStackCategory, Recommendation
 │   ├── ValueObjects/                    Role, Company, Period, NotionPage
-│   │                                    (misplaced)
+│   │                                    (misplaced — plan 3.2, deferred, KI-045)
 │   └── Interfaces/                      IRepository<T>, IPortfolio*Repository,
-│                                        INotionService (misplaced)
+│                                        INotionService (misplaced — same decision)
 │
 ├── JDB_Portfolio_API.Application/       ← core, references Domain
 │   ├── Common/Result.cs                 Result<T> (string error today)
+│   ├── Models/DashboardItem.cs          read model for the overview tiles (3.2)
 │   ├── Services/                        PortfolioService, PortfolioExperienceService,
 │   │                                    PortfolioProjectService,
 │   │                                    PortfolioRecommendationService,

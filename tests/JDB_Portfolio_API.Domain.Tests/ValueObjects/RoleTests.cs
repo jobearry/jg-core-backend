@@ -51,4 +51,34 @@ public class RoleTests
 
         Assert.Equal("Developer", role.ToString());
     }
+
+    /// <summary>
+    /// The point of a value object: two roles with the same text are the same role.
+    /// A class without an <c>Equals</c> override answers <c>false</c> here.
+    /// </summary>
+    [Fact]
+    public void TwoRolesWithTheSameValue_AreEqual()
+    {
+        Assert.Equal(new Role("Developer"), new Role("Developer"));
+        Assert.True(new Role("Developer") == new Role("Developer"));
+        Assert.NotEqual(new Role("Developer"), new Role("Engineer"));
+    }
+
+    [Fact]
+    public void TwoRolesWithTheSameValue_ShareAHashCode()
+    {
+        Assert.Equal(new Role("Developer").GetHashCode(), new Role("Developer").GetHashCode());
+    }
+
+    /// <summary>
+    /// The practical consequence of equality: a role can be a dictionary key, which
+    /// reference equality makes impossible (every lookup misses).
+    /// </summary>
+    [Fact]
+    public void A_Role_CanBeUsedAsADictionaryKey()
+    {
+        var roles = new Dictionary<Role, string> { [new Role("Developer")] = "dev" };
+
+        Assert.Equal("dev", roles[new Role("Developer")]);
+    }
 }

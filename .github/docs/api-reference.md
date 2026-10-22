@@ -117,10 +117,16 @@ Notes:
 
 - `company` and `role` are **strings**. The value objects are flattened at the
   boundary; the wire no longer carries `{ "name": … }` or `{ "value": … }`.
+- `company` is **never `null`**. A role always names a company; if you cannot
+  disclose the client, use a truthful stand-in such as `"Self-employed"` or
+  `"Contract — NDA"`. The column is `NOT NULL` with a non-blank `CHECK`
+  (plan 3.1a, migration `20261022150752_RequireCompanyName`), so the guarantee is
+  enforced by the database rather than by the mapper.
 - `role` is **nullable**. `"role": null` means the role is deliberately not
   declared — it is not an error, and it does not affect the rest of the list.
   (Before 2026-10-22 a blank role threw inside the mapper and returned `500` for
-  every experience; see plan item 1.5.)
+  every experience; see plan item 1.5.) The asymmetry with `company` is
+  intentional: "not disclosed" is a real answer for a *role*, not for an employer.
 - `durationMonths` is whole **calendar** months, `int?`:
   - between `startedAt` and `finishedAt` when the role has ended,
   - between `startedAt` and *now* while the role is ongoing,
@@ -223,8 +229,14 @@ Every change a client has to absorb, in one place:
 
 Field **names** on `/overview` and `/notion/{pageId}` are unchanged.
 
-Nothing became non-nullable: every field that was previously absent or `null` is
-still optional. The disruptive part is the `duration` object being flattened.
+Nothing in this table became non-nullable: every field that was previously absent
+or `null` is still optional. The disruptive part is the `duration` object being
+flattened.
+
+One field did gain a guarantee later the same day: **`company` can no longer be
+`null`** (plan 3.1a, migration `20261022150752_RequireCompanyName`). No response
+changed shape — every stored row already had a company — but a client that
+branches on `company === null` can drop that branch. `role` is still nullable.
 
 
 ## 4. Notion endpoints

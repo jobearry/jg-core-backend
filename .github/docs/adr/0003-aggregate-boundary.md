@@ -1,7 +1,7 @@
 # ADR-0003 — Aggregate boundary for Experience and Project
 
-- **Status:** Accepted
-- **Date:** 2026-10-21 (proposed) · 2026-10-22 (decided — plan 001 decision D3)
+- **Status:** Accepted · **implemented 2026-10-23** (plan 001 item 3.4)
+- **Date:** 2026-10-21 (proposed) · 2026-10-22 (decided — plan 001 decision D3) · 2026-10-23 (enforced in code)
 - **Related:** plan 001 items 3.4 and D3, [`../domain-model.md`](../domain-model.md), [`../database.md`](../database.md)
 
 ## Context
@@ -44,18 +44,31 @@ Concretely:
 - `ProjectEntity.ExperienceId` stays **nullable**. A standalone project has
   `ExperienceId == null`. This matches the existing schema, so no migration is
   required.
-- `Experience.Projects` becomes a **read-only projection** — the projects that
-  point at this experience — not an owned collection. It is populated by the
-  mapping and never mutated by callers. It is currently
-  `List<Project>?` with a public setter (`Domain/Entities/Experience.cs:22`).
+- `Experience.Projects` is a **read-only projection** — the projects that point at
+  this experience — not an owned collection. It is `IReadOnlyList<Project>`,
+  populated by the mapping and replaced only through `ReplaceProjects`, so no
+  caller can swap or mutate it while the aggregate believes nothing changed.
 - Attaching and detaching a project to and from an experience is one explicit
-  operation on the `Project` aggregate, so exactly one place owns the
-  relationship. Without it, the two repositories could disagree about who a
-  project belongs to.
-- `Project.TechStacks` becomes `IReadOnlyCollection<TechStackRef>` (id + name +
-  image) or a list of ids resolved by the read model. `TechStack` is shared
-  reference data with no per-project state, so it is not part of any aggregate
-  that contains a project.
+  operation on the `Project` aggregate (`AttachToExperience`), so exactly one
+  place owns the relationship. Without it, the two repositories could disagree
+  about who a project belongs to.
+- `Project.TechStacks` is `IReadOnlyList<TechStackRef>`. A `TechStackRef` is a
+  `record` carrying the id, name, image and category: an immutable snapshot,
+  identified by id. The category is included because the wire already publishes it
+  for a nested stack — dropping it would have been a contract change smuggled into
+  a refactor.
+
+**What "enforced" means while there is no write path.** Every repository derives from
+`IRepository<T>`, whose only member is `GetAllAsync`; no `Add`/`Update`/`Delete` method
+exists anywhere in `src/`. So the boundary is currently enforced by *shape*, not by a
+transaction:
+
+- `Experience.Projects` cannot be assigned, and `Project.ExperienceId` changes only
+  through `AttachToExperience`.
+- `Project.TechStacks` cannot be assigned, and its elements are immutable records.
+- `IPortfolioProjectRepository` is named as the future write entry point for `Project`;
+  `IPortfolioExperienceRepository` is not. Adding a second one is the thing to refuse in
+  review — that is the ambiguity this ADR exists to prevent.
 
 ## Consequences
 
@@ -80,12 +93,13 @@ Concretely:
 
 **Follow-up work**
 
-- Decide whether `Project.Period` is modelled (add columns) or deleted — plan
-  item 1.4.
-- Add `finished_at` to `experience` (plan item 1.3) — an owned project's period
-  is currently meaningless without it.
-- Replace `Project.TechStacks` with ids or a `TechStackRef` value object — plan
-  item 3.4.
+- ~~Decide whether `Project.Period` is modelled or deleted~~ — **deleted
+  2026-10-22**: it had no column and no mapping, so it was always `null`.
+- ~~Add `finished_at` to `experience`~~ — **added and applied** (plan 1.3/D1,
+  `20261022064321_AddExperienceFinishedAt`). The **data backfill is still
+  outstanding**: past roles currently report an ongoing duration.
+- ~~Replace `Project.TechStacks` with ids or a `TechStackRef` value object~~ —
+  **done 2026-10-23** (plan 3.4).
 
 ## Alternatives considered
 

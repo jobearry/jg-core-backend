@@ -15,13 +15,7 @@ public class TechStackEntityMappingTests : MappingTestBase
     [Fact]
     public void Map_TechStack_To_TechStackEntity_LeavesTheCategoryIdUnset()
     {
-        var stack = new TechStack
-        {
-            Id = 1,
-            StackName = "Angular",
-            ImgSrc = "angular.png",
-            Category = "Frontend"
-        };
+        var stack = new TechStack(1, "Angular", "angular.png", "Frontend");
 
         var entity = Mapper.Map<TechStackEntity>(stack);
 

@@ -1,4 +1,5 @@
 using JDB_Portfolio_API.Application.DTO;
+using JDB_Portfolio_API.Application.Models;
 using JDB_Portfolio_API.Domain.Entities;
 using JDB_Portfolio_API.Domain.ValueObjects;
 using System.Text.Json;
@@ -105,14 +106,7 @@ public class PortfolioDtoMapperTests
     [Fact]
     public void MapsTechStack()
     {
-        var techStack = new TechStack
-        {
-            Id = 2,
-            StackName = "C#",
-            ImgSrc = "https://example.test/csharp.svg",
-            Category = "Backend",
-            CreatedAt = new DateTime(2026, 1, 1)
-        };
+        var techStack = new TechStack(2, "C#", "https://example.test/csharp.svg", "Backend");
 
         var dto = techStack.ToDto();
 
@@ -127,15 +121,13 @@ public class PortfolioDtoMapperTests
     [Fact]
     public void MapsProjectWithItsTechStacks()
     {
-        var project = new Project(7, "Portfolio API")
-        {
-            Description = "The API behind this site",
-            Contribution = "Everything",
-            TechStacks = new List<TechStack>
-            {
-                new() { Id = 2, StackName = "C#", Category = "Backend" }
-            }
-        };
+        var project = new Project(
+            7,
+            null,
+            "Portfolio API",
+            "The API behind this site",
+            "Everything",
+            new[] { new TechStackRef(2, "C#", null, "Backend") });
 
         var dto = project.ToDto();
 
@@ -150,7 +142,7 @@ public class PortfolioDtoMapperTests
     [Fact]
     public void MapsProjectWithNoTechStacksToAnEmptyList()
     {
-        var project = new Project(7, "Portfolio API") { TechStacks = new List<TechStack>() };
+        var project = new Project(7, "Portfolio API");
 
         var dto = project.ToDto();
 
@@ -166,22 +158,17 @@ public class PortfolioDtoMapperTests
             4,
             new Company("Applied ICT Inc."),
             new Period(new DateTime(2026, 6, 25), null),
-            new Role("Software Engineer"))
-        {
-            Projects = new List<Project>
-            {
-                new(7, "Portfolio API")
-            }
-        };
+            new Role("Software Engineer"));
 
         experience.UpdateDescription("Transitioned into Software Engineer role");
 
-        // Responsibility and Type have no mutator at all — only a private setter,
-        // which AutoMapper writes to through reflection in production. A test has no
-        // public way in, so this reaches for the setter directly. That is a symptom of
-        // plan item 3.3 ("add behaviour or drop them"), not a testing preference.
-        SetPrivate(experience, nameof(Experience.Responsibility), "Maintain enterprise insurance software");
-        SetPrivate(experience, nameof(Experience.Type), "Corporate");
+        // Plan 3.3 gave these two their own mutators. Before, they had only a private
+        // setter, so a test had to reach for reflection — a symptom of the missing
+        // behaviour, not a testing preference.
+        experience.UpdateResponsibility("Maintain enterprise insurance software");
+        experience.UpdateType("Corporate");
+
+        experience.ReplaceProjects(new[] { new Project(7, "Portfolio API") });
 
         var dto = experience.ToDto(new DateTime(2026, 10, 22));
 
@@ -202,28 +189,11 @@ public class PortfolioDtoMapperTests
             4,
             new Company("Acme"),
             new Period(new DateTime(2026, 6, 25), null),
-            new Role("Engineer"))
-        {
-            Projects = null
-        };
-
-        var dto = experience.ToDto(new DateTime(2026, 10, 22));
-
-        Assert.Empty(dto.Projects);
-    }
-
-    [Fact]
-    public void MapsExperienceWithNoCompanyToNull()
-    {
-        var experience = new Experience(
-            4,
-            null,
-            new Period(new DateTime(2026, 6, 25), null),
             new Role("Engineer"));
 
         var dto = experience.ToDto(new DateTime(2026, 10, 22));
 
-        Assert.Null(dto.Company);
+        Assert.Empty(dto.Projects);
     }
 
     /// <summary>
@@ -382,12 +352,4 @@ public class PortfolioDtoMapperTests
         Assert.Equal("About me", dto.Title);
     }
 
-    /// <summary>
-    /// Writes a domain property that only has a private setter. Used for the fields
-    /// that plan 3.3 still has to give a real API — see the call site for why.
-    /// </summary>
-    private static void SetPrivate(object target, string propertyName, object? value) =>
-        target.GetType()
-            .GetProperty(propertyName)!
-            .SetValue(target, value);
 }

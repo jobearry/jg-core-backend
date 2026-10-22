@@ -360,35 +360,32 @@ public class PortfolioEndpointsTests : IClassFixture<PortfolioApiFactory>
             Title = "About me"
         });
 
-        var techStack = new TechStack
-        {
-            Id = 2,
-            StackName = "C#",
-            ImgSrc = "https://example.test/csharp.svg",
-            Category = "Backend",
-            CreatedAt = new DateTime(2026, 1, 1)
-        };
+        var techStack = new TechStack(2, "C#", "https://example.test/csharp.svg", "Backend");
         _factory.TechStacks.TechStacks.Add(techStack);
 
-        _factory.Projects.Projects.Add(new Project(7, "Portfolio API")
-        {
-            Description = "The API behind the site",
-            Contribution = "Everything",
-            TechStacks = new List<TechStack> { techStack }
-        });
+        // Plan 3.4: the entity above is the shared reference row; the project cites it by
+        // reference, which is what the aggregate actually holds.
+        var techStackRef = new TechStackRef(2, "C#", "https://example.test/csharp.svg", "Backend");
+
+        _factory.Projects.Projects.Add(new Project(
+            7,
+            null,
+            "Portfolio API",
+            "The API behind the site",
+            "Everything",
+            new[] { techStackRef }));
 
         // The current role: ongoing, declared title, with projects.
-        _factory.Experience.Experiences.Add(new Experience(
+        var currentRole = new Experience(
             4,
             new Company("Applied ICT Inc."),
             new Period(new DateTime(2026, 6, 25), null),
-            new Role("Software Engineer"))
+            new Role("Software Engineer"));
+        currentRole.ReplaceProjects(new[]
         {
-            Projects = new List<Project>
-            {
-                new(7, "Portfolio API") { TechStacks = new List<TechStack> { techStack } }
-            }
+            new Project(7, null, "Portfolio API", null, null, new[] { techStackRef })
         });
+        _factory.Experience.Experiences.Add(currentRole);
 
         // The past role: ended, and the title is deliberately undeclared.
         _factory.Experience.Experiences.Add(new Experience(

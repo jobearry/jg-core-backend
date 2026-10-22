@@ -32,6 +32,7 @@ namespace JDB_Portfolio_API.Persistence.Migrations
                     NpgsqlPropertyBuilderExtensions.UseIdentityAlwaysColumn(b.Property<int>("Id"));
 
                     b.Property<string>("CompanyName")
+                        .IsRequired()
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)")
                         .HasColumnName("company_name");
@@ -66,7 +67,10 @@ namespace JDB_Portfolio_API.Persistence.Migrations
                     b.HasKey("Id")
                         .HasName("experience_pkey");
 
-                    b.ToTable("experience", (string)null);
+                    b.ToTable("experience", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_experience_company_name_not_blank", "btrim(company_name) <> ''");
+                        });
                 });
 
             modelBuilder.Entity("JDB_Portfolio_API.Persistence.Entities.ProjectEntity", b =>

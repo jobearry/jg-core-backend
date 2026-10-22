@@ -1,5 +1,6 @@
 ﻿using JDB_Portfolio_API.Application.Common;
 using JDB_Portfolio_API.Application.DTO;
+using JDB_Portfolio_API.Application.Models;
 using JDB_Portfolio_API.Domain.Entities;
 using JDB_Portfolio_API.Domain.Interfaces;
 using Microsoft.Extensions.Logging;

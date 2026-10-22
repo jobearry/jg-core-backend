@@ -1,3 +1,4 @@
+using JDB_Portfolio_API.Application.Models;
 using JDB_Portfolio_API.Domain.Entities;
 using JDB_Portfolio_API.Domain.ValueObjects;
 
@@ -22,13 +23,24 @@ public static class PortfolioDtoMapper
             techStack.ImgSrc,
             techStack.Category);
 
+    /// <summary>
+    /// A referenced stack publishes the same shape as a standalone one (plan 3.4): the
+    /// change was in how the aggregate holds a stack, not in what the client sees.
+    /// </summary>
+    public static TechStackDto ToDto(this TechStackRef techStack) =>
+        new(
+            techStack.Id,
+            techStack.StackName,
+            techStack.ImgSrc,
+            techStack.Category);
+
     public static ProjectDto ToDto(this Project project) =>
         new(
             project.Id,
             project.ProjectName,
             project.Description,
             project.Contribution,
-            (project.TechStacks ?? new List<TechStack>())
+            project.TechStacks
                 .Select(techStack => techStack.ToDto())
                 .ToList());
 
@@ -43,7 +55,7 @@ public static class PortfolioDtoMapper
 
         return new ExperienceDto(
             experience.Id,
-            experience.Company?.Name,
+            experience.Company.Name,
             experience.Role?.Value,
             startedAt,
             finishedAt,
@@ -51,7 +63,7 @@ public static class PortfolioDtoMapper
             experience.Description,
             experience.Responsibility,
             experience.Type,
-            (experience.Projects ?? new List<Project>())
+            (experience.Projects)
                 .Select(project => project.ToDto())
                 .ToList());
     }
