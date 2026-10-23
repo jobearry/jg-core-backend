@@ -87,8 +87,10 @@ approach and apply it everywhere:
 2. FluentValidation + a filter, or
 3. Explicit checks returning `Results.ValidationProblem(...)`.
 
-`AuthDto` currently has no validation at all. At minimum: `Key` is required and
-non-empty.
+`AuthDto` is validated by an explicit guard in `AuthEndpoints` (2.5): a missing or blank
+`Key` returns `400 + validation_failed`. If another input DTO appears, follow the same
+shape — `Error.Validation(...)` → `400 + validation_failed` — rather than introducing a
+second error contract.
 
 ## 7. OpenAPI
 
@@ -96,17 +98,19 @@ non-empty.
 - Every endpoint carries `.WithName(...)`, `.WithTags(...)`, `.Produces<T>(...)`,
   and `.ProducesProblem(...)`.
 - Document auth requirements with `.RequireAuthorization()` **only if it is
-  actually enforced** — today it is commented out.
+  actually enforced** — today only `/auth/me` carries it.
 - The Swagger UI is served at `/swagger`; the document is `v1/swagger.json`.
 
 ## 8. Authentication
 
 - `/api/v1/auth/login` exchanges a shared key for a JWT. This is a *service*
-  token, not user authentication: the token contains only a role claim, no
-  `sub`, so `User.Identity.Name` is null.
-- Either implement real claims (`sub`, `scope`) and enable
-  `RequireAuthorization()`, or rename the endpoint to `/auth/token` and document
-  it as a service credential. Do not leave it ambiguous (plan 2.5).
+  token, not user authentication: one shared key, no user store, and a token
+  carrying `sub=portfolio-api` and one role claim.
+- The portfolio read endpoints are **anonymous by design** — they feed a public CV
+  site. Only `/auth/me` requires a token. Adding `RequireAuthorization()` to the
+  others is a breaking change for the frontend, not a hardening tweak (2.5).
+- Do not rename the endpoint or change the claims shape without an ADR; the
+  service-token decision is recorded in 2.5 and `docs/api-reference.md` §2.
 - Never accept a secret in a query string.
 
 ## 9. CORS

@@ -17,8 +17,8 @@ OpenAPI: `/swagger` (Development only) · Document: `v1/swagger.json`
 | `GET` | `/api/v1/notion/{pageId}` | none* | path `pageId` | `NotionPageDto[]` |
 | `GET` | `/api/v1/notion/{pageId}/count` | none* | path `pageId` | `number` |
 
-\* `RequireAuthorization()` is present but **commented out** on all portfolio and
-Notion endpoints. Only `/auth/me` is actually protected. Treat the API as public.
+\* Anonymous **by design**: they feed the public CV site. `RequireAuthorization()` is
+applied only to `/auth/me`; there is no commented-out code left to uncomment (2.5).
 
 Route nouns are **singular** (`/experience`, not `/experiences`). Keep that
 convention for consistency; a rename is a breaking change.
@@ -27,8 +27,8 @@ convention for consistency; a rename is a breaking change.
 
 **The portfolio read endpoints are public by design.** They feed a public CV site, so
 no `RequireAuthorization()` is applied anywhere except `/auth/me`. This is deliberate,
-not an oversight — do not "harden" it by uncommenting something without coordinating a
-frontend change.
+not an oversight — do not "harden" it by adding `RequireAuthorization()` without
+coordinating a frontend change.
 
 What exists is a **service-token flow**, not a user login: one shared key, no user store,
 and a token that says so.

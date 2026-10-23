@@ -108,13 +108,25 @@ The container listens on `8080` (`ASPNETCORE_URLS=http://+:8080`), runs as
 
 `.github/workflows/main_jdb-portfolio-api.yml`:
 
-1. Trigger: push to `main`, or manual dispatch.
-2. `dotnet restore` → `dotnet build -c Release` → `dotnet publish -o ./publish`.
-3. `azure/login@v2` with OIDC (`AZURE_CLIENT_ID`, `AZURE_TENANT_ID`,
+1. Trigger: push to `main`, or manual dispatch. Runs are serialized by a
+   `production-deploy` concurrency group.
+2. `dotnet restore` → `dotnet tool restore` → `has-pending-model-changes` gate (fails
+   if the model changed without a migration) → `dotnet build -c Release` →
+   `dotnet publish -o ./publish`.
+3. `dotnet ef database update` against the production connection string, before the
+   app is replaced. A failure stops the deploy; the running app stays up (KI-038).
+4. `azure/login@v2` with OIDC (`AZURE_CLIENT_ID`, `AZURE_TENANT_ID`,
    `AZURE_SUBSCRIPTION_ID`).
-4. `azure/webapps-deploy@v2` to app `jdb-portfolio-api`, `clean: true`.
+5. `azure/webapps-deploy@v2` to app `jdb-portfolio-api`, `clean: true`.
 
-No test step exists. Tests now live in `tests/` (two xUnit projects, 24 tests) —
+The migration step needs the repository secret `PRODUCTION_CONNECTION_STRING`. Use
+the **direct** Neon endpoint (no `-pooler`), in Npgsql key-value form — not the
+`postgresql://` URI — because pooling can break DDL and session state.
+
+`Database:AutoMigrate` is still `true` (KI-038); the startup migration now finds
+nothing pending. Flip it to `false` after this step has run green once.
+
+No test step exists. Tests now live in `tests/` (four xUnit projects, 179 tests) —
 add a `dotnet test src/JDB_Portfolio_API.slnx` step to the workflow.
 
 Swagger is enabled only when `ASPNETCORE_ENVIRONMENT=Development`. Production
@@ -125,6 +137,7 @@ should not set it.
 | Symptom | Likely cause | Action |
 |---|---|---|
 | App fails at startup with an Npgsql connection error | `Migrate()` ran with a bad/missing connection string | check `ConnectionStrings__JDBConnection` |
+| Deploy fails at "Apply database migrations" | migration could not run: dirty data, unreachable DB, or a missing/wrong `PRODUCTION_CONNECTION_STRING` | read the step log; the old app is still live. Fix the data or secret and re-run |
 | `docker compose up` fails with "required variable ConnectionStrings__JDBConnection is missing" | `docker/.env` not created | `cp docker/.env.example docker/.env` and fill it in |
 | `dotnet ef` says "command not found" | the tool manifest was not restored | `dotnet tool restore` (from the repo root) |
 | `dotnet ef` sees a null connection string | no user-secrets id or connection string was supplied | set `JDB_USER_SECRETS_ID` and `ConnectionStrings__JDBConnection`, or use the startup project |
@@ -144,5 +157,5 @@ should not set it.
 | Structured logs | default only | add Serilog or OpenTelemetry |
 | Metrics / tracing | none | OpenTelemetry + Azure Monitor |
 | Rate limiting | none | `AddRateLimiter` on `/auth/login` at minimum |
-| Backup / restore | not documented | define an RPO/RTO for the Azure PostgreSQL instance |
+| Backup / restore | not documented | define an RPO/RTO for the Neon PostgreSQL instance |
 | Config validation | none | fail fast at startup if `Jwt:Key` < 32 bytes |

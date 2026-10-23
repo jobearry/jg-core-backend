@@ -22,14 +22,16 @@ Rules:
 ## 2. Authentication and authorization
 
 Current design: a **single shared key** exchanged at `/api/v1/auth/login` for a
-JWT containing one `role=User` claim. There is no user store and no `sub` claim.
+JWT carrying `sub=portfolio-api` and one `role=User` claim. There is no user store.
 
 - Compare secrets with `CryptographicOperations.FixedTimeEquals` (already done).
 - Reject a configured key shorter than 32 bytes (already done, returns 500 —
   correct, since it is a server misconfiguration).
-- `RequireAuthorization()` is currently commented out on every portfolio
-  endpoint. This must be resolved one way or the other (plan 2.5): either
-  enforce it, or document the API as public and stop pretending.
+- The portfolio read endpoints are **anonymous by design** — they feed a public CV
+  site. Only `/auth/me` requires a token; adding `RequireAuthorization()` to the
+  others is a breaking change, not a hardening tweak (2.5).
+- A secure-by-default fallback policy is deliberately deferred until a write
+  endpoint exists (KI-010). Do not flip it as a drive-by change.
 - Do not put secrets in query strings — they end up in logs and proxies.
 - When adding authorization, use policies (`RequireClaim`, `RequireRole`), not
   ad-hoc claim checks scattered across endpoints.

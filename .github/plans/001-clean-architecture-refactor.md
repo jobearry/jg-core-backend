@@ -1,6 +1,6 @@
 # Plan 001 — Clean Architecture & DDD Refactor
 
-**Status:** In progress — decisions D1–D4 resolved; items 1.1–1.8, 2.1–2.5, 2.7, 3.1, 3.1a, 3.2, 3.3 and 3.4 complete, plus the four test projects and Batch 2 phase 1–3 (DTO boundary + endpoint contracts). **Part 1 and Part 2 are done** (2.6 is a feature, not debt); **Part 3 is complete** (3.2's Notion half closed 2026-10-23, ADR-0005). `20261022150752_RequireCompanyName` is **applied to the local dev database** (2026-10-23) and still pending for any other environment — see 3.1a.
+**Status:** In progress — decisions D1–D4 resolved; items 1.1–1.8, 2.1–2.5, 2.7, 3.1, 3.1a, 3.2, 3.3, 3.4 and 3.5 complete, plus Batch 2 phase 1–3 (DTO boundary + endpoint contracts). **Part 1 and Part 2 are done** (2.6 is a feature, not debt); **Part 3 is complete** (3.2's Notion half closed 2026-10-23, ADR-0005). `20261022150752_RequireCompanyName` is **applied to the local dev database** (2026-10-23) and still pending for any other environment — see 3.1a.
 **Scope:** `src/JDB_Portfolio_API.Domain`, `.Application`, `.Persistence`, `.ExternalService`, `JDB_Portfolio_API` (Presentation), `tests/`
 **Goal:** Bring the solution in line with clean architecture dependency rules and turn the Domain project into an actual domain model rather than a set of persistence shapes.
 
@@ -30,6 +30,11 @@ Nothing here is urgent in the "production is down" sense. The value is that Part
 ---
 
 ## Summary
+
+> **Status 2026-10-23:** the four gaps below are closed and Parts 1–3 are complete.
+> This summary is the **original assessment (2026-10-21)**, kept as the rationale for
+> the work; read the item-level Done notes for the current state. Today: 179 green
+> tests, 0 build warnings, and every dependency edge points inward.
 
 The project boundaries are already clean-architecture-shaped: Domain has zero project references, EF entities are kept separate from domain entities, repository ports live in Domain, and the composition root is in the API project. The remaining gaps:
 
@@ -1141,7 +1146,7 @@ dotnet test tests/JDB_Portfolio_API.Domain.Tests --filter ValueObjects
 > company that the new `CHECK` rejects anyway, i.e. data invented and then refused. With
 > the default gone, a dirty row makes the migration fail loudly, which is the correct
 > outcome. Editing a migration in place is normally forbidden (rule 10); it is allowed
-> here because the migration has never been applied to any database.
+> here because the migration had never been applied to any database at the time.
 >
 > **Deploy risk, stated plainly.** `Database:AutoMigrate` defaults to `true` (KI-038), so
 > this runs on the next deploy. `SET NOT NULL` aborts if a `NULL` row exists. Local data is
@@ -1404,21 +1409,22 @@ Answer "how do I create a project?" — there are two ways today. Two answers me
 - [x] `tests/JDB_Portfolio_API.Api.Tests`: `WebApplicationFactory` smoke tests per endpoint
 - [x] `tests/JDB_Portfolio_API.Persistence.Tests`: the AutoMapper profile
 
-> **Partially done (2026-10-22).** Four test projects exist and `dotnet test` is green
-> (132 tests). What they cover today:
+> **Done (2026-10-23).** Four test projects exist and `dotnet test` is green
+> (179 tests). What they cover today:
 >
-> - **Domain.Tests** — 33 tests over `Role`, `Company` and `Period`. These are
->   *characterisation* tests: they lock in the value objects' current behaviour so that
->   items 3.1 and 3.3 can change it deliberately.
-> - **Application.Tests** — 38 tests: 11 over `PortfolioExperienceService` with a
->   hand-rolled `FakePortfolioExperienceRepository` in `Fakes/` (the shared
->   `ExecuteAsync` behaviour from 2.3, plus the 2.4 logging levels and token threading),
->   7 over `ResultErrors` (2.2), and 21 over `PortfolioDtoMapper` (2.1) — two-thirds of
->   which are wire-shape guards on the DTO types themselves.
-> - **Persistence.Tests** — 24 tests: 9 over `Experience`, 2 over `TechStack`, 8 over the
->   "undeclared role" mapping from 1.5, and `NpgsqlFailureTypeTests` (2.2), which pins
->   the assumption that a provider failure is a `DbException` — the fact the 503 mapping
->   silently depends on.
+> - **Domain.Tests** — 81 tests: the value objects (`Role`, `Company`, `Period`,
+>   `TechStackRef`) with equality, `==`, `GetHashCode` and dictionary-key behaviour,
+>   plus the entity invariants from 3.3 (`Experience`, `Project`, `Recommendation`,
+>   `TechStack`, `TechStackCategory`).
+> - **Application.Tests** — 37 tests: `PortfolioExperienceService` with a hand-rolled
+>   `FakePortfolioExperienceRepository` in `Fakes/` (the shared `ExecuteAsync`
+>   behaviour from 2.3, plus the 2.4 logging levels and token threading),
+>   `ResultErrors` (2.2), and `PortfolioDtoMapper` (2.1) — two-thirds of which are
+>   wire-shape guards on the DTO types themselves.
+> - **Persistence.Tests** — 22 tests: the `Experience` and `TechStack` maps, the
+>   "undeclared role" mapping from 1.5, the required-company rule from 3.1a, and
+>   `NpgsqlFailureTypeTests` (2.2), which pins the assumption that a provider failure
+>   is a `DbException` — the fact the 503 mapping silently depends on.
 >   - `MappingConfiguration_HasNoUnmappedMembers` — an `AssertConfigurationIsValid()`
 >     gate. It found **6 maps with unmapped destination members**, all now explicitly
 >     ignored or properly mapped.
@@ -1427,7 +1433,7 @@ Answer "how do I create a project?" — there are two ways today. Two answers me
 >   - `PopulatesDescriptionResponsibilityAndType` — this **resolves KI-035**: the
 >     private-setter properties *are* populated by AutoMapper. The behaviour was never
 >     broken, only unverified.
-> - **Api.Tests** — 37 endpoint contract and policy tests over `WebApplicationFactory<Program>`.
+> - **Api.Tests** — 39 endpoint contract and policy tests over `WebApplicationFactory<Program>`.
 >   The real application boots in-process and the requests go over HTTP, so routing,
 >   model binding, status codes and serialization are all production code. Two things
 >   make that safe: the repository **ports** are replaced with in-memory fakes, so no
@@ -1436,17 +1442,13 @@ Answer "how do I create a project?" — there are two ways today. Two answers me
 >   configured. The strongest test asserts the **exact JSON key list and order** for
 >   `ExperienceDto` at the endpoint — the contract a client sees, not a proxy for it.
 >   The failure path is covered too: a throwing repository must produce `502` with
->   `ProblemDetails`, not an unhandled exception.
+>   `ProblemDetails`, not an unhandled exception. `NotionPageContentReaderTests` runs the
+>   real stub-handler → parser → vendor model → adapter chain, the one seam the endpoint
+>   tests replace.
 >
-> **Not covered yet, and deliberately so:**
->
-> - **Entity invariants** (3.3) are not tested, because the entities do not have
->   invariants yet. Writing those tests red-first is part of item 3.3.
-> - **VO equality** (3.1) is now covered — equal values, `==`, `GetHashCode` and
->   dictionary-key use — and `Company`'s blank-name rejection and `Period`'s future-start
->   rule are tested too.
-> - **Auth** is not covered beyond `/auth/me`; the portfolio endpoints are anonymous on
->   purpose, so there is nothing else to assert (2.5).
+> **Not covered yet, deliberately:** authentication beyond `/auth/me` (the portfolio
+> endpoints are anonymous on purpose, 2.5) and the startup path — `Database.Migrate()`
+> is unreachable from the test host, which is why KI-043 has no regression test.
 >
 > Package baseline (approved): `xunit` 2.9.3, `xunit.runner.visualstudio` 3.1.4,
 > `Microsoft.NET.Test.Sdk` 17.14.1, and `Microsoft.AspNetCore.Mvc.Testing` 10.0.13 for
@@ -1471,10 +1473,11 @@ Every change in Parts 1–3 is a refactor, and a refactor without tests is a rew
 **How to verify**
 
 ```bash
-dotnet test    # 132 tests, all green
+dotnet test    # 179 tests, all green
 ```
 
-**Pragmatic order:** do not build all three. Start with one Domain test project covering 3.1 and 3.3. That is about an hour and protects the rest.
+**Pragmatic order, as executed:** Domain first, covering 3.1 and 3.3, then Application,
+Persistence and Api as each part landed.
 
 **Acceptance:** `dotnet test` is green and covers every value object and entity invariant.
 
@@ -1484,11 +1487,11 @@ dotnet test    # 132 tests, all green
 
 | # | Item | Why | How to verify |
 |---|---|---|---|
-| 4.1 | Split `ConfigurationSettings.cs` into `AddApplication()` / `AddPersistence()` / `AddExternalServices()` / `AddPresentation()` | Service registrations currently sit inside `AddDatabase`; one method per layer is easier to reason about | `grep -n "AddScoped<Portfolio" ConfigurationSettings.cs` — all inside `AddDatabase` |
+| 4.1 | Split `ConfigurationSettings.cs` into `AddApplication()` / `AddPersistence()` / `AddExternalServices()` / `AddPresentation()`, and delete `AddControllers()` / `MapControllers()` (KI-025) | Service registrations currently sit inside `AddDatabase`; one method per layer is easier to reason about. No controllers exist, so the calls are dead — 2.7 already deferred their removal to this item | `grep -n "AddScoped<Portfolio" ConfigurationSettings.cs` — all inside `AddDatabase`; `grep -n "AddControllers\|MapControllers" Program.cs` — no match |
 | 4.2 | Remove the unused `IConfiguration` parameter from `AddMapper` | A dead parameter implies configuration is used | read the signature, then the body |
 | 4.3 | Replace the 150-line `OnModelCreating` with `IEntityTypeConfiguration<T>` classes | One file per entity diffs cleanly and keeps `PortfolioContext` small | `wc -l src/JDB_Portfolio_API.Persistence/Contexts/PortfolioContext.cs` |
-| 4.4 | Add `IUnitOfWork` / transaction abstraction before write endpoints | `AddNewAsync` is commented out; you will need it the moment a write exists | `grep -rn "SaveChangesAsync" src` — only in the commented block |
-| 4.5 | Add `Directory.Build.props` with `TreatWarningsAsErrors` + analyzers | Catches CS1998-style issues (like the `async` endpoint) at build time | add it, build, see what breaks |
+| 4.4 | Add `IUnitOfWork` / transaction abstraction before write endpoints | there is no write path at all — `AddNewAsync` is gone and `IRepository<T>` exposes only `GetAllAsync` — but you will need it the moment one exists | `grep -rn "SaveChangesAsync\|IUnitOfWork" src` — no match |
+| 4.5 | Add `Directory.Build.props` with `TreatWarningsAsErrors` + analyzers | Nothing enforces the current 0-warning build; this is how the CS1998 that 2.5 fixed would have been caught at build time | add it, build, see what breaks |
 | 4.6 | Fix `NotionClientService.cs`: don't rethrow `new HttpRequestException(msg)` (loses the inner exception); don't use an absolute URL when `BaseAddress` is set; set auth headers in `ConfigureHttpClient`; add retry/timeout | Current code hides the original stack and duplicates configuration | read lines 30–46 |
 | 4.7 | Replace the `NotionPageParserUtility` XML trick | `XDocument.Parse("<root>" + markdown + "</root>")` breaks on malformed content or a literal `</root>` | feed it `"<page>unclosed"` |
 | 4.8 | Move `PortfolioService.GetOverview` hardcoded copy to config; parallelise the three sequential queries | Display text in the app layer; three independent awaits that could be `Task.WhenAll` | `grep -n "Homelabbing" src` |
@@ -1543,3 +1546,4 @@ If all seven confirm, the plan is accurate and Parts 1–3 are safe to schedule.
 | 2026-10-21 | Initial plan (4 phases, checklist only) |
 | 2026-10-21 | Restructured into parts with Why / How to verify / Risk per item; added the four open decisions; **corrected** 1.5 — `career_position` is `NOT NULL`, the real risk is an empty string, not null |
 | 2026-10-22 | Added **2.7 — CORS policy** after a review question about the hardcoded origin list: origins moved to configuration, localhost gated to Development, `AllowCredentials()` dropped, methods/headers narrowed |
+| 2026-10-23 | Documentation sync after Part 3 closed: test counts corrected to 179, 3.5 marked done, KI-003/KI-009/KI-013 marked resolved, 4.1 extended to cover the dead controller registrations (KI-025) |

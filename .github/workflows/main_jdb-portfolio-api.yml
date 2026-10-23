@@ -9,6 +9,11 @@ on:
       - main
   workflow_dispatch:
 
+# Serialize deploys: two overlapping runs would race each other and the database.
+concurrency:
+  group: production-deploy
+  cancel-in-progress: false
+
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
@@ -26,11 +31,38 @@ jobs:
       - name: Restore dependencies
         run: dotnet restore src/JDB_Portfolio_API.slnx
 
+      - name: Restore .NET tools
+        run: dotnet tool restore
+
+      # Fails when the model changed but no migration was written. Needs no database:
+      # the placeholder is only read by the design-time factory, never dialled.
+      - name: Check for pending model changes
+        env:
+          ConnectionStrings__JDBConnection: "Host=unused;Database=unused;Username=unused;Password=unused"
+        run: >
+          dotnet ef migrations has-pending-model-changes
+          --project src/JDB_Portfolio_API.Persistence
+          --startup-project src/JDB_Portfolio_API
+
       - name: Build with dotnet        
         run: dotnet build src/JDB_Portfolio_API.slnx --configuration Release --no-restore
 
       - name: dotnet publish
         run: dotnet publish src/JDB_Portfolio_API/JDB_Portfolio_API.csproj -c Release --no-restore -o ./publish
+
+      # Schema changes run here, once, before the app is replaced (KI-038). A failure
+      # stops the deploy and leaves the running app untouched.
+      - name: Apply database migrations
+        env:
+          ConnectionStrings__JDBConnection: ${{ secrets.PRODUCTION_CONNECTION_STRING }}
+        run: |
+          if [ -z "$ConnectionStrings__JDBConnection" ]; then
+            echo "::error::PRODUCTION_CONNECTION_STRING is not set; refusing to deploy without migrations."
+            exit 1
+          fi
+          dotnet ef database update \
+            --project src/JDB_Portfolio_API.Persistence \
+            --startup-project src/JDB_Portfolio_API
 
       - name: Azure Login
         uses: azure/login@v2

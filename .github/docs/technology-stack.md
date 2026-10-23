@@ -78,13 +78,13 @@ approval (AGENTS.md §10).
 
 | Concern | Candidate | Why |
 |---|---|---|
-| Testing | `Microsoft.AspNetCore.Mvc.Testing`, `Testcontainers.PostgreSql` | `xunit` + `Microsoft.NET.Test.Sdk` are in place (24 tests), but there is no endpoint test project and no test database yet |
+| Testing | `Testcontainers.PostgreSql` | xUnit and `Microsoft.AspNetCore.Mvc.Testing` are in place (four projects, 179 tests, repository ports faked). What is still missing is a **database-backed** test: nothing exercises the EF model or a migration against real PostgreSQL |
 | Assertions | `Shouldly` or `FluentAssertions` | optional; xUnit asserts are enough to start |
 | Validation | `FluentValidation.AspNetCore` or a hand-written endpoint filter | minimal APIs do not validate automatically |
 | Resilience | `Microsoft.Extensions.Http.Resilience` (Polly v8) | Notion call has no retry/timeout |
 | Health checks | `Microsoft.Extensions.Diagnostics.HealthChecks` + Npgsql check | nothing to probe today |
-| Structured logging | Serilog / OpenTelemetry | no application logging |
-| Analyzers | `Directory.Build.props` with `TreatWarningsAsErrors`, `Microsoft.CodeAnalysis.NetAnalyzers` | CS1998 already present |
+| Structured logging | Serilog / OpenTelemetry | `ILogger` reaches the application services (2.4), but there is no structured sink and no correlation id beyond `traceId` |
+| Analyzers | `Directory.Build.props` with `TreatWarningsAsErrors`, `Microsoft.CodeAnalysis.NetAnalyzers` | the build is at 0 warnings, but nothing prevents the next one |
 | API versioning | `Asp.Versioning.Http` | path version is hardcoded |
 | Migrations at deploy | EF bundle or a job step | `Migrate()` at startup is a race |
 

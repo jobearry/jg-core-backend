@@ -36,7 +36,7 @@ src/
 │                                        (ports only — no vendor types; 3.2, ADR-0005)
 │
 ├── JDB_Portfolio_API.Application/       ← core, references Domain
-│   ├── Common/Result.cs                 Result<T> (string error today)
+│   ├── Common/Result.cs                 Result<T> + typed Error (ErrorKind, code)
 │   ├── Abstractions/                    IPageContentReader (3.2, ADR-0005)
 │   ├── Models/                          DashboardItem, PageContent
 │   ├── Services/                        PortfolioService, PortfolioExperienceService,
@@ -54,7 +54,7 @@ src/
 │   ├── Repositories/                    BasePortfolioRepository<TDomain,TEntity>
 │   │                                    + 4 concrete repositories
 │   ├── Profiles/PortfolioMappingProfile.cs  entity ↔ domain AutoMapper profile
-│   └── Migrations/                      6 migrations + snapshot
+│   └── Migrations/                      9 migrations + snapshot
 │
 ├── JDB_Portfolio_API.ExternalService/   ← infrastructure
 │   └── Notion/                          NotionClientService, parser, settings, DTO,
@@ -62,11 +62,12 @@ src/
 │
 └── JDB_Portfolio_API/                   ← presentation / composition root
     ├── Program.cs                       builder, middleware, endpoint mapping
-    ├── ConfigurationSettings.cs         DI composition (AddDatabase, AddExternalService, …)
+    ├── ConfigurationSettings.cs         DI extensions (all in one class; 4.1 splits it)
     ├── Adapters/                        NotionPageContentReader — bridges the Application
     │                                    port to the Notion client (ADR-0005)
-    ├── ConfigurationSettings.cs         DI extensions (all in one class)
-    └── Endpoints/                       7 static classes, one per area
+    ├── Authentication/                  JwtTokenService, Swagger security filter
+    ├── ErrorHandling/                   GlobalExceptionHandler (2.4)
+    └── Endpoints/                       one static class per area + ApiResult
 ```
 
 ## 3. Dependency graph (actual)
@@ -85,10 +86,10 @@ flowchart TD
     A --> D
     PE --> D
     E --> D
-    PE -.->|"VIOLATION (plan 1.1)"| A
 ```
 
-Target: delete the dotted edge. Everything else is already correct.
+All arrows point inward. `Persistence` no longer references `Application`
+(1.1), and no project references Presentation.
 
 ## 4. Request flow
 
@@ -105,36 +106,36 @@ sequenceDiagram
     participant DB as PostgreSQL
 
     C->>EP: GET /api/v1/project?includeTools=true
-    EP->>S: GetAllProjectsAsync(true)
-    S->>R: GetAllProjectsWithTechStacksAsync()
+    EP->>S: GetAllProjectsAsync(includeTools, ct)
+    S->>R: GetAllProjectsWithTechStacksAsync(ct)
     R->>EF: Include/ThenInclude query
     EF->>DB: SQL
     DB-->>EF: rows
     EF-->>R: ProjectEntity[]
-    R->>M: Map<List<Project?>>
+    R->>M: Map<List<Project>>
     M-->>R: Project[] (domain)
-    R-->>S: List<Project?>
-    S-->>EP: Result<List<Project?>>.Success
-    EP-->>C: 200 + domain entities as JSON
+    R-->>S: List<Project>
+    S->>S: project.ToDto()  (PortfolioDtoMapper)
+    S-->>EP: Result<List<ProjectDto>>.Success
+    EP->>EP: ApiResult.ToHttpResult()
+    EP-->>C: 200 + DTO JSON
 ```
 
 Two things to notice:
 
-1. There is **no DTO step** — the domain object is the response.
-2. `Result<T>` is produced by a `try/catch` in the service. Since plan 2.2 the
-   failure is a typed `Error` and `Endpoints/ApiResult.cs` maps its kind to a
-   status code (`503` for the database, `502` for Notion, `500` for a bug) in one
-   place. Before that, every endpoint hardcoded `502`.
+1. **Domain types stop at the service boundary.** The service maps domain → DTO by
+   hand (`PortfolioDtoMapper`, ADR-0004); the endpoint signature and the response
+   contain DTOs only.
+2. `Result<T>` is produced by `PortfolioServiceBase.ExecuteAsync`, which classifies
+   failures into a typed `Error`. `Endpoints/ApiResult.cs` is the only place that maps
+   the error kind to a status code (`503` for the database, `502` for Notion, `500` for
+   a bug), and `GlobalExceptionHandler` covers exceptions that escape a service.
 
-### Target
+### Write (not built)
 
-```
-endpoint → handler/service → repository → EF
-         ← DTO              ← domain entity
-```
-
-Domain types stop at the application boundary. `Result<T>` carries an error
-kind, and one mapper turns it into `ProblemDetails`.
+There is no write path. `IRepository<T>` exposes only `GetAllAsync`, and `AddNewAsync`
+is gone. The target seam is `IUnitOfWork` (plan 4.4); `Project` is the aggregate root
+and `IPortfolioProjectRepository` its future write entry point (ADR-0003).
 
 ## 5. Composition root
 
@@ -171,12 +172,12 @@ Issues:
 
 | Concern | Today | Gap |
 |---|---|---|
-| Error handling | `try/catch` per service → `Result<T>` with a typed `Error` → one mapper in `ApiResult.cs` → `503`/`502`/`500` | no global handler for exceptions thrown outside a service, `/skill` ignores `IsSuccess` |
+| Error handling | `try/catch` per service → `Result<T>` with a typed `Error` → one mapper in `ApiResult.cs` → `503`/`502`/`500`; `GlobalExceptionHandler` for anything outside a service (2.2, 2.4) | — |
 | Logging | `ILogger` in the Application services — warning for a dependency failure, error for a bug — plus the default ASP.NET request log | no structured sink, no correlation id; the provider's exception detail lives only in the log |
-| Validation | none | `AuthDto` accepts anything |
+| Validation | explicit `AuthDto` guard in `AuthEndpoints` → `400 + validation_failed` (2.5) | no other endpoint takes input |
 | Cancellation | `CancellationToken` is a required parameter from endpoint → service → repository → `ToListAsync(ct)` / `HttpClient.GetAsync(ct)` | — |
-| Mapping | AutoMapper, entity → domain | no DTO mapping, broken reverse mappings |
-| Auth | JWT issued, not enforced | `RequireAuthorization()` commented out |
+| Mapping | AutoMapper for entity ↔ domain; hand-written `PortfolioDtoMapper` for domain → DTO (ADR-0004) | reverse maps are explicit but unused until a write path exists |
+| Auth | JWT **service token** (`sub=portfolio-api`); only `/auth/me` requires it, the portfolio endpoints are anonymous on purpose (2.5) | no user authentication; no secure-by-default fallback policy until a write endpoint exists |
 | Observability | none | no health check, no metrics, no tracing |
 | Resilience | none | Notion call has no timeout/retry policy |
 
@@ -191,13 +192,12 @@ Issues:
 
 ## 8. Where this is going
 
-Plan [`001`](../plans/001-clean-architecture-refactor.md) moves the system
-toward:
-
-- strict dependency direction;
-- a domain model with invariants and value equality;
-- DTOs at the edge;
-- typed errors + `ProblemDetails`;
-- tests at the domain, application, and API layers.
+Plan [`001`](../plans/001-clean-architecture-refactor.md) Parts 1–3 are complete
+(2026-10-23): dependency direction is clean, the domain has invariants and value
+equality, DTOs sit at the edge, errors are typed, and 179 tests cover the invariants,
+mappings and endpoint contracts. What remains is the optional Part 4 polish — the
+composition-root split (4.1), `Directory.Build.props` (4.5), `IEntityTypeConfiguration`
+split (4.3), the Notion client/parser cleanup (4.6, 4.7), and `IUnitOfWork` (4.4) before
+any write endpoint is added.
 
 Open architectural decisions are tracked as ADRs in [`adr/`](adr/).

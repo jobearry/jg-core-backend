@@ -130,14 +130,14 @@ erDiagram
 | `20260822074954_ProdBaseline` | production baseline (FK rename) |
 | `20261021161825_NormalizeIdentifierNames` | renames identifiers the old chain left stale |
 | `20261022064321_AddExperienceFinishedAt` | adds `experience.finished_at` (nullable) — one column, no data statement |
-| `20261022150752_RequireCompanyName` | `experience.company_name` → `NOT NULL` + `CHECK (btrim(company_name) <> '')` — **written, not yet applied** (see below) |
+| `20261022150752_RequireCompanyName` | `experience.company_name` → `NOT NULL` + `CHECK (btrim(company_name) <> '')` — applied to the local dev database 2026-10-23; pending everywhere else (see below) |
 
-### `RequireCompanyName` is not applied yet
+### `RequireCompanyName` is applied locally only
 
-The migration exists in the repository and the model snapshot matches it, but no
-database has run it. It applies on the next `dotnet ef database update`, or
-automatically at the next deploy because `Database:AutoMigrate` defaults to `true`
-(KI-038).
+The migration exists in the repository and the model snapshot matches it. It has run
+against the local dev database (2026-10-23); no other environment has it yet. It applies
+on the next `dotnet ef database update`, or automatically at the next deploy because
+`Database:AutoMigrate` defaults to `true` (KI-038).
 
 Two things to know before it runs:
 
@@ -145,8 +145,9 @@ Two things to know before it runs:
   any row is blank or all-whitespace. That failure is intended: the migration was
   scaffolded with `defaultValue: ""`, which would have invented an empty company
   for every `NULL` row — and then been rejected by the `CHECK` anyway. It was
-  removed by hand, and the migration has never been applied anywhere, so editing
-  it in place does not violate the "never edit an applied migration" rule.
+  removed by hand, while the migration was still unapplied, so editing it in place did
+  not violate the "never edit an applied migration" rule. It has since run on the local
+  dev database only.
 - Verify the target database first:
 
   ```sql

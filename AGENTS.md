@@ -19,13 +19,14 @@ dashboard overview, and Notion page content as JSON.
 Current status:
 
 - Read path is complete and deployed (Azure Web App).
-- **No write endpoints exist.** `AddNewAsync` is commented out.
-- DDD/clean-architecture refactor is **in progress**, not complete. Do not treat
-  the current code as the target design — see
+- **No write endpoints exist.** `AddNewAsync` was removed; `IRepository<T>` exposes
+  only `GetAllAsync`.
+- DDD/clean-architecture refactor is **complete through Part 3** (2026-10-23). Only
+  the optional Part 4 polish remains — see
   [`.github/plans/001-clean-architecture-refactor.md`](.github/plans/001-clean-architecture-refactor.md).
-- **Tests exist but are thin.** Four xUnit projects cover the Domain value objects,
-  the application services, the DTO mapping, the AutoMapper profile and the endpoint
-  contracts (132 tests).
+- **Tests cover every invariant.** Four xUnit projects cover the Domain entities and
+  value objects, the application services, the DTO mapping, the AutoMapper profile,
+  the endpoint contracts and the Notion adapter chain (179 tests).
 
 ---
 
@@ -249,7 +250,8 @@ backfilled**. Errors are typed and mapped to the right status in one place;
 `CancellationToken` runs end-to-end; unhandled exceptions become `ProblemDetails`;
 services log their failures. The CORS allow-list is configuration now, with localhost
 gated to Development, no credentials flag, and only `GET`/`POST`. Tests went from none
-to 112, including endpoint contracts and the CORS policy.
+to 179, including entity invariants, value-object equality, endpoint contracts and the
+CORS policy.
 
 Full reasoning and verification steps:
 [`.github/plans/001-clean-architecture-refactor.md`](.github/plans/001-clean-architecture-refactor.md).
@@ -295,6 +297,9 @@ Stop and ask the user before:
 
 ## 11. House style for agents
 
+- **Keep responses short.** Lead with the answer, then at most five bullets. For a
+  step, phase, or technical discussion: what it fixes, what it does not, the blocker,
+  the recommendation. No preamble, no restating, no essay — expand only when asked.
 - Match the surrounding code; do not introduce a second pattern for the same
   problem.
 - Prefer the smallest diff that satisfies the task. No drive-by refactors.
