@@ -1,31 +1,31 @@
 ﻿using JDB_Portfolio_API.Application.Common;
+using JDB_Portfolio_API.Application.DTO;
 using JDB_Portfolio_API.Domain.Entities;
 using JDB_Portfolio_API.Domain.Interfaces;
-using System;
+using Microsoft.Extensions.Logging;
 using System.Collections.Generic;
-using System.Text;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace JDB_Portfolio_API.Application.Services;
 
-public class PortfolioRecommendationService:BaseService<Recommendation>
+public class PortfolioRecommendationService : PortfolioServiceBase<Recommendation, IPortfolioRecommendationRepository>
 {
-    private readonly IPortfolioRecommendationRepository _recoRepo;
-    public PortfolioRecommendationService(IPortfolioRecommendationRepository recoRepo)
-        : base(recoRepo)
-    {
-        _recoRepo = recoRepo;
-    }
+    public PortfolioRecommendationService(IPortfolioRecommendationRepository repository, ILogger<PortfolioRecommendationService> logger)
+        : base(repository, logger) { }
 
-    public async Task<Result<List<Recommendation?>>> GetAllRecommendationsAsync()
+    public async Task<Result<List<RecommendationDto>>> GetAllRecommendationsAsync(
+        CancellationToken cancellationToken)
     {
-        try
+        return await ExecuteAsync(async ct =>
         {
-            List<Recommendation?> recommendations = await _recoRepo.GetAllRecommendationsAsync()?? await _repo.GetAllAsync();
-            return Result<List<Recommendation?>>.Success(recommendations.OrderBy(x => x.Id).ToList());
-        }
-        catch (HttpRequestException hre)
-        {
-            return Result<List<Recommendation?>>.Failure("Failed to get portfolio recommendation content: " + hre.Message);
-        }
+            var recommendations = await Repository.GetAllRecommendationsAsync(ct);
+
+            return recommendations
+                .OrderBy(x => x.Id)
+                .Select(x => x.ToDto())
+                .ToList();
+        }, "get portfolio recommendation content", cancellationToken);
     }
 }

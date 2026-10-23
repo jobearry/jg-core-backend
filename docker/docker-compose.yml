@@ -1,6 +1,10 @@
 # =============================================================================
 # Spins up:
 #   - api : the ASP.NET Core Web API (built from the ../Dockerfile)
+#
+# The database is NOT part of this stack. The api connects to an existing
+# PostgreSQL supplied through ConnectionStrings__JDBConnection in docker/.env:
+# a server you run yourself, or a hosted one.
 # =============================================================================
 
 name: jdb-portfolio-api
@@ -13,9 +17,10 @@ services:
     image: jdb-portfolio-api:latest
     container_name: jdb_portfolio_api
     restart: unless-stopped
-    depends_on:
-      db:
-        condition: service_healthy
+    # Makes host.docker.internal resolve on Linux too, so a PostgreSQL running
+    # on the host is reachable from the container.
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     environment:
       # "Development" enables Swagger UI; set to Production for deployments.
       ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Development}
@@ -33,7 +38,10 @@ services:
       Jwt__Audience: ${Jwt__Audience:?}
       Jwt__ExpirationInMinutes: ${Jwt__ExpirationInMinutes:-60}
 
-      ConnectionStrings__JDBConnection: "Host=db;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}"
+      # Required. There is no bundled database, so the full Npgsql connection
+      # string comes from docker/.env. `host.docker.internal` reaches a
+      # PostgreSQL running on the host.
+      ConnectionStrings__JDBConnection: ${ConnectionStrings__JDBConnection:?}
     ports:
       # Host port configurable via API_PORT; container port is always 8080.
       - "${API_PORT:-8080}:8080"
@@ -43,6 +51,3 @@ services:
 networks:
   jdb_network:
     driver: bridge
-
-volumes:
-  jdb_pgdata:

@@ -7,9 +7,11 @@ public partial class ExperienceEntity
 {
     public int Id { get; set; }
 
-    public string? CompanyName { get; set; }
+    public string CompanyName { get; set; } = null!;
 
     public DateTime? StartedAt { get; set; }
+
+    public DateTime? FinishedAt { get; set; }
 
     public string? Description { get; set; }
 

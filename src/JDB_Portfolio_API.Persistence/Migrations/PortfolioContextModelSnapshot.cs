@@ -32,6 +32,7 @@ namespace JDB_Portfolio_API.Persistence.Migrations
                     NpgsqlPropertyBuilderExtensions.UseIdentityAlwaysColumn(b.Property<int>("Id"));
 
                     b.Property<string>("CompanyName")
+                        .IsRequired()
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)")
                         .HasColumnName("company_name");
@@ -39,6 +40,10 @@ namespace JDB_Portfolio_API.Persistence.Migrations
                     b.Property<string>("Description")
                         .HasColumnType("text")
                         .HasColumnName("description");
+
+                    b.Property<DateTime?>("FinishedAt")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("finished_at");
 
                     b.Property<string>("Responsibility")
                         .HasColumnType("text")
@@ -62,7 +67,10 @@ namespace JDB_Portfolio_API.Persistence.Migrations
                     b.HasKey("Id")
                         .HasName("experience_pkey");
 
-                    b.ToTable("experience", (string)null);
+                    b.ToTable("experience", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_experience_company_name_not_blank", "btrim(company_name) <> ''");
+                        });
                 });
 
             modelBuilder.Entity("JDB_Portfolio_API.Persistence.Entities.ProjectEntity", b =>
@@ -119,7 +127,8 @@ namespace JDB_Portfolio_API.Persistence.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("tech_stack_id");
 
-                    b.HasKey("ProjectId", "TechStackId");
+                    b.HasKey("ProjectId", "TechStackId")
+                        .HasName("project_tech_stack_pkey");
 
                     b.HasIndex("TechStackId");
 
@@ -159,7 +168,7 @@ namespace JDB_Portfolio_API.Persistence.Migrations
                         .HasDefaultValueSql("CURRENT_TIMESTAMP");
 
                     b.HasKey("Id")
-                        .HasName("recommendations_pkey");
+                        .HasName("recommendation_pkey");
 
                     b.ToTable("recommendation", (string)null);
                 });

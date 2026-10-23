@@ -1,10 +1,11 @@
 ﻿using JDB_Portfolio_API.Domain.Entities;
-using JDB_Portfolio_API.Domain.ValueObjects;
+using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace JDB_Portfolio_API.Domain.Interfaces;
 
 public interface IPortfolioExperienceRepository : IRepository<Experience>
 {
-    //Task<Experience?> GetExperienceAsync(ExperienceId id);
-    Task<List<Experience?>> GetAllExperienceWithProjectsAsync();
+    Task<List<Experience>> GetAllExperienceWithProjectsAsync(CancellationToken cancellationToken);
 }

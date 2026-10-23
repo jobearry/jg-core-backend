@@ -12,16 +12,19 @@
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /repo
 
-# Copy the solution + csproj files first so NuGet restore can be cached
-COPY ["src/JDB_Portfolio_API.slnx", "./src/"]
+# Copy the csproj files of the project to publish and its transitive project
+# references first, so NuGet restore can be cached
 COPY ["src/JDB_Portfolio_API.Application/*.csproj", "src/JDB_Portfolio_API.Application/"]
 COPY ["src/JDB_Portfolio_API.Domain/*.csproj", "src/JDB_Portfolio_API.Domain/"]
 COPY ["src/JDB_Portfolio_API.ExternalService/*.csproj", "src/JDB_Portfolio_API.ExternalService/"]
 COPY ["src/JDB_Portfolio_API.Persistence/*.csproj", "src/JDB_Portfolio_API.Persistence/"]
 COPY ["src/JDB_Portfolio_API/*.csproj", "src/JDB_Portfolio_API/"]
 
-# Restore all dependencies from the solution file
-RUN dotnet restore "./src/JDB_Portfolio_API.slnx"
+# Restore the web project and its transitive project references.
+# Do NOT restore the solution: it also lists the tests/ projects, whose .csproj
+# files are not (and need not be) copied into the build context, and MSB3202
+# would fail the build.
+RUN dotnet restore "./src/JDB_Portfolio_API/JDB_Portfolio_API.csproj"
 
 # Copy the remaining source and publish the main web project
 COPY ["src/", "./src/"]
