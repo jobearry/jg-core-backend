@@ -2,6 +2,7 @@
 using JDB_Portfolio_API.Application.Common;
 using JDB_Portfolio_API.Application.DTO;
 using JDB_Portfolio_API.Application.Models;
+using JDB_Portfolio_API.Application.Settings;
 using JDB_Portfolio_API.Domain.Entities;
 using JDB_Portfolio_API.Domain.Interfaces;
 using Microsoft.Extensions.Logging;
@@ -19,6 +20,7 @@ public class PortfolioService
     private readonly IPortfolioProjectRepository _projectRepository;
     private readonly IPortfolioTechStackRepository _techStackRepository;
     private readonly IPortfolioRecommendationRepository _recommendationRepository;
+    private readonly OverviewSettings _overviewSettings;
     private readonly ILogger<PortfolioService> _logger;
 
     public PortfolioService(
@@ -26,12 +28,14 @@ public class PortfolioService
         IPortfolioProjectRepository projectRepository,
         IPortfolioTechStackRepository techStackRepository,
         IPortfolioRecommendationRepository recommendationRepository,
+        OverviewSettings overviewSettings,
         ILogger<PortfolioService> logger)
     {
         _pageContentReader = pageContentReader;
         _projectRepository = projectRepository;
         _techStackRepository = techStackRepository;
         _recommendationRepository = recommendationRepository;
+        _overviewSettings = overviewSettings;
         _logger = logger;
     }
 
@@ -69,32 +73,41 @@ public class PortfolioService
     {
         try
         {
+            // Deliberately sequential. All three repositories share the scoped
+            // PortfolioContext, and EF Core forbids concurrent operations on one
+            // context — Task.WhenAll here throws "A second operation was started on
+            // this context instance". Parallelism needs a context per query, which
+            // costs more than it saves for three counts.
             var projects = await _projectRepository.GetAllProjectsWithTechStacksAsync(cancellationToken);
             var skills = await _techStackRepository.GetAllTechStacksAsync(cancellationToken);
             var recommendations = await _recommendationRepository.GetAllRecommendationsAsync(cancellationToken);
+
+            var projectsText = _overviewSettings.Projects;
+            var skillsText = _overviewSettings.Skills;
+            var recommendationsText = _overviewSettings.Recommendations;
 
             var dashboardItems = new List<DashboardItem>
             {
                 new DashboardItem
                 {
-                    Title = "Projects",
+                    Title = projectsText.Title,
                     Count = projects.Count(),
-                    Subtitle = "projects across all roles",
-                    Description = "Homelabbing and App Building"
+                    Subtitle = projectsText.Subtitle,
+                    Description = projectsText.Description
                 },
                 new DashboardItem
                 {
-                    Title = "Skills",
+                    Title = skillsText.Title,
                     Count = skills.Count(),
-                    Subtitle = "tools and technologies",
-                    Description = "Focusing on Angular and .NET"
+                    Subtitle = skillsText.Subtitle,
+                    Description = skillsText.Description
                 },
                 new DashboardItem
                 {
-                    Title = "Recommendations",
+                    Title = recommendationsText.Title,
                     Count = recommendations.Count(),
-                    Subtitle = "satisfied clients",
-                    Description = "Collaboration and communication"
+                    Subtitle = recommendationsText.Subtitle,
+                    Description = recommendationsText.Description
                 }
             };
 

@@ -1,0 +1,12 @@
+<Project>
+
+  <!--
+    Warnings are build failures in every project, tests included. The tree is
+    currently at zero warnings, so this preserves that instead of letting a new
+    one scroll past in CI output. Add a <NoWarn> here only with a reason.
+  -->
+  <PropertyGroup>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+  </PropertyGroup>
+
+</Project>

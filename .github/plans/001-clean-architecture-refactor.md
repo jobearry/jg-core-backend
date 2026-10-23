@@ -1,6 +1,6 @@
 # Plan 001 — Clean Architecture & DDD Refactor
 
-**Status:** In progress — decisions D1–D4 resolved; items 1.1–1.8, 2.1–2.5, 2.7, 3.1, 3.1a, 3.2, 3.3, 3.4 and 3.5 complete, plus Batch 2 phase 1–3 (DTO boundary + endpoint contracts). **Part 1 and Part 2 are done** (2.6 is a feature, not debt); **Part 3 is complete** (3.2's Notion half closed 2026-10-23, ADR-0005). `20261022150752_RequireCompanyName` is **applied to the local dev database** (2026-10-23) and still pending for any other environment — see 3.1a.
+**Status:** In progress — decisions D1–D4 resolved; items 1.1–1.8, 2.1–2.5, 2.7, 3.1, 3.1a, 3.2, 3.3, 3.4 and 3.5 complete, plus Batch 2 phase 1–3 (DTO boundary + endpoint contracts). **Part 1 and Part 2 are done** (2.6 is a feature, not debt); **Part 3 is complete** (3.2's Notion half closed 2026-10-23, ADR-0005). **Part 4:** 4.1, 4.2, 4.3, 4.5, 4.6, 4.7 and 4.9 are done, and 4.8's config move landed with parallelisation rejected (2026-10-23); 4.4 is deferred until the first write endpoint. `20261022150752_RequireCompanyName` is applied locally and production Neon reports no pending migrations (CI, 2026-10-23).
 **Scope:** `src/JDB_Portfolio_API.Domain`, `.Application`, `.Persistence`, `.ExternalService`, `JDB_Portfolio_API` (Presentation), `tests/`
 **Goal:** Bring the solution in line with clean architecture dependency rules and turn the Domain project into an actual domain model rather than a set of persistence shapes.
 
@@ -33,7 +33,7 @@ Nothing here is urgent in the "production is down" sense. The value is that Part
 
 > **Status 2026-10-23:** the four gaps below are closed and Parts 1–3 are complete.
 > This summary is the **original assessment (2026-10-21)**, kept as the rationale for
-> the work; read the item-level Done notes for the current state. Today: 179 green
+> the work; read the item-level Done notes for the current state. Today: 187 green
 > tests, 0 build warnings, and every dependency edge points inward.
 
 The project boundaries are already clean-architecture-shaped: Domain has zero project references, EF entities are kept separate from domain entities, repository ports live in Domain, and the composition root is in the API project. The remaining gaps:
@@ -1410,7 +1410,7 @@ Answer "how do I create a project?" — there are two ways today. Two answers me
 - [x] `tests/JDB_Portfolio_API.Persistence.Tests`: the AutoMapper profile
 
 > **Done (2026-10-23).** Four test projects exist and `dotnet test` is green
-> (179 tests). What they cover today:
+> (187 tests). What they cover today:
 >
 > - **Domain.Tests** — 81 tests: the value objects (`Role`, `Company`, `Period`,
 >   `TechStackRef`) with equality, `==`, `GetHashCode` and dictionary-key behaviour,
@@ -1473,7 +1473,7 @@ Every change in Parts 1–3 is a refactor, and a refactor without tests is a rew
 **How to verify**
 
 ```bash
-dotnet test    # 179 tests, all green
+dotnet test    # 187 tests, all green
 ```
 
 **Pragmatic order, as executed:** Domain first, covering 3.1 and 3.3, then Application,
@@ -1487,15 +1487,15 @@ Persistence and Api as each part landed.
 
 | # | Item | Why | How to verify |
 |---|---|---|---|
-| 4.1 | Split `ConfigurationSettings.cs` into `AddApplication()` / `AddPersistence()` / `AddExternalServices()` / `AddPresentation()`, and delete `AddControllers()` / `MapControllers()` (KI-025) | Service registrations currently sit inside `AddDatabase`; one method per layer is easier to reason about. No controllers exist, so the calls are dead — 2.7 already deferred their removal to this item | `grep -n "AddScoped<Portfolio" ConfigurationSettings.cs` — all inside `AddDatabase`; `grep -n "AddControllers\|MapControllers" Program.cs` — no match |
-| 4.2 | Remove the unused `IConfiguration` parameter from `AddMapper` | A dead parameter implies configuration is used | read the signature, then the body |
-| 4.3 | Replace the 150-line `OnModelCreating` with `IEntityTypeConfiguration<T>` classes | One file per entity diffs cleanly and keeps `PortfolioContext` small | `wc -l src/JDB_Portfolio_API.Persistence/Contexts/PortfolioContext.cs` |
-| 4.4 | Add `IUnitOfWork` / transaction abstraction before write endpoints | there is no write path at all — `AddNewAsync` is gone and `IRepository<T>` exposes only `GetAllAsync` — but you will need it the moment one exists | `grep -rn "SaveChangesAsync\|IUnitOfWork" src` — no match |
-| 4.5 | Add `Directory.Build.props` with `TreatWarningsAsErrors` + analyzers | Nothing enforces the current 0-warning build; this is how the CS1998 that 2.5 fixed would have been caught at build time | add it, build, see what breaks |
-| 4.6 | Fix `NotionClientService.cs`: don't rethrow `new HttpRequestException(msg)` (loses the inner exception); don't use an absolute URL when `BaseAddress` is set; set auth headers in `ConfigureHttpClient`; add retry/timeout | Current code hides the original stack and duplicates configuration | read lines 30–46 |
-| 4.7 | Replace the `NotionPageParserUtility` XML trick | `XDocument.Parse("<root>" + markdown + "</root>")` breaks on malformed content or a literal `</root>` | feed it `"<page>unclosed"` |
-| 4.8 | Move `PortfolioService.GetOverview` hardcoded copy to config; parallelise the three sequential queries | Display text in the app layer; three independent awaits that could be `Task.WhenAll` | `grep -n "Homelabbing" src` |
-| 4.9 | Add `.github/plans/README.md` index if more plans are added | Keeps plans discoverable | `ls .github/plans/` |
+| 4.1 | Split `ConfigurationSettings.cs` into `AddApplication()` / `AddPersistence()` / `AddExternalServices()` / `AddPresentation()`, and delete `AddControllers()` / `MapControllers()` (KI-025) | Service registrations currently sit inside `AddDatabase`; one method per layer is easier to reason about. No controllers exist, so the calls are dead — 2.7 already deferred their removal to this item | **Done (2026-10-23).** `AddPresentation(configuration, environment)` also owns the `IPageContentReader` adapter and the exception handler; `AddPersistence` registers the four repositories and `AddMapper()`; `AddApplication` the five services. `AddControllers`/`MapControllers` are gone |
+| 4.2 | Remove the unused `IConfiguration` parameter from `AddMapper` | A dead parameter implies configuration is used | **Done (2026-10-23).** Signature is `AddMapper(this IServiceCollection)`; called from `AddPersistence` |
+| 4.3 | Replace the 150-line `OnModelCreating` with `IEntityTypeConfiguration<T>` classes | One file per entity diffs cleanly and keeps `PortfolioContext` small | **Done (2026-10-23).** Six classes in `Persistence/Configurations/`; `OnModelCreating` calls `ApplyConfigurationsFromAssembly`. `has-pending-model-changes` reports no changes, so the snapshot is identical |
+| 4.4 | Add `IUnitOfWork` / transaction abstraction before write endpoints | there is no write path at all — `AddNewAsync` is gone and `IRepository<T>` exposes only `GetAllAsync` — but you will need it the moment one exists | **Deferred (2026-10-23).** Reads only, so a unit of work would be dead code; EF Core's `DbContext` already provides the transaction boundary. Decide at the first write endpoint: repository-saves vs Application-owned `IUnitOfWork.SaveChangesAsync()` |
+| 4.5 | Add `Directory.Build.props` with `TreatWarningsAsErrors` + analyzers | Nothing enforces the current 0-warning build; this is how the CS1998 that 2.5 fixed would have been caught at build time | **Done (2026-10-23).** Root `Directory.Build.props` sets `TreatWarningsAsErrors`; build stays at 0 warnings. No analyzer package was added — SDK analyzers only |
+| 4.6 | Fix `NotionClientService.cs`: don't rethrow `new HttpRequestException(msg)` (loses the inner exception); don't use an absolute URL when `BaseAddress` is set; set auth headers in `ConfigureHttpClient`; add retry/timeout | Current code hides the original stack and duplicates configuration | **Done (2026-10-23).** Relative path; base address, auth headers and a 15s timeout live in `AddExternalServices`; one manual retry on 429/5xx; failures keep their status code. Network errors/timeouts are not retried |
+| 4.7 | Replace the `NotionPageParserUtility` XML trick | `XDocument.Parse("<root>" + markdown + "</root>")` breaks on malformed content or a literal `</root>` | **Done (2026-10-23).** Tolerant `<page>…</page>` scan (tempered dot so an unclosed tag cannot swallow the next card); tags stripped, entities decoded, whitespace collapsed. Broken fragments are skipped, not fatal |
+| 4.8 | Move `PortfolioService.GetOverview` hardcoded copy to config; parallelise the three sequential queries | Display text in the app layer; three independent awaits that could be `Task.WhenAll` | **Partly done (2026-10-23).** Copy moved to the `Overview` section and `OverviewSettings`. **Parallelisation rejected:** all three repositories share the scoped `PortfolioContext`, and EF Core forbids concurrent operations on one context — `Task.WhenAll` throws. The three counts are still full `SELECT`s; a `CountAsync` port method would be the real win (new KI-046) |
+| 4.9 | Add `.github/plans/README.md` index if more plans are added | Keeps plans discoverable | **Done (2026-10-23).** Index exists and its 001 status row now matches the plan |
 
 ---
 
@@ -1547,3 +1547,4 @@ If all seven confirm, the plan is accurate and Parts 1–3 are safe to schedule.
 | 2026-10-21 | Restructured into parts with Why / How to verify / Risk per item; added the four open decisions; **corrected** 1.5 — `career_position` is `NOT NULL`, the real risk is an empty string, not null |
 | 2026-10-22 | Added **2.7 — CORS policy** after a review question about the hardcoded origin list: origins moved to configuration, localhost gated to Development, `AllowCredentials()` dropped, methods/headers narrowed |
 | 2026-10-23 | Documentation sync after Part 3 closed: test counts corrected to 179, 3.5 marked done, KI-003/KI-009/KI-013 marked resolved, 4.1 extended to cover the dead controller registrations (KI-025) |
+| 2026-10-23 | Part 4: 4.1, 4.2, 4.3, 4.5, 4.6, 4.7 and 4.9 done; 4.8's copy moved to config (parallelisation rejected — one scoped `DbContext`); 4.4 deferred until the first write endpoint. Tests 179 → 187 |

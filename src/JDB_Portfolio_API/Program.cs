@@ -1,6 +1,5 @@
 using JDB_Portfolio_API;
 using JDB_Portfolio_API.Endpoints;
-using JDB_Portfolio_API.ErrorHandling;
 using JDB_Portfolio_API.Persistence.Contexts;
 using Microsoft.EntityFrameworkCore;
 
@@ -9,20 +8,12 @@ var builder = WebApplication.CreateBuilder(args);
 // load configurations
 builder.Configuration.AddUserSecrets<Program>();
 
-// Add services to the container.
-builder.Services.AddControllers();
+// Add services to the container, one method per layer.
+builder.Services.AddPresentation(builder.Configuration, builder.Environment);
+builder.Services.AddApplication();
+builder.Services.AddPersistence(builder.Configuration);
+builder.Services.AddExternalServices(builder.Configuration);
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerConfig(builder.Configuration);
-builder.Services.AddDatabase(builder.Configuration);
-builder.Services.AddExternalService(builder.Configuration);
-builder.Services.AddAuthentication(builder.Configuration);
-builder.Services.AddMapper(builder.Configuration);
-builder.Services.AddCorsOrigins(builder.Configuration, builder.Environment);
-
-// Anything that escapes an endpoint — including exceptions thrown outside a service,
-// which plan 2.2 could not classify — becomes the same application/problem+json shape.
-builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
-builder.Services.AddProblemDetails();
 
 var app = builder.Build();
 
@@ -51,8 +42,6 @@ if (app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
-
-app.MapControllers();
 
 // One prefix, declared once. Endpoint files declare only the segment below it, so a
 // future /api/v2 is one edit here instead of a hunt through seven files.

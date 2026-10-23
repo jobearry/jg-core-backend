@@ -57,6 +57,7 @@ string is required just to boot. Set `Database__AutoMigrate=false` to skip it.
 | `Notion:Version` | default `2026-03-11` | `Notion__Version` | optional |
 | `Cors:AllowedOrigins` | `appsettings.json` | `Cors__AllowedOrigins__0`, `__1`, … | App Service setting |
 | `Cors:DevelopmentOrigins` | `appsettings.json` | applied only when `ASPNETCORE_ENVIRONMENT=Development` | ignored |
+| `Overview:*` | `appsettings.json` | `Overview__Projects__Title`, … | optional; copy for the three `/overview` tiles |
 
 Origins are configuration so that a new domain or a Vercel preview deployment
 (`https://demo-git-my-branch-team.vercel.app`) is an added setting rather than a code
@@ -126,7 +127,7 @@ the **direct** Neon endpoint (no `-pooler`), in Npgsql key-value form — not th
 `Database:AutoMigrate` is still `true` (KI-038); the startup migration now finds
 nothing pending. Flip it to `false` after this step has run green once.
 
-No test step exists. Tests now live in `tests/` (four xUnit projects, 179 tests) —
+No test step exists. Tests now live in `tests/` (four xUnit projects, 187 tests) —
 add a `dotnet test src/JDB_Portfolio_API.slnx` step to the workflow.
 
 Swagger is enabled only when `ASPNETCORE_ENVIRONMENT=Development`. Production

@@ -15,7 +15,7 @@ None known.
 
 | ID | Issue | Evidence | Plan |
 |---|---|---|---|
-| KI-003 | ~~No tests at all~~ **RESOLVED 2026-10-23** | four xUnit projects — `Domain.Tests` (81), `Application.Tests` (37), `Persistence.Tests` (22), `Api.Tests` (39) — and `dotnet test` is green (179 tests). Entity invariants and VO equality landed with 3.1/3.3, `TechStackRef` equality with 3.4, the Notion adapter chain with 3.2 | 3.5 |
+| KI-003 | ~~No tests at all~~ **RESOLVED 2026-10-23** | four xUnit projects — `Domain.Tests` (81), `Application.Tests` (37), `Persistence.Tests` (22), `Api.Tests` (47) — and `dotnet test` is green (187 tests). Entity invariants and VO equality landed with 3.1/3.3, `TechStackRef` equality with 3.4, the Notion adapter chain with 3.2 | 3.5 |
 | KI-004 | ~~Domain entities are the public API contract~~ **RESOLVED 2026-10-22** | endpoints return `Application/DTO` records; `PortfolioDtoMapper` maps explicitly. No `Domain.Entities`/`Domain.ValueObjects` type appears in an endpoint signature or response. Proven by the wire-shape guards in `PortfolioDtoMapperTests` | 2.1 / D4 |
 | KI-005 | `Period.FinishedAt` was always null after mapping, so `Duration` grew daily for past roles | **code fixed 2026-10-22** — `finished_at` column added (migration `20261022064321_AddExperienceFinishedAt`), entity + context + mapping updated, regression tests added. **Still open: the data.** Existing rows have `finished_at IS NULL`, which now correctly means *ongoing*. The past roles need their end dates backfilled by hand | 1.3 / D1 |
 | KI-006 | ~~`/api/v1/skill` returns `200` with `null` on failure~~ **RESOLVED 2026-10-22** | it goes through `ApiResult.ToHttpResult()` like its siblings, so a database failure returns `503` + `database_unavailable` instead of a success-shaped empty body. Pinned by `GetSkill_WhenTheDatabaseFails_Returns503NotAnEmpty200` | 2.5 |
@@ -49,15 +49,16 @@ None known.
 
 | ID | Issue | Evidence | Plan |
 |---|---|---|---|
-| KI-025 | `AddControllers()` / `MapControllers()` are registered but no controllers exist | `Program.cs:12,44` | 4.1 |
+| KI-025 | ~~`AddControllers()` / `MapControllers()` are registered but no controllers exist~~ **RESOLVED 2026-10-23** | Removed with the 4.1 composition-root split; `Program.cs` no longer calls either | 4.1 |
 | KI-026 | ~~`/auth/me` is `async` with no `await` (CS1998)~~ **RESOLVED 2026-10-22** | the lambda is synchronous now. JWT issuance moved out of the endpoint entirely into `JwtTokenService` (interface `IAuthTokenService` in Application), so it is unit-tested without HTTP | 2.5 |
-| KI-027 | Notion client rethrows `new HttpRequestException(msg)`, losing the inner exception | `NotionClientService.cs` catch blocks | 4.6 |
-| KI-028 | Notion client uses an absolute URL despite `BaseAddress`, sets headers in the constructor, and has no retry/timeout | `NotionClientService.cs:24-33` | 4.6 |
-| KI-029 | Notion markdown is parsed as XML wrapped in `<root>`, fragile to malformed input or a literal `</root>` | `NotionPageParserUtility.cs` | 4.7 |
-| KI-030 | `/overview` hardcodes display copy and runs three counts sequentially | `PortfolioService.GetOverview` | 4.8 |
+| KI-027 | ~~Notion client rethrows `new HttpRequestException(msg)`, losing the inner exception~~ **RESOLVED 2026-10-23** | There is no catch-all rethrow any more. A non-success response throws `HttpRequestException` with the status code, and network/timeout exceptions escape unchanged, so the logger keeps the original detail | 4.6 |
+| KI-028 | ~~Notion client uses an absolute URL despite `BaseAddress`, sets headers in the constructor, and has no retry/timeout~~ **RESOLVED 2026-10-23** | Base address, auth headers and a 15s timeout are configured in `AddExternalServices`; the client requests `v1/pages/{id}/markdown` and retries once on 429/5xx | 4.6 |
+| KI-029 | ~~Notion markdown is parsed as XML wrapped in `<root>`, fragile to malformed input or a literal `</root>`~~ **RESOLVED 2026-10-23** | Tolerant `<page>` scan; an unclosed card is skipped and the remaining cards are returned. Tag stripping, entity decoding and whitespace collapsing are unit-tested | 4.7 |
+| KI-030 | ~~`/overview` hardcodes display copy and runs three counts sequentially~~ **RESOLVED 2026-10-23** | Copy comes from `OverviewSettings` (`Overview` config section); the queries stay sequential on purpose — one scoped `PortfolioContext` cannot run them concurrently. Counting by loading full rows is now KI-046 | 4.8 |
 | KI-033 | `opencode.json` is committed and points at `127.0.0.1` | repo root | decide |
 | KI-034 | No health-check endpoint; nothing to probe in Azure | `Program.cs` | 4.x |
 | KI-035 | ~~`Experience.Description`/`Responsibility`/`Type` are not explicitly mapped~~ **RESOLVED 2026-10-22** | they are name-mapped and AutoMapper **does** write to the private setters. Proven by `Map_ExperienceEntity_To_Experience_PopulatesDescriptionResponsibilityAndType` in `Persistence.Tests`. The behaviour was never broken — only unverified | 3.3 |
+| KI-046 | `/overview` counts by materialising every row (projects with tech stacks, tech stacks, recommendations), not by `COUNT(*)` | `PortfolioService.GetOverview` calls the three list methods; cost grows with table size. A `CountAsync` port method per repository would issue three counts, but it widens three Domain ports | 4.x |
 
 ## Resolved
 

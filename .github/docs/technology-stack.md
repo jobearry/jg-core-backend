@@ -78,13 +78,13 @@ approval (AGENTS.md §10).
 
 | Concern | Candidate | Why |
 |---|---|---|
-| Testing | `Testcontainers.PostgreSql` | xUnit and `Microsoft.AspNetCore.Mvc.Testing` are in place (four projects, 179 tests, repository ports faked). What is still missing is a **database-backed** test: nothing exercises the EF model or a migration against real PostgreSQL |
+| Testing | `Testcontainers.PostgreSql` | xUnit and `Microsoft.AspNetCore.Mvc.Testing` are in place (four projects, 187 tests, repository ports faked). What is still missing is a **database-backed** test: nothing exercises the EF model or a migration against real PostgreSQL |
 | Assertions | `Shouldly` or `FluentAssertions` | optional; xUnit asserts are enough to start |
 | Validation | `FluentValidation.AspNetCore` or a hand-written endpoint filter | minimal APIs do not validate automatically |
-| Resilience | `Microsoft.Extensions.Http.Resilience` (Polly v8) | Notion call has no retry/timeout |
+| Resilience | `Microsoft.Extensions.Http.Resilience` (Polly v8) | the Notion client now has a 15s timeout and one manual retry on 429/5xx (4.6); Polly would add circuit breaking |
 | Health checks | `Microsoft.Extensions.Diagnostics.HealthChecks` + Npgsql check | nothing to probe today |
 | Structured logging | Serilog / OpenTelemetry | `ILogger` reaches the application services (2.4), but there is no structured sink and no correlation id beyond `traceId` |
-| Analyzers | `Directory.Build.props` with `TreatWarningsAsErrors`, `Microsoft.CodeAnalysis.NetAnalyzers` | the build is at 0 warnings, but nothing prevents the next one |
+| Analyzers (third-party) | `Microsoft.CodeAnalysis.NetAnalyzers` | SDK analyzers run by default, and a root `Directory.Build.props` now turns warnings into errors (4.5, 2026-10-23); the extra package is not needed yet |
 | API versioning | `Asp.Versioning.Http` | path version is hardcoded |
 | Migrations at deploy | EF bundle or a job step | `Migrate()` at startup is a race |
 

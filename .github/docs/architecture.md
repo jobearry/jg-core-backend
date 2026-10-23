@@ -48,8 +48,9 @@ src/
 │   └── Settings/JwtOptions.cs
 │
 ├── JDB_Portfolio_API.Persistence/       ← infrastructure
-│   ├── Contexts/PortfolioContext.cs     DbContext + fluent config (partial, DB-first)
+│   ├── Contexts/PortfolioContext.cs     DbContext + ApplyConfigurationsFromAssembly
 │   ├── Contexts/PortfolioContextFactory.cs  design-time factory (env-var user secrets id)
+│   ├── Configurations/                  one IEntityTypeConfiguration per entity
 │   ├── Entities/                        *Entity + ProjectTechStack join
 │   ├── Repositories/                    BasePortfolioRepository<TDomain,TEntity>
 │   │                                    + 4 concrete repositories
@@ -143,12 +144,12 @@ and `IPortfolioProjectRepository` its future write entry point (ADR-0003).
 
 ```
 builder.Services
-  .AddSwaggerConfig(...)     → Swashbuckle, JWT security scheme
-  .AddDatabase(...)          → DbContext + ALL repositories/services (misfiled)
-  .AddExternalService(...)   → Notion HttpClient + IPageContentReader (adapter in Adapters/)
-  .AddAuthentication(...)    → JwtOptions + JwtBearer + AddAuthorization + IAuthTokenService
-  .AddMapper(...)            → AutoMapper profile
-  .AddCorsOrigins(configuration, environment)  → "AllowSPA" policy
+  .AddPresentation(configuration, environment)  → IPageContentReader adapter, Swagger,
+                                                   JWT, CORS, ProblemDetails
+  .AddApplication()                             → the five use-case services
+  .AddPersistence(configuration)                → DbContext + four repositories + AutoMapper
+  .AddExternalServices(configuration)           → Notion settings + HttpClient
+  .AddEndpointsApiExplorer()                    → let Swagger see the minimal-API endpoints
 
 app
   .UseExceptionHandler()     → ProblemDetails for anything that escapes
@@ -162,11 +163,9 @@ app
 
 Issues:
 
-- `AddDatabase` registers application services — the method name lies
-  (plan 4.1).
-- `AddControllers()` / `MapControllers()` are called but no controllers exist.
 - `Database.Migrate()` runs at startup inside a scope, before the pipeline.
 - Swagger is Development-only.
+- There are no controllers and no `AddControllers()` / `MapControllers()` calls (4.1).
 
 ## 6. Cross-cutting concerns
 
@@ -179,7 +178,7 @@ Issues:
 | Mapping | AutoMapper for entity ↔ domain; hand-written `PortfolioDtoMapper` for domain → DTO (ADR-0004) | reverse maps are explicit but unused until a write path exists |
 | Auth | JWT **service token** (`sub=portfolio-api`); only `/auth/me` requires it, the portfolio endpoints are anonymous on purpose (2.5) | no user authentication; no secure-by-default fallback policy until a write endpoint exists |
 | Observability | none | no health check, no metrics, no tracing |
-| Resilience | none | Notion call has no timeout/retry policy |
+| Resilience | Notion client: 15s timeout, one retry on 429/5xx | no circuit breaker; network failures are not retried (4.6) |
 
 ## 7. Deployment topology
 
@@ -194,10 +193,11 @@ Issues:
 
 Plan [`001`](../plans/001-clean-architecture-refactor.md) Parts 1–3 are complete
 (2026-10-23): dependency direction is clean, the domain has invariants and value
-equality, DTOs sit at the edge, errors are typed, and 179 tests cover the invariants,
-mappings and endpoint contracts. What remains is the optional Part 4 polish — the
-composition-root split (4.1), `Directory.Build.props` (4.5), `IEntityTypeConfiguration`
-split (4.3), the Notion client/parser cleanup (4.6, 4.7), and `IUnitOfWork` (4.4) before
-any write endpoint is added.
+equality, DTOs sit at the edge, errors are typed, and 187 tests cover the invariants,
+mappings and endpoint contracts. Part 4 is under way: the composition root is split per
+layer (4.1, 4.2) and `Directory.Build.props` turns warnings into errors (4.5). What
+remains is the `IEntityTypeConfiguration` split (4.3), the Notion client/parser cleanup
+(4.6, 4.7), the overview query (4.8), and `IUnitOfWork` (4.4) before any write endpoint
+is added.
 
 Open architectural decisions are tracked as ADRs in [`adr/`](adr/).

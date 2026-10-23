@@ -21,12 +21,13 @@ Current status:
 - Read path is complete and deployed (Azure Web App).
 - **No write endpoints exist.** `AddNewAsync` was removed; `IRepository<T>` exposes
   only `GetAllAsync`.
-- DDD/clean-architecture refactor is **complete through Part 3** (2026-10-23). Only
-  the optional Part 4 polish remains — see
+- DDD/clean-architecture refactor is **complete through Part 3** (2026-10-23), and
+  Part 4 is partly done (4.1, 4.2, 4.3, 4.5, and the config half of 4.8). The rest is
+  optional polish — see
   [`.github/plans/001-clean-architecture-refactor.md`](.github/plans/001-clean-architecture-refactor.md).
 - **Tests cover every invariant.** Four xUnit projects cover the Domain entities and
   value objects, the application services, the DTO mapping, the AutoMapper profile,
-  the endpoint contracts and the Notion adapter chain (179 tests).
+  the endpoint contracts and the Notion adapter chain (187 tests).
 
 ---
 
@@ -250,7 +251,7 @@ backfilled**. Errors are typed and mapped to the right status in one place;
 `CancellationToken` runs end-to-end; unhandled exceptions become `ProblemDetails`;
 services log their failures. The CORS allow-list is configuration now, with localhost
 gated to Development, no credentials flag, and only `GET`/`POST`. Tests went from none
-to 179, including entity invariants, value-object equality, endpoint contracts and the
+to 187, including entity invariants, value-object equality, endpoint contracts and the
 CORS policy.
 
 Full reasoning and verification steps:
@@ -263,7 +264,7 @@ Full reasoning and verification steps:
 A change is done when **all** of these are true:
 
 - [ ] `dotnet build src/JDB_Portfolio_API.slnx` has **zero warnings**
-      (treat warnings as errors once `Directory.Build.props` exists).
+      (`Directory.Build.props` makes warnings build failures).
 - [ ] `dotnet test` passes, and new behaviour has a test that failed first.
 - [ ] Dependency direction is unchanged or improved.
 - [ ] No secret, connection string, or token added to source.

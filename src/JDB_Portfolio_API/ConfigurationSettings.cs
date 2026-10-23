@@ -10,10 +10,12 @@ using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
 using System.Text;
+using System.Net.Http.Headers;
 using JDB_Portfolio_API.ExternalService.Notion.Services;
 using JDB_Portfolio_API.ExternalService.Notion.Settings;
 using JDB_Portfolio_API.Application.Services;
 using JDB_Portfolio_API.Authentication;
+using JDB_Portfolio_API.ErrorHandling;
 using JDB_Portfolio_API.Persistence.Repositories;
 using JDB_Portfolio_API.Persistence.Profiles;
 using System.IdentityModel.Tokens.Jwt;
@@ -22,47 +24,94 @@ namespace JDB_Portfolio_API
 {
     public static class ConfigurationSettings
     {
-        public static void AddDatabase(this IServiceCollection services, IConfiguration configuration)
+        /// <summary>
+        /// Registers the application use cases. These depend only on the repository and
+        /// page-content ports declared in the inner layers.
+        /// </summary>
+        public static void AddApplication(this IServiceCollection services)
+        {
+            // A plain POCO rather than IOptions<T>: Application does not reference the
+            // options package. Resolve configuration lazily, when the host is built —
+            // reading it here would freeze the value before test/environment overrides
+            // are applied.
+            services.AddSingleton(sp =>
+                sp.GetRequiredService<IConfiguration>().GetSection("Overview").Get<OverviewSettings>()
+                    ?? new OverviewSettings());
+
+            services.AddScoped<PortfolioService>();
+            services.AddScoped<PortfolioExperienceService>();
+            services.AddScoped<PortfolioProjectService>();
+            services.AddScoped<PortfolioRecommendationService>();
+            services.AddScoped<PortfolioSkillService>();
+        }
+
+        /// <summary>
+        /// Registers the persistence adapters: the EF Core context, one repository per
+        /// aggregate, and the AutoMapper profile that maps persistence entities to domain
+        /// entities. Repository ports are declared in Domain; implementations live here.
+        /// </summary>
+        public static void AddPersistence(this IServiceCollection services, IConfiguration configuration)
         {
             // Read connection string from appsettings.json or environment variables
             var jdbConnectionString = configuration.GetConnectionString("JDBConnection");
 
-            // Register DbContext
             services.AddDbContext<PortfolioContext>(options =>
                 options.UseNpgsql(jdbConnectionString)
             );
 
-            services.AddScoped<PortfolioService>();
-
-            ////DI for experiences 
             services.AddScoped<IPortfolioExperienceRepository, EfPortfolioExperienceRepository>();
-            services.AddScoped<PortfolioExperienceService>();
-
             services.AddScoped<IPortfolioProjectRepository, EfPortfolioProjectRepository>();
-            services.AddScoped<PortfolioProjectService>();
-
             services.AddScoped<IPortfolioTechStackRepository, EfPortfolioTechStackRepository>();
-            //services.AddScoped<PortfolioTechStackService>();
-
             services.AddScoped<IPortfolioRecommendationRepository, EfPortfolioRecommendationRepository>();
-            services.AddScoped<PortfolioRecommendationService>();
 
-            services.AddScoped<PortfolioSkillService>();
+            services.AddMapper();
         }
-        public static void AddExternalService(this IServiceCollection services, IConfiguration configuration)
+
+        /// <summary>
+        /// Registers the outbound integrations. The Notion adapter (<see cref="IPageContentReader"/>)
+        /// is a presentation concern and is registered by <see cref="AddPresentation"/>.
+        /// </summary>
+        public static void AddExternalServices(this IServiceCollection services, IConfiguration configuration)
         {
-
-            //Notion
             services.Configure<NotionSettings>(configuration.GetSection("Notion"));
-            services.AddHttpClient<NotionClientService>()
-                .ConfigureHttpClient(client =>
-                {
-                    client.BaseAddress = new Uri("https://api.notion.com");
-                });
 
-            services.AddScoped<IPageContentReader, NotionPageContentReader>();
+            // The typed client owns its transport settings: base address, auth headers and
+            // a 15s timeout. Keeping them here means NotionClientService knows only the
+            // path it calls, and every Notion request has the same limits.
+            services.AddHttpClient<NotionClientService>((provider, client) =>
+            {
+                var notion = provider.GetRequiredService<IOptions<NotionSettings>>().Value;
+
+                client.BaseAddress = new Uri("https://api.notion.com");
+                client.Timeout = TimeSpan.FromSeconds(15);
+                client.DefaultRequestHeaders.Authorization =
+                    new AuthenticationHeaderValue("Bearer", notion.Token);
+                client.DefaultRequestHeaders.Add("Notion-Version", notion.Version);
+            });
         }
-        public static void AddMapper(this IServiceCollection services, IConfiguration configuration)
+
+        /// <summary>
+        /// Registers everything the HTTP host owns: the page-content adapter, Swagger,
+        /// authentication, CORS, and the exception-handling contract.
+        /// </summary>
+        public static void AddPresentation(
+            this IServiceCollection services,
+            IConfiguration configuration,
+            IWebHostEnvironment environment)
+        {
+            services.AddScoped<IPageContentReader, NotionPageContentReader>();
+
+            services.AddSwaggerConfig(configuration);
+            services.AddAuthentication(configuration);
+            services.AddCorsOrigins(configuration, environment);
+
+            // Anything that escapes an endpoint — including exceptions thrown outside a
+            // service — becomes the same application/problem+json shape.
+            services.AddExceptionHandler<GlobalExceptionHandler>();
+            services.AddProblemDetails();
+        }
+
+        public static void AddMapper(this IServiceCollection services)
         {
             services.AddAutoMapper(a =>
                 {

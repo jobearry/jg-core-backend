@@ -4,8 +4,6 @@ using System.Text.Json;
 using JDB_Portfolio_API.Adapters;
 using JDB_Portfolio_API.Application.Models;
 using JDB_Portfolio_API.ExternalService.Notion.Services;
-using JDB_Portfolio_API.ExternalService.Notion.Settings;
-using Microsoft.Extensions.Options;
 
 namespace JDB_Portfolio_API.Api.Tests;
 
@@ -50,10 +48,11 @@ public class NotionPageContentReaderTests
 
     private static NotionPageContentReader CreateReader(HttpStatusCode status, string body)
     {
-        var http = new HttpClient(new StubHandler(status, body));
-        var client = new NotionClientService(
-            http,
-            Options.Create(new NotionSettings { Token = "test-token", Version = "test-version" }));
+        var http = new HttpClient(new StubHandler(status, body))
+        {
+            BaseAddress = new Uri("https://api.notion.com")
+        };
+        var client = new NotionClientService(http);
 
         return new NotionPageContentReader(client);
     }

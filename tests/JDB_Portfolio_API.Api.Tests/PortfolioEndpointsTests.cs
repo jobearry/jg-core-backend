@@ -6,6 +6,8 @@ using JDB_Portfolio_API.Domain.Entities;
 using JDB_Portfolio_API.Domain.ValueObjects;
 using JDB_Portfolio_API.ErrorHandling;
 using Microsoft.AspNetCore.Diagnostics;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace JDB_Portfolio_API.Api.Tests;
@@ -180,11 +182,26 @@ public class PortfolioEndpointsTests : IClassFixture<PortfolioApiFactory>
     }
 
     [Fact]
-    public async Task GetOverview_ReturnsTheThreeTiles()
+    public async Task GetOverview_ReturnsTheThreeTilesWithCopyFromConfiguration()
     {
-        var json = await GetJsonAsync("/api/v1/overview");
+        using var factory = _factory.WithWebHostBuilder(builder =>
+            builder.ConfigureAppConfiguration((_, configuration) =>
+                configuration.AddInMemoryCollection(new Dictionary<string, string?>
+                {
+                    ["Overview:Projects:Title"] = "Configured title",
+                    ["Overview:Projects:Subtitle"] = "configured subtitle",
+                    ["Overview:Projects:Description"] = "configured description"
+                })));
+
+        var json = await GetJsonAsync("/api/v1/overview", factory.CreateClient());
 
         Assert.Equal(3, json.GetArrayLength());
+
+        // Plan 4.8: the tile text comes from configuration, not from the service.
+        var projects = json[0];
+        Assert.Equal("Configured title", projects.GetProperty("title").GetString());
+        Assert.Equal("configured subtitle", projects.GetProperty("subtitle").GetString());
+        Assert.Equal("configured description", projects.GetProperty("description").GetString());
     }
 
     // ---------------------------------------------------------------- failure paths
