@@ -94,7 +94,8 @@ second error contract.
 
 ## 7. OpenAPI
 
-- Swagger is Development-only today. Keep it that way unless there is a reason.
+- Swagger is Development-only by default. `Swagger:Enabled=true` exposes it in a
+  deployment for a smoke test; keep it unset otherwise.
 - Every endpoint carries `.WithName(...)`, `.WithTags(...)`, `.Produces<T>(...)`,
   and `.ProducesProblem(...)`.
 - Document auth requirements with `.RequireAuthorization()` **only if it is

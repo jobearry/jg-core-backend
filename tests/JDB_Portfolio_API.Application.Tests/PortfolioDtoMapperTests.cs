@@ -316,26 +316,6 @@ public class PortfolioDtoMapperTests
     // -------------------------------------------------------------------- read models
 
     [Fact]
-    public void MapsDashboardItem()
-    {
-        var item = new DashboardItem
-        {
-            Title = "Projects",
-            Subtitle = "projects across all roles",
-            Icon = "",
-            Count = 3,
-            Description = "Homelabbing and App Building"
-        };
-
-        var dto = item.ToDto();
-
-        Assert.Equal("Projects", dto.Title);
-        Assert.Equal("projects across all roles", dto.Subtitle);
-        Assert.Equal(3, dto.Count);
-        Assert.Equal("Homelabbing and App Building", dto.Description);
-    }
-
-    [Fact]
     public void MapsPageContent()
     {
         var page = new PageContent("https://notion.so/page", "2026-06-27", "About me");

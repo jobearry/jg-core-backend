@@ -164,7 +164,7 @@ app
 Issues:
 
 - `Database.Migrate()` runs at startup inside a scope, before the pipeline.
-- Swagger is Development-only.
+- Swagger is Development-only, or on when `Swagger:Enabled` is true.
 - There are no controllers and no `AddControllers()` / `MapControllers()` calls (4.1).
 
 ## 6. Cross-cutting concerns
@@ -193,7 +193,7 @@ Issues:
 
 Plan [`001`](../plans/001-clean-architecture-refactor.md) Parts 1–3 are complete
 (2026-10-23): dependency direction is clean, the domain has invariants and value
-equality, DTOs sit at the edge, errors are typed, and 187 tests cover the invariants,
+equality, DTOs sit at the edge, errors are typed, and 188 tests cover the invariants,
 mappings and endpoint contracts. Part 4 is under way: the composition root is split per
 layer (4.1, 4.2) and `Directory.Build.props` turns warnings into errors (4.5). What
 remains is the `IEntityTypeConfiguration` split (4.3), the Notion client/parser cleanup

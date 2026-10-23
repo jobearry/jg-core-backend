@@ -30,14 +30,6 @@ namespace JDB_Portfolio_API
         /// </summary>
         public static void AddApplication(this IServiceCollection services)
         {
-            // A plain POCO rather than IOptions<T>: Application does not reference the
-            // options package. Resolve configuration lazily, when the host is built —
-            // reading it here would freeze the value before test/environment overrides
-            // are applied.
-            services.AddSingleton(sp =>
-                sp.GetRequiredService<IConfiguration>().GetSection("Overview").Get<OverviewSettings>()
-                    ?? new OverviewSettings());
-
             services.AddScoped<PortfolioService>();
             services.AddScoped<PortfolioExperienceService>();
             services.AddScoped<PortfolioProjectService>();

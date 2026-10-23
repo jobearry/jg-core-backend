@@ -33,7 +33,7 @@ Nothing here is urgent in the "production is down" sense. The value is that Part
 
 > **Status 2026-10-23:** the four gaps below are closed and Parts 1–3 are complete.
 > This summary is the **original assessment (2026-10-21)**, kept as the rationale for
-> the work; read the item-level Done notes for the current state. Today: 187 green
+> the work; read the item-level Done notes for the current state. Today: 188 green
 > tests, 0 build warnings, and every dependency edge points inward.
 
 The project boundaries are already clean-architecture-shaped: Domain has zero project references, EF entities are kept separate from domain entities, repository ports live in Domain, and the composition root is in the API project. The remaining gaps:
@@ -439,12 +439,13 @@ Each returns only the declaration plus the base implementation that nothing call
 >   the factory no longer throws when it is run from a directory that has no such file.
 > - `Migrate()` is gated behind `Database:AutoMigrate` (`appsettings.json`).
 >
-> **The flag defaults to `true`, deliberately.** The deploy workflow
-> (`.github/workflows/main_jdb-portfolio-api.yml`) builds, publishes and deploys — it has
-> **no migration step**. Turning the default off would silently stop applying migrations
-> in production. The race condition therefore still exists by default and is now
-> *controllable* rather than *fixed*; see KI-038 for the follow-up (give CI a migration
-> step, then default the flag to `false`).
+> **The flag defaults to `true` in code.** The deploy workflow
+> (`.github/workflows/main_jdb-portfolio-api.yml`) now applies migrations against
+> production before deploying the app. **Production configuration completed
+> (2026-10-23):** the owner confirmed that the Azure App Service application
+> setting `Database__AutoMigrate=false` has been applied and production is
+> aligned. The workflow continues to migrate on future deployments. See KI-038
+> and `docs/operations.md` §5 for the configuration record and recovery steps.
 >
 > Verified: with `Database__AutoMigrate=false` EF issues **no** query against
 > `__EFMigrationsHistory`; with `true` it runs the migration check as before.
@@ -1410,7 +1411,7 @@ Answer "how do I create a project?" — there are two ways today. Two answers me
 - [x] `tests/JDB_Portfolio_API.Persistence.Tests`: the AutoMapper profile
 
 > **Done (2026-10-23).** Four test projects exist and `dotnet test` is green
-> (187 tests). What they cover today:
+> (188 tests). What they cover today:
 >
 > - **Domain.Tests** — 81 tests: the value objects (`Role`, `Company`, `Period`,
 >   `TechStackRef`) with equality, `==`, `GetHashCode` and dictionary-key behaviour,
@@ -1473,7 +1474,7 @@ Every change in Parts 1–3 is a refactor, and a refactor without tests is a rew
 **How to verify**
 
 ```bash
-dotnet test    # 187 tests, all green
+dotnet test    # 188 tests, all green
 ```
 
 **Pragmatic order, as executed:** Domain first, covering 3.1 and 3.3, then Application,
@@ -1494,7 +1495,7 @@ Persistence and Api as each part landed.
 | 4.5 | Add `Directory.Build.props` with `TreatWarningsAsErrors` + analyzers | Nothing enforces the current 0-warning build; this is how the CS1998 that 2.5 fixed would have been caught at build time | **Done (2026-10-23).** Root `Directory.Build.props` sets `TreatWarningsAsErrors`; build stays at 0 warnings. No analyzer package was added — SDK analyzers only |
 | 4.6 | Fix `NotionClientService.cs`: don't rethrow `new HttpRequestException(msg)` (loses the inner exception); don't use an absolute URL when `BaseAddress` is set; set auth headers in `ConfigureHttpClient`; add retry/timeout | Current code hides the original stack and duplicates configuration | **Done (2026-10-23).** Relative path; base address, auth headers and a 15s timeout live in `AddExternalServices`; one manual retry on 429/5xx; failures keep their status code. Network errors/timeouts are not retried |
 | 4.7 | Replace the `NotionPageParserUtility` XML trick | `XDocument.Parse("<root>" + markdown + "</root>")` breaks on malformed content or a literal `</root>` | **Done (2026-10-23).** Tolerant `<page>…</page>` scan (tempered dot so an unclosed tag cannot swallow the next card); tags stripped, entities decoded, whitespace collapsed. Broken fragments are skipped, not fatal |
-| 4.8 | Move `PortfolioService.GetOverview` hardcoded copy to config; parallelise the three sequential queries | Display text in the app layer; three independent awaits that could be `Task.WhenAll` | **Partly done (2026-10-23).** Copy moved to the `Overview` section and `OverviewSettings`. **Parallelisation rejected:** all three repositories share the scoped `PortfolioContext`, and EF Core forbids concurrent operations on one context — `Task.WhenAll` throws. The three counts are still full `SELECT`s; a `CountAsync` port method would be the real win (new KI-046) |
+| 4.8 | Move `PortfolioService.GetOverview` hardcoded copy to config; parallelise the three sequential queries | Display text in the app layer; three independent awaits that could be `Task.WhenAll` | **Done differently (2026-10-23).** The copy was removed rather than configured: `/overview` now returns `{ key, count }` and the client owns labels, icons and order (Option B). **Parallelisation rejected:** all three repositories share the scoped `PortfolioContext`, and EF Core forbids concurrent operations on one context — `Task.WhenAll` throws. The counts still materialise rows; a `CountAsync` port method is KI-046 |
 | 4.9 | Add `.github/plans/README.md` index if more plans are added | Keeps plans discoverable | **Done (2026-10-23).** Index exists and its 001 status row now matches the plan |
 
 ---
@@ -1548,3 +1549,5 @@ If all seven confirm, the plan is accurate and Parts 1–3 are safe to schedule.
 | 2026-10-22 | Added **2.7 — CORS policy** after a review question about the hardcoded origin list: origins moved to configuration, localhost gated to Development, `AllowCredentials()` dropped, methods/headers narrowed |
 | 2026-10-23 | Documentation sync after Part 3 closed: test counts corrected to 179, 3.5 marked done, KI-003/KI-009/KI-013 marked resolved, 4.1 extended to cover the dead controller registrations (KI-025) |
 | 2026-10-23 | Part 4: 4.1, 4.2, 4.3, 4.5, 4.6, 4.7 and 4.9 done; 4.8's copy moved to config (parallelisation rejected — one scoped `DbContext`); 4.4 deferred until the first write endpoint. Tests 179 → 187 |
+| 2026-10-23 | `Swagger:Enabled` config flag: Swagger stays Development-only by default but can be exposed in a deployment for a smoke test. Tests 187 → 189 |
+| 2026-10-23 | `/overview` contract: `{ key, count }` items replace the display-copy tiles (Option B); `OverviewSettings`, its config section and the mapper are removed. Tests 189 → 188 |

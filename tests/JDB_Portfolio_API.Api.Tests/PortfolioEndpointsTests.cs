@@ -6,8 +6,6 @@ using JDB_Portfolio_API.Domain.Entities;
 using JDB_Portfolio_API.Domain.ValueObjects;
 using JDB_Portfolio_API.ErrorHandling;
 using Microsoft.AspNetCore.Diagnostics;
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace JDB_Portfolio_API.Api.Tests;
@@ -182,26 +180,19 @@ public class PortfolioEndpointsTests : IClassFixture<PortfolioApiFactory>
     }
 
     [Fact]
-    public async Task GetOverview_ReturnsTheThreeTilesWithCopyFromConfiguration()
+    public async Task GetOverview_ReturnsStableKeysAndCounts()
     {
-        using var factory = _factory.WithWebHostBuilder(builder =>
-            builder.ConfigureAppConfiguration((_, configuration) =>
-                configuration.AddInMemoryCollection(new Dictionary<string, string?>
-                {
-                    ["Overview:Projects:Title"] = "Configured title",
-                    ["Overview:Projects:Subtitle"] = "configured subtitle",
-                    ["Overview:Projects:Description"] = "configured description"
-                })));
-
-        var json = await GetJsonAsync("/api/v1/overview", factory.CreateClient());
+        var json = await GetJsonAsync("/api/v1/overview");
 
         Assert.Equal(3, json.GetArrayLength());
 
-        // Plan 4.8: the tile text comes from configuration, not from the service.
-        var projects = json[0];
-        Assert.Equal("Configured title", projects.GetProperty("title").GetString());
-        Assert.Equal("configured subtitle", projects.GetProperty("subtitle").GetString());
-        Assert.Equal("configured description", projects.GetProperty("description").GetString());
+        // Plan 4.x: the key is the contract; labels/icons/order live in the client.
+        Assert.Equal("projects", json[0].GetProperty("key").GetString());
+        Assert.Equal(1, json[0].GetProperty("count").GetInt32());
+        Assert.Equal("skills", json[1].GetProperty("key").GetString());
+        Assert.Equal(1, json[1].GetProperty("count").GetInt32());
+        Assert.Equal("recommendations", json[2].GetProperty("key").GetString());
+        Assert.Equal(2, json[2].GetProperty("count").GetInt32());
     }
 
     // ---------------------------------------------------------------- failure paths

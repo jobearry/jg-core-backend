@@ -2,7 +2,6 @@
 using JDB_Portfolio_API.Application.Common;
 using JDB_Portfolio_API.Application.DTO;
 using JDB_Portfolio_API.Application.Models;
-using JDB_Portfolio_API.Application.Settings;
 using JDB_Portfolio_API.Domain.Entities;
 using JDB_Portfolio_API.Domain.Interfaces;
 using Microsoft.Extensions.Logging;
@@ -20,7 +19,6 @@ public class PortfolioService
     private readonly IPortfolioProjectRepository _projectRepository;
     private readonly IPortfolioTechStackRepository _techStackRepository;
     private readonly IPortfolioRecommendationRepository _recommendationRepository;
-    private readonly OverviewSettings _overviewSettings;
     private readonly ILogger<PortfolioService> _logger;
 
     public PortfolioService(
@@ -28,14 +26,12 @@ public class PortfolioService
         IPortfolioProjectRepository projectRepository,
         IPortfolioTechStackRepository techStackRepository,
         IPortfolioRecommendationRepository recommendationRepository,
-        OverviewSettings overviewSettings,
         ILogger<PortfolioService> logger)
     {
         _pageContentReader = pageContentReader;
         _projectRepository = projectRepository;
         _techStackRepository = techStackRepository;
         _recommendationRepository = recommendationRepository;
-        _overviewSettings = overviewSettings;
         _logger = logger;
     }
 
@@ -69,7 +65,7 @@ public class PortfolioService
         }
     }
 
-    public async Task<Result<List<DashboardItemDto>>> GetOverview(CancellationToken cancellationToken)
+    public async Task<Result<List<OverviewItemDto>>> GetOverview(CancellationToken cancellationToken)
     {
         try
         {
@@ -82,37 +78,16 @@ public class PortfolioService
             var skills = await _techStackRepository.GetAllTechStacksAsync(cancellationToken);
             var recommendations = await _recommendationRepository.GetAllRecommendationsAsync(cancellationToken);
 
-            var projectsText = _overviewSettings.Projects;
-            var skillsText = _overviewSettings.Skills;
-            var recommendationsText = _overviewSettings.Recommendations;
-
-            var dashboardItems = new List<DashboardItem>
+            // Keys are the contract; the client owns labels, icons and order. Only add a
+            // key here when the client has a tile for it.
+            var counters = new List<OverviewItemDto>
             {
-                new DashboardItem
-                {
-                    Title = projectsText.Title,
-                    Count = projects.Count(),
-                    Subtitle = projectsText.Subtitle,
-                    Description = projectsText.Description
-                },
-                new DashboardItem
-                {
-                    Title = skillsText.Title,
-                    Count = skills.Count(),
-                    Subtitle = skillsText.Subtitle,
-                    Description = skillsText.Description
-                },
-                new DashboardItem
-                {
-                    Title = recommendationsText.Title,
-                    Count = recommendations.Count(),
-                    Subtitle = recommendationsText.Subtitle,
-                    Description = recommendationsText.Description
-                }
+                new("projects", projects.Count()),
+                new("skills", skills.Count()),
+                new("recommendations", recommendations.Count())
             };
 
-            return Result<List<DashboardItemDto>>.Success(
-                dashboardItems.Select(item => item.ToDto()).ToList());
+            return Result<List<OverviewItemDto>>.Success(counters);
         }
         catch (OperationCanceledException)
         {
@@ -142,7 +117,7 @@ public class PortfolioService
                     error.Code);
             }
 
-            return Result<List<DashboardItemDto>>.Failure(error);
+            return Result<List<OverviewItemDto>>.Failure(error);
         }
     }
 }

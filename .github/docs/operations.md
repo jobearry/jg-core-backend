@@ -57,7 +57,7 @@ string is required just to boot. Set `Database__AutoMigrate=false` to skip it.
 | `Notion:Version` | default `2026-03-11` | `Notion__Version` | optional |
 | `Cors:AllowedOrigins` | `appsettings.json` | `Cors__AllowedOrigins__0`, `__1`, … | App Service setting |
 | `Cors:DevelopmentOrigins` | `appsettings.json` | applied only when `ASPNETCORE_ENVIRONMENT=Development` | ignored |
-| `Overview:*` | `appsettings.json` | `Overview__Projects__Title`, … | optional; copy for the three `/overview` tiles |
+| `Swagger:Enabled` | `appsettings.json` (`false`) | `Swagger__Enabled` | optional; `true` exposes `/swagger` |
 
 Origins are configuration so that a new domain or a Vercel preview deployment
 (`https://demo-git-my-branch-team.vercel.app`) is an added setting rather than a code
@@ -124,14 +124,34 @@ The migration step needs the repository secret `PRODUCTION_CONNECTION_STRING`. U
 the **direct** Neon endpoint (no `-pooler`), in Npgsql key-value form — not the
 `postgresql://` URI — because pooling can break DDL and session state.
 
-`Database:AutoMigrate` is still `true` (KI-038); the startup migration now finds
-nothing pending. Flip it to `false` after this step has run green once.
+Production is configured to let GitHub Actions own migrations. The
+**`Database__AutoMigrate=false`** App Service setting has been applied and
+verified by the owner (2026-10-23). If recreating the App Service or its
+settings, restore this configuration only after the **Apply database
+migrations** workflow step has succeeded against production:
 
-No test step exists. Tests now live in `tests/` (four xUnit projects, 187 tests) —
+1. Open the Azure Portal and select the `jdb-portfolio-api` App Service.
+2. Go to **Settings → Environment variables** (called **Configuration** in some
+   portal views).
+3. Add or update the application setting `Database__AutoMigrate` to `false`.
+   The double underscore maps to the .NET configuration key
+   `Database:AutoMigrate`.
+4. Save the setting. Azure restarts the app; after it is healthy, confirm the
+   setting is present and the app starts successfully.
+
+Saving the setting restarts the app. Confirm it starts successfully afterwards.
+This is an Azure configuration, not a code or workflow change. The GitHub
+Actions migration step continues to apply pending migrations before each
+deployment; this setting only prevents the app from also applying migrations
+during startup. It is separate from the GitHub `PRODUCTION_CONNECTION_STRING`
+secret used by that workflow.
+
+No test step exists. Tests now live in `tests/` (four xUnit projects, 188 tests) —
 add a `dotnet test src/JDB_Portfolio_API.slnx` step to the workflow.
 
-Swagger is enabled only when `ASPNETCORE_ENVIRONMENT=Development`. Production
-should not set it.
+Swagger is enabled when `ASPNETCORE_ENVIRONMENT=Development` or when the
+`Swagger:Enabled` setting is `true`. Production leaves it unset (off); turn it on
+for a smoke test and off again.
 
 ## 6. Runbook
 

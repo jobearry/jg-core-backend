@@ -29,8 +29,10 @@ if (app.Configuration.GetValue("Database:AutoMigrate", true))
 // First in the pipeline, so it sees everything the rest of the pipeline throws.
 app.UseExceptionHandler();
 app.UseCors(ConfigurationSettings.SpaCorsPolicy);
-// Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
+// Swagger is Development-only by default. Swagger:Enabled lets a deployment expose it
+// temporarily (e.g. a CRUD smoke test in Azure) without a code change; keep it false in
+// production otherwise.
+if (app.Environment.IsDevelopment() || app.Configuration.GetValue("Swagger:Enabled", false))
 {
     app.UseSwagger();
     app.UseSwaggerUI(ui =>

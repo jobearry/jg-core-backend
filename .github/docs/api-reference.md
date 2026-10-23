@@ -1,7 +1,7 @@
 # API reference
 
 Base path: `/api/v1` · Content type: `application/json`
-OpenAPI: `/swagger` (Development only) · Document: `v1/swagger.json`
+OpenAPI: `/swagger` (Development only, or `Swagger:Enabled=true`) · Document: `v1/swagger.json`
 
 ## 1. Endpoint catalogue
 
@@ -195,19 +195,20 @@ an empty body. Plan item 2.5.
 
 ### `GET /api/v1/overview`
 
-Returns three dashboard widgets. Copy is hardcoded in
-`PortfolioService.GetOverview`. Unchanged by the DTO work.
+Returns one counter per dashboard tile. The `key` is the contract; the client owns the
+label, icon, order and link, so adding a counter is additive and reordering them is free.
 
 ```json
 [
-  { "title": "Projects", "subtitle": "projects across all roles", "icon": "", "count": 12, "description": "Homelabbing and App Building" },
-  { "title": "Skills", "subtitle": "tools and technologies", "icon": "", "count": 30, "description": "Focusing on Angular and .NET" },
-  { "title": "Recommendations", "subtitle": "satisfied clients", "icon": "", "count": 4, "description": "Collaboration and communication" }
+  { "key": "projects", "count": 12 },
+  { "key": "skills", "count": 30 },
+  { "key": "recommendations", "count": 4 }
 ]
 ```
 
-The three counts are fetched sequentially — three round trips that could be
-parallel or a single query. A fourth Notion tile is planned as item 2.6.
+The three counts are still fetched sequentially — one scoped `DbContext` cannot run the
+queries concurrently — and each one materialises rows rather than issuing `COUNT(*)`
+(KI-046). Unknown keys must be ignored by the client.
 
 ### Breaking change — 2026-10-22 (plan 2.1)
 

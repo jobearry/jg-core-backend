@@ -27,7 +27,7 @@ Current status:
   [`.github/plans/001-clean-architecture-refactor.md`](.github/plans/001-clean-architecture-refactor.md).
 - **Tests cover every invariant.** Four xUnit projects cover the Domain entities and
   value objects, the application services, the DTO mapping, the AutoMapper profile,
-  the endpoint contracts and the Notion adapter chain (187 tests).
+  the endpoint contracts and the Notion adapter chain (188 tests).
 
 ---
 
@@ -162,6 +162,7 @@ Required configuration (user-secrets in dev, env vars in prod):
 | `Jwt:Issuer`, `Jwt:Audience`, `Jwt:ExpirationInMinutes` | token settings |
 | `Notion:Token`, `Notion:Version` | Notion integration |
 | `Cors:AllowedOrigins`, `Cors:DevelopmentOrigins` | browser origins; the second is applied in Development only |
+| `Swagger:Enabled` | optional; `true` exposes `/swagger` outside Development (default `false`) |
 
 ---
 
@@ -251,7 +252,7 @@ backfilled**. Errors are typed and mapped to the right status in one place;
 `CancellationToken` runs end-to-end; unhandled exceptions become `ProblemDetails`;
 services log their failures. The CORS allow-list is configuration now, with localhost
 gated to Development, no credentials flag, and only `GET`/`POST`. Tests went from none
-to 187, including entity invariants, value-object equality, endpoint contracts and the
+to 188, including entity invariants, value-object equality, endpoint contracts and the
 CORS policy.
 
 Full reasoning and verification steps:

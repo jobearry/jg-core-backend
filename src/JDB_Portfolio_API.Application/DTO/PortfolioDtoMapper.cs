@@ -76,14 +76,6 @@ public static class PortfolioDtoMapper
             recommendation.CareerPosition?.Value,
             recommendation.PostedAt);
 
-    public static DashboardItemDto ToDto(this DashboardItem dashboardItem) =>
-        new(
-            dashboardItem.Title,
-            dashboardItem.Subtitle,
-            dashboardItem.Icon,
-            dashboardItem.Count,
-            dashboardItem.Description);
-
     public static NotionPageDto ToDto(this PageContent pageContent) =>
         new(
             pageContent.Url,

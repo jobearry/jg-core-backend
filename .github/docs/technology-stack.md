@@ -21,7 +21,7 @@ table in sync when a package changes.
 |---|---|---|---|
 | `Microsoft.AspNetCore.Authentication.JwtBearer` | 10.0.10 | Validate JWTs issued by `/auth/login` | `MapInboundClaims = false` |
 | `Microsoft.EntityFrameworkCore.Design` | 10.0.10 | Design-time migrations | `PrivateAssets=all` |
-| `Swashbuckle.AspNetCore` | 10.2.3 | OpenAPI + Swagger UI | UI at `/swagger`, Development only |
+| `Swashbuckle.AspNetCore` | 10.2.3 | OpenAPI + Swagger UI | UI at `/swagger`, Development only unless `Swagger:Enabled` |
 
 ### Application — `JDB_Portfolio_API.Application`
 
@@ -78,7 +78,7 @@ approval (AGENTS.md §10).
 
 | Concern | Candidate | Why |
 |---|---|---|
-| Testing | `Testcontainers.PostgreSql` | xUnit and `Microsoft.AspNetCore.Mvc.Testing` are in place (four projects, 187 tests, repository ports faked). What is still missing is a **database-backed** test: nothing exercises the EF model or a migration against real PostgreSQL |
+| Testing | `Testcontainers.PostgreSql` | xUnit and `Microsoft.AspNetCore.Mvc.Testing` are in place (four projects, 188 tests, repository ports faked). What is still missing is a **database-backed** test: nothing exercises the EF model or a migration against real PostgreSQL |
 | Assertions | `Shouldly` or `FluentAssertions` | optional; xUnit asserts are enough to start |
 | Validation | `FluentValidation.AspNetCore` or a hand-written endpoint filter | minimal APIs do not validate automatically |
 | Resilience | `Microsoft.Extensions.Http.Resilience` (Polly v8) | the Notion client now has a 15s timeout and one manual retry on 429/5xx (4.6); Polly would add circuit breaking |

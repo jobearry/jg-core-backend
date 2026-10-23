@@ -11,7 +11,7 @@ public static class PortfolioOverview
             (await portfolioService.GetOverview(cancellationToken)).ToHttpResult())
         .WithName("GetPortfolioOverview")
         .WithTags("Portfolio")
-        .Produces<List<DashboardItemDto>>(StatusCodes.Status200OK)
+        .Produces<List<OverviewItemDto>>(StatusCodes.Status200OK)
         .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
     }
 }
