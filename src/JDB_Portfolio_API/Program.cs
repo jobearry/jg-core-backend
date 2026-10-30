@@ -56,6 +56,7 @@ var api = app.MapGroup("api/v1");
 //endpoints
 api.MapAuthEndpoints();
 api.MapNotionEndpoints();
+api.MapGithubEndpoints();
 
 //portfolio endpoints
 api.MapPortfolioExperienceEndpoints();

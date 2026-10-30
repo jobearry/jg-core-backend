@@ -13,6 +13,8 @@ using System.Text;
 using System.Net.Http.Headers;
 using JDB_Portfolio_API.ExternalService.Notion.Services;
 using JDB_Portfolio_API.ExternalService.Notion.Settings;
+using JDB_Portfolio_API.ExternalService.Github.Services;
+using JDB_Portfolio_API.ExternalService.Github.Settings;
 using JDB_Portfolio_API.Application.Services;
 using JDB_Portfolio_API.Authentication;
 using JDB_Portfolio_API.ErrorHandling;
@@ -35,6 +37,7 @@ namespace JDB_Portfolio_API
             services.AddScoped<PortfolioProjectService>();
             services.AddScoped<PortfolioRecommendationService>();
             services.AddScoped<PortfolioSkillService>();
+            services.AddScoped<IGithubRepositoryService, GithubRepositoryService>();
         }
 
         /// <summary>
@@ -66,6 +69,7 @@ namespace JDB_Portfolio_API
         public static void AddExternalServices(this IServiceCollection services, IConfiguration configuration)
         {
             services.Configure<NotionSettings>(configuration.GetSection("Notion"));
+            services.Configure<GithubAPISettings>(configuration.GetSection("Github"));
 
             // The typed client owns its transport settings: base address, auth headers and
             // a 15s timeout. Keeping them here means NotionClientService knows only the
@@ -80,6 +84,18 @@ namespace JDB_Portfolio_API
                     new AuthenticationHeaderValue("Bearer", notion.Token);
                 client.DefaultRequestHeaders.Add("Notion-Version", notion.Version);
             });
+
+            services.AddHttpClient("Github", (provider, client) =>
+            {
+                var github = provider.GetRequiredService<IOptions<GithubAPISettings>>().Value;
+
+                client.BaseAddress = new Uri($"{github.BaseUrl.TrimEnd('/')}/");
+                client.Timeout = TimeSpan.FromSeconds(15);
+            });
+            services.AddTransient(provider =>
+                new GithubClientService(
+                    provider.GetRequiredService<IHttpClientFactory>().CreateClient("Github"),
+                    provider.GetRequiredService<IOptions<GithubAPISettings>>().Value));
         }
 
         /// <summary>
@@ -92,6 +108,7 @@ namespace JDB_Portfolio_API
             IWebHostEnvironment environment)
         {
             services.AddScoped<IPageContentReader, NotionPageContentReader>();
+            services.AddScoped<IGithubRepositoryReader, GithubRepositoryReader>();
 
             services.AddSwaggerConfig(configuration);
             services.AddAuthentication(configuration);

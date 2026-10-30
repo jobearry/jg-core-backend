@@ -16,6 +16,9 @@ OpenAPI: `/swagger` (Development only, or `Swagger:Enabled=true`) · Document: `
 | `GET` | `/api/v1/overview` | none* | — | `DashboardItemDto[]` |
 | `GET` | `/api/v1/notion/{pageId}` | none* | path `pageId` | `NotionPageDto[]` |
 | `GET` | `/api/v1/notion/{pageId}/count` | none* | path `pageId` | `number` |
+| `GET` | `/api/v1/github/owner/{owner}/repositories` | none* | path `owner` | `GithubRepositoryDto[]` |
+| `GET` | `/api/v1/github/repository/{owner}/{repository}/languages` | none* | path `owner`, `repository` | `GithubRepositoryLanguagesDto` |
+| `GET` | `/api/v1/github/owner/{owner}/repositories/{repositoryId}` | none* | path `owner`, `repositoryId` (long) | `GithubRepositoryDto` |
 
 \* Anonymous **by design**: they feed the public CV site. `RequireAuthorization()` is
 applied only to `/auth/me`; there is no commented-out code left to uncomment (2.5).
@@ -259,9 +262,41 @@ with an optional `<mention-date start="…"/>`.
 Same call, returns just the array length as a bare number.
 
 Both endpoints fail with `502` if Notion errors or the parse throws — with
-`code` set to `notion_unavailable` or `notion_invalid_response` (see §5).
+`code` set to `notion_unavailable` or `notion_invalid_response` (see §6).
 
-## 5. Error behaviour
+## 5. GitHub endpoints
+
+These anonymous read endpoints proxy public GitHub repository information. They
+use the configured `Github:BaseUrl` and optional `Github:Token` settings.
+
+### `GET /api/v1/github/owner/{owner}/repositories`
+
+Returns all public repositories owned by the specified GitHub user. The client
+follows GitHub's page size of 100 until the owner's full repository list is read.
+Repository entries are portfolio-owned DTOs, not GitHub's nested vendor response.
+
+### `GET /api/v1/github/repository/{owner}/{repository}/languages`
+
+Returns a `languages` object whose keys are language names and values are GitHub's
+byte counts:
+
+```json
+{
+  "languages": { "C#": 1234, "JavaScript": 567 }
+}
+```
+
+### `GET /api/v1/github/owner/{owner}/repositories/{repositoryId}`
+
+Returns the same repository DTO using the numeric repository ID, only when it
+belongs to the specified owner. A repository that does not exist or belongs to
+another owner returns `404`.
+
+An unknown repository returns `404` with `code` `github_repository_not_found`.
+Other GitHub request failures return `502` with `code` `github_unavailable`;
+unreadable responses return `502` with `code` `github_invalid_response`.
+
+## 6. Error behaviour
 
 Every failure is a `ProblemDetails` produced in exactly one place —
 `Endpoints/ApiResult.cs`. Endpoints no longer pick a status code; they call
@@ -286,12 +321,12 @@ same status apart.
 
 | `ErrorKind` | Status | `code` | When |
 |---|---|---|---|
-| `NotFound` | `404` | `not_found` | a record that was asked for does not exist |
+| `NotFound` | `404` | `not_found`, `github_repository_not_found` | a record or GitHub repository that was asked for does not exist |
 | `Validation` | `400` | `validation_failed` | the caller sent something invalid |
 | `Unauthorized` | `401` | `invalid_credentials`, `unauthorized` | a missing or wrong credential |
 | `Conflict` | `409` | `conflict` | the request conflicts with current state |
 | `Infrastructure` | `503` | `database_unavailable` | our own PostgreSQL is unreachable |
-| `Upstream` | `502` | `notion_unavailable`, `notion_invalid_response` | Notion failed, or returned something unreadable |
+| `Upstream` | `502` | `notion_unavailable`, `notion_invalid_response`, `github_unavailable`, `github_invalid_response` | Notion or GitHub failed, or returned something unreadable |
 | `Unexpected` | `500` | `unexpected_error` | a bug |
 
 Why the two dependency kinds are different statuses: a database outage is
@@ -325,7 +360,7 @@ Debug, not Error. A client navigating away is not a server failure.
 
 The exception detail is written to the application log, where it belongs.
 
-## 6. CORS
+## 7. CORS
 
 An explicit allow-list, configured rather than hardcoded:
 
