@@ -84,14 +84,15 @@ Rules:
 - `Program.cs` calls `Database.Migrate()` at startup when
   `Database:AutoMigrate` is enabled. That is fine for one instance and wrong for
   many; disable it when migrations are applied out of band.
-- The design-time factory reads the user-secrets id from
-  `JDB_USER_SECRETS_ID`; it must not hardcode a developer-specific GUID.
+- The design-time factory uses the API project's `UserSecretsId` to load the
+  same User Secrets store; keep the ID in `PortfolioContextFactory` synchronized
+  with `JDB_Portfolio_API.csproj`.
 
 ## 6. Configuration
 
 - Connection string key: `ConnectionStrings:JDBConnection`.
-- Development: user-secrets on the **API** project (`UserSecretsId`
-  `57d40eab-…`), not a checked-in file.
+- Development: User Secrets on the **API** project; the shared project ID is
+  declared in `JDB_Portfolio_API.csproj` and used by the design-time factory.
 - Production: environment variable
   `ConnectionStrings__JDBConnection` (double underscore).
 - Never commit a connection string, even a localhost one.

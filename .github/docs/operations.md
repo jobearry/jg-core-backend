@@ -173,7 +173,7 @@ for a smoke test and off again.
 | Deploy fails at "Apply database migrations" | migration could not run: dirty data, unreachable DB, or a missing/wrong `PRODUCTION_CONNECTION_STRING` | read the step log; the old app is still live. Fix the data or secret and re-run |
 | `docker compose up` fails with "required variable ConnectionStrings__JDBConnection is missing" | `docker/.env` not created | `cp docker/.env.example docker/.env` and fill it in |
 | `dotnet ef` says "command not found" | the tool manifest was not restored | `dotnet tool restore` (from the repo root) |
-| `dotnet ef` sees a null connection string | no user-secrets id or connection string was supplied | set `JDB_USER_SECRETS_ID` and `ConnectionStrings__JDBConnection`, or use the startup project |
+| `dotnet ef` sees a null connection string | no `JDBConnection` value was found in the API project's User Secrets, `appsettings.Development.json`, or environment | confirm the secret key is `ConnectionStrings:JDBConnection`, or set `ConnectionStrings__JDBConnection` |
 | `/auth/login` returns 401 with the right key | whitespace, or the key was rotated | re-read `Jwt:Key` |
 | `/auth/login` returns 500 `server_misconfigured` | `Jwt:Key` is shorter than 32 bytes | HS256 needs a 256-bit key |
 | `/auth/me` returns 401 | missing or expired token, or the signing key changed | re-issue from `/auth/login` |

@@ -141,9 +141,8 @@ dotnet ef migrations add <Name> \
 dotnet ef database update \
   --project src/JDB_Portfolio_API.Persistence \
   --startup-project src/JDB_Portfolio_API
-# EF uses PortfolioContextFactory, not the app host, so it needs the id:
-#   export JDB_USER_SECRETS_ID=<id from src/JDB_Portfolio_API/*.csproj>
-# Without it every EF command reports a null connection string (docs/database.md §5).
+# EF uses PortfolioContextFactory, which loads the API project's User Secrets
+# using its UserSecretsId (docs/database.md §6).
 
 # Docker (API only; set ConnectionStrings__JDBConnection in docker/.env)
 docker compose -f docker/docker-compose.yml up --build
@@ -244,7 +243,7 @@ Each rule has a full explanation in `.github/rules/`.
 
 Recently fixed: the `Persistence` → `Application` dependency violation, the
 dead code, the duplicated repository fields, the untracked read queries, the
-hardcoded user-secrets GUID, the un-gated startup migration, and **the DTO
+EF factory's separate user-secrets environment variable, the un-gated startup migration, and **the DTO
 boundary** — endpoints return DTOs, value objects are flattened, and
 `createdAt`/`experienceId`/the `TimeSpan` duration no longer reach the client.
 The `finished_at` column and its mapping were added, so a past role can report a

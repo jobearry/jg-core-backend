@@ -6,11 +6,8 @@ namespace JDB_Portfolio_API.Persistence.Contexts;
 
 public class PortfolioContextFactory : IDesignTimeDbContextFactory<PortfolioContext>
 {
-    /// <summary>
-    /// Environment variable holding the user-secrets id of the API project. The id is
-    /// machine specific, so it is never hardcoded here.
-    /// </summary>
-    private const string UserSecretsIdVariable = "JDB_USER_SECRETS_ID";
+    // Must match the API project's UserSecretsId in JDB_Portfolio_API.csproj.
+    private const string UserSecretsId = "57d40eab-5101-40e4-9e11-4895f9a689f0";
 
     /// <summary>
     /// Environment variable holding the connection string, in the same shape the
@@ -24,11 +21,7 @@ public class PortfolioContextFactory : IDesignTimeDbContextFactory<PortfolioCont
                 .SetBasePath(Directory.GetCurrentDirectory())
                 .AddJsonFile("appsettings.Development.json", optional: true);
 
-        var userSecretsId = Environment.GetEnvironmentVariable(UserSecretsIdVariable);
-        if (!string.IsNullOrWhiteSpace(userSecretsId))
-        {
-            configurationBuilder.AddUserSecrets(userSecretsId);
-        }
+        configurationBuilder.AddUserSecrets(UserSecretsId);
 
         IConfigurationRoot configuration = configurationBuilder.Build();
 
