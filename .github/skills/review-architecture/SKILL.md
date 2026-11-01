@@ -78,7 +78,8 @@ git diff -- '*.csproj'
 
 ```
 BLOCKER  src/.../File.cs:42  Persistence references Application.
-         Fix: remove the ProjectReference (plan 1.1).
+         Fix: remove the outward `ProjectReference` and keep dependencies aligned
+         with the allowed graph in `rules/architecture.md`.
 
 MAJOR    src/.../Endpoints/X.cs:13  Failure returns 200 with null.
          Fix: check IsSuccess and map the error kind.

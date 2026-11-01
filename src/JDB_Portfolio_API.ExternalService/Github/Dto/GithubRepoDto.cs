@@ -15,7 +15,7 @@ public sealed class GithubRepoDto
     public string FullName { get; set; } = string.Empty;
 
     [JsonPropertyName("private")]
-    public bool Private { get; set; }
+    public bool? Private { get; set; }
 
     [JsonPropertyName("owner")]
     public GithubOwnerDto Owner { get; set; } = new();

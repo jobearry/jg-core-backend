@@ -16,7 +16,7 @@ Rules:
 - Never let EF materialise a Domain type. Domain types are constructed by the
   mapping profile (or a factory), so their invariants always run.
 - No EF attributes in Domain. Fluent configuration only, in
-  `Persistence/Contexts` (later: `IEntityTypeConfiguration<T>` classes).
+  `Persistence/Configurations` as `IEntityTypeConfiguration<T>` classes.
 
 ## 2. Schema conventions
 
@@ -57,7 +57,7 @@ file in the solution.
 - Every used direction needs a mapping test, including a runtime map (not just
   `AssertConfigurationIsValid()`).
 - A domain → entity mapping that is never used should be **deleted**, not left
-  broken (plan 1.2).
+  broken.
 
 ## 5. Migrations
 
@@ -81,11 +81,11 @@ Rules:
 - Always read the generated `Up`/`Down` before committing. EF guesses wrong on
   renames (it drops + adds, losing data).
 - Never commit a migration without the matching model snapshot.
-- `Program.cs` currently calls `Database.Migrate()` at startup. That is fine for
-  one instance and wrong for many — gate it behind a config flag before scaling
-  (plan 1.8).
-- The design-time factory hardcodes a developer's user-secrets GUID. It must read
-  from an env var or rely on `--startup-project` (plan 1.8).
+- `Program.cs` calls `Database.Migrate()` at startup when
+  `Database:AutoMigrate` is enabled. That is fine for one instance and wrong for
+  many; disable it when migrations are applied out of band.
+- The design-time factory reads the user-secrets id from
+  `JDB_USER_SECRETS_ID`; it must not hardcode a developer-specific GUID.
 
 ## 6. Configuration
 
@@ -99,8 +99,7 @@ Rules:
 ## 7. Transactions and writes
 
 - There is no write path today and no `IUnitOfWork`. Before adding one, read
-  ADR-0003 and plan 3.4 — the aggregate boundary decides where the transaction
-  lives.
+  ADR-0003 — the aggregate boundary decides where the transaction lives.
 - A write must save exactly one aggregate per transaction. If you need two,
   that is a domain event or a saga, not a bigger transaction.
 

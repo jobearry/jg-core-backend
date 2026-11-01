@@ -223,7 +223,7 @@ Prefer:
 dotnet ef ... --startup-project src/JDB_Portfolio_API
 ```
 
-or read `ConnectionStrings__JDBConnection` from the environment (plan 1.8).
+or read `ConnectionStrings__JDBConnection` from the environment.
 
 ## 7. Runtime migration
 
@@ -239,10 +239,10 @@ production without a migration.
 
 ## 8. Known schema gaps
 
-| Gap | Impact | Plan |
+| Gap | Impact | Follow-up |
 |---|---|---|
-| `experience.finished_at` exists but is **not backfilled** | past roles still report a growing duration until the end dates are filled in | 1.3 / D1 — data task |
-| `timestamp without time zone` everywhere | timezone bugs when the host TZ changes | 4.x |
+| `experience.finished_at` exists but is **not backfilled** | past roles still report a growing duration until the end dates are filled in | Backfill the existing role end dates |
+| `timestamp without time zone` everywhere | timezone bugs when the host TZ changes | Consider a separately reviewed schema migration |
 | No index on `project.experience_id` | sequential scan as data grows | — |
 | No unique constraint on `tech_stack.stack_name` | duplicates possible | — |
 | `project.updated_at` is never maintained | column is dead weight | — |

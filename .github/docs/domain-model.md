@@ -1,8 +1,7 @@
 # Domain model
 
-Descriptive: what the model is **today**. Intended design and open questions are
-in [`../plans/001-clean-architecture-refactor.md`](../plans/001-clean-architecture-refactor.md)
-and [`adr/0003-aggregate-boundary.md`](adr/0003-aggregate-boundary.md).
+Descriptive: what the model is **today**. The aggregate decision is recorded in
+[`adr/0003-aggregate-boundary.md`](adr/0003-aggregate-boundary.md).
 
 ## 1. Bounded context
 
@@ -92,7 +91,7 @@ repository), not by a transaction.
 | `TechStackCategory` | `int Id` (get-only) | `(id, category)` | both get-only | **name non-blank** (3.3) |
 | `Recommendation` | `int Id` (get-only) | `(id, personName, description, careerPosition, postedAt)` | name/description/postedAt get-only; `CareerPosition` via `ChangeCareerPosition` | `PersonName` and `Description` **non-blank** (3.3, closes KI-041); `CareerPosition` is **optional** — `null` means it is deliberately not shown |
 
-Behaviour that exists (plan 3.3 replaced public setters with these):
+Behaviour that exists:
 
 - `Experience.ChangeRole(Role?)` — sets or clears the role; `null` means "not declared".
 - `Experience.UpdateDescription` / `UpdateResponsibility` / `UpdateType` — the last two were added by 3.3; before, the entity could not express its own fields and AutoMapper wrote them by reflection.
@@ -107,7 +106,7 @@ Behaviour that exists (plan 3.3 replaced public setters with these):
 | VO | Type | Validation | Equality | Notes |
 |---|---|---|---|---|
 | `Role` | `sealed record` | non-empty, ≤ 50 | **value** | "not disclosed" is `Role? == null`, never `""` |
-| `Company` | `sealed record` | non-empty, ≤ 255 | **value** | never absent: "not disclosed" is not a thing for an employer, so there is no `Company?` (3.1a). The empty-string concept is gone (plan 3.1) |
+| `Company` | `sealed record` | non-empty, ≤ 255 | **value** | never absent: "not disclosed" is not a thing for an employer, so there is no `Company?`. The empty-string concept is gone |
 | `Period` | `sealed record` | no `default` dates; `FinishedAt >= StartedAt`; `StartedAt` not in the future | **value** | `FinishedAt == null` means *ongoing* — see `IsOngoing` |
 | `TechStackRef` | `sealed record` | non-blank name; non-blank category when present | **value** | A project's citation of a shared stack (3.4): identified by `Id`, immutable, so mutating one project's stack cannot reach another project |
 
@@ -135,31 +134,30 @@ returns `500` for the whole collection rather than rendering a nonsense duration
 is deliberate — a typo such as `2062` should be loud — but it means the invariant is
 enforced on the read path until a write path exists to validate it earlier.
 
-## 6. Invariants: current vs intended
+## 6. Enforced invariants
 
-| Invariant | Now | Intended |
+| Invariant | Enforcement |
 |---|---|---|
-| A project has a non-empty name | not enforced | constructor/factory throws |
-| A project belongs to at most one experience | not modelled | enforced by aggregate root |
-| A project has a non-empty name | **enforced (3.3)** | constructor throws |
-| A tech stack has a non-empty name | **enforced (3.3)** | constructor throws |
-| A tech stack category is non-blank when present | **enforced (3.3)** | `null` allowed; blank throws |
-| A recommendation has a person and a description | **enforced (3.3)** | constructor throws |
-| `Period.FinishedAt >= StartedAt` | enforced | enforced |
-| `Role` non-empty and ≤ 50 | enforced | enforced |
-| `Company` non-empty and ≤ 255 | **enforced (3.1)** | enforced, plus `NOT NULL` + non-blank `CHECK` (3.1a) |
-| A role cannot start in the future | **enforced (3.1)** | enforced |
-| Audit fields are not part of the domain | **enforced (3.3)** | removed from `TechStack`/`TechStackCategory`; the columns stay on the entities |
+| `Project.ProjectName` is non-blank | `Project` constructor |
+| A project is linked to at most one experience | `Project.AttachToExperience`; the link is optional |
+| `TechStack.StackName` and `TechStackCategory.Category` are non-blank | Entity constructors |
+| `TechStack.Category` is non-blank when present | `TechStack.SetCategory`; `null` is allowed |
+| `Recommendation.PersonName` and `Description` are non-blank | `Recommendation` constructor |
+| `Period.FinishedAt` is not before `StartedAt` | `Period` constructor |
+| `Role` is non-empty and at most 50 characters | `Role` constructor |
+| `Company` is non-empty and at most 255 characters | `Company` constructor; the database also has `NOT NULL` and a non-blank `CHECK` |
+| A role cannot start in the future | `Period` constructor |
+| Persistence audit fields are absent from domain entities | Domain model shape |
 
-## 7. Types in the wrong layer
+## 7. Types in their owning layer
 
 | Type | Where it is | Should be | Status |
 |---|---|---|---|
-| `DashboardItem` | `Application/Models` | — | **moved 2026-10-22** (3.2). A read model with no invariant; only `PortfolioService` and `PortfolioDtoMapper` ever touched it |
-| `NotionPage` | `ExternalService/Notion/Models` (vendor) · `Application/Models/PageContent` (core) | — | **resolved 2026-10-23** (3.2, ADR-0005). The vendor model stays with the vendor client; the application reads `PageContent` through `IPageContentReader` |
-| `INotionService` | `Application/Abstractions/IPageContentReader` | — | **resolved 2026-10-23** (3.2, ADR-0005). The Notion client implements nothing; `Presentation/Adapters/NotionPageContentReader` bridges the two |
-| `ExperienceId` | deleted | — | resolved during the 1.x dead-code pass |
-| `IService<T>` / `IMapper<,,>` | deleted | — | resolved during the 1.x dead-code pass |
+| `DashboardItem` | `Application/Models` | — | A read model with no domain invariant |
+| `NotionPage` | `ExternalService/Notion/Models` (vendor); `Application/Models/PageContent` (application) | — | The application reads `PageContent` through `IPageContentReader` |
+| `INotionService` | `Application/Abstractions/IPageContentReader` | — | `Presentation/Adapters/NotionPageContentReader` bridges the application port to the Notion client |
+| `ExperienceId` | deleted | — | Unused identifier type removed |
+| `IService<T>` / `IMapper<,,>` | deleted | — | Unused abstractions removed |
 
 Everything in this table is now resolved. The Notion pair needed a bridge rather than a
 move: `Application` owns the port and cannot reference `ExternalService`, and

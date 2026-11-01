@@ -12,7 +12,7 @@ public class GithubClientServiceTests
     public async Task GetRepositoriesByOwnerAsync_Owner_ReturnsAllRepositories()
     {
         const string responseBody =
-            """[{"id":123,"name":"hello-world","full_name":"octocat/hello-world","owner":{"login":"octocat","id":1}}]""";
+            """[{"id":123,"name":"hello-world","full_name":"octocat/hello-world","private":false,"owner":{"login":"octocat","id":1}},{"id":124,"name":"secret","full_name":"octocat/secret","private":true,"owner":{"login":"octocat","id":1}}]""";
         var handler = new StubHandler(responseBody);
         var service = CreateService(handler);
 
@@ -25,6 +25,8 @@ public class GithubClientServiceTests
         Assert.Equal(
             new Uri("https://api.github.test/users/octocat/repos?per_page=100&page=1"),
             Assert.Single(handler.RequestUris));
+        Assert.Equal("Bearer", Assert.Single(handler.AuthorizationHeaders)!.Scheme);
+        Assert.Equal("test-token", handler.AuthorizationHeaders[0]!.Parameter);
     }
 
     [Fact]
@@ -35,6 +37,7 @@ public class GithubClientServiceTests
             {
                 id,
                 name = $"repo-{id}",
+                @private = false,
                 owner = new { login = "octocat" }
             }));
         var handler = new StubHandler(firstPage, "[]");
@@ -50,9 +53,24 @@ public class GithubClientServiceTests
     }
 
     [Fact]
+    public async Task GetRepositoriesByOwnerAsync_FiltersToRequestedOwner()
+    {
+        const string responseBody =
+            """[{"id":123,"name":"mine","private":false,"owner":{"login":"octocat"}},{"id":456,"name":"other","private":false,"owner":{"login":"someone-else"}}]""";
+        var service = CreateService(new StubHandler(responseBody));
+
+        var repositories = await service.GetRepositoriesByOwnerAsync("octocat", CancellationToken.None);
+
+        var repository = Assert.Single(repositories);
+        Assert.Equal("mine", repository.Name);
+    }
+
+    [Fact]
     public async Task GetRepositoryLanguagesAsync_OwnerAndName_ReturnsLanguagesAndByteCounts()
     {
-        var handler = new StubHandler("""{"C#":1234,"JavaScript":567}""");
+        var handler = new StubHandler(
+            """{"id":123,"name":"hello-world","private":false,"owner":{"login":"octocat"}}""",
+            """{"C#":1234,"JavaScript":567}""");
         var service = CreateService(handler);
 
         var languages = await service.GetRepositoryLanguagesAsync("octocat", "hello-world", CancellationToken.None);
@@ -60,15 +78,18 @@ public class GithubClientServiceTests
         Assert.Equal(1234, languages["C#"]);
         Assert.Equal(567, languages["JavaScript"]);
         Assert.Equal(
+            new Uri("https://api.github.test/repos/octocat/hello-world"),
+            handler.RequestUris[0]);
+        Assert.Equal(
             new Uri("https://api.github.test/repos/octocat/hello-world/languages"),
-            Assert.Single(handler.RequestUris));
+            handler.RequestUris[1]);
     }
 
     [Fact]
     public async Task GetRepositoryByOwnerAndIdAsync_Id_ReturnsRepository()
     {
         const string responseBody =
-            """{"id":456,"name":"portfolio","full_name":"octocat/portfolio","owner":{"login":"octocat","id":1}}""";
+            """{"id":456,"name":"portfolio","full_name":"octocat/portfolio","private":false,"owner":{"login":"octocat","id":1}}""";
         var handler = new StubHandler(responseBody);
         var service = CreateService(handler);
 
@@ -95,12 +116,43 @@ public class GithubClientServiceTests
         Assert.Equal(HttpStatusCode.NotFound, exception.StatusCode);
     }
 
+    [Fact]
+    public async Task GetRepositoryLanguagesAsync_PrivateRepository_ThrowsNotFound()
+    {
+        const string responseBody =
+            """{"id":123,"name":"secret","private":true,"owner":{"login":"octocat"}}""";
+        var handler = new StubHandler(responseBody);
+        var service = CreateService(handler);
+
+        var exception = await Assert.ThrowsAsync<HttpRequestException>(
+            () => service.GetRepositoryLanguagesAsync("octocat", "secret", CancellationToken.None));
+
+        Assert.Equal(HttpStatusCode.NotFound, exception.StatusCode);
+        Assert.Single(handler.RequestUris);
+    }
+
+    [Fact]
+    public async Task GetRepositoryByOwnerAndIdAsync_PrivateRepository_ThrowsNotFound()
+    {
+        const string responseBody =
+            """{"id":456,"name":"secret","private":true,"full_name":"octocat/secret","owner":{"login":"octocat","id":1}}""";
+        var handler = new StubHandler(responseBody);
+        var service = CreateService(handler);
+
+        var exception = await Assert.ThrowsAsync<HttpRequestException>(
+            () => service.GetRepositoryByOwnerAndIdAsync("octocat", 456, CancellationToken.None));
+
+        Assert.Equal(HttpStatusCode.NotFound, exception.StatusCode);
+        Assert.Single(handler.RequestUris);
+    }
+
     private static GithubClientService CreateService(HttpMessageHandler handler) =>
         new(
             new HttpClient(handler),
             new GithubAPISettings
             {
-                BaseUrl = "https://api.github.test/"
+                BaseUrl = "https://api.github.test/",
+                Token = "test-token"
             });
 
     private sealed class StubHandler(params string[] responseBodies) : HttpMessageHandler
@@ -108,12 +160,14 @@ public class GithubClientServiceTests
         private readonly Queue<string> _responseBodies = new(responseBodies);
 
         public List<Uri> RequestUris { get; } = [];
+        public List<System.Net.Http.Headers.AuthenticationHeaderValue?> AuthorizationHeaders { get; } = [];
 
         protected override Task<HttpResponseMessage> SendAsync(
             HttpRequestMessage request,
             CancellationToken cancellationToken)
         {
             RequestUris.Add(request.RequestUri!);
+            AuthorizationHeaders.Add(request.Headers.Authorization);
 
             return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
             {

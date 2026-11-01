@@ -9,7 +9,7 @@ How to run, configure, and deploy the API.
 | .NET SDK | 10.0.x | 10.0.402 in use |
 | PostgreSQL | any recent | local install or container |
 | `dotnet-ef` | matching EF 10 | available via the root tool manifest — run `dotnet tool restore` |
-| Docker + Compose v2 | 20.10+ | optional, currently broken (see §4) |
+| Docker + Compose v2 | 20.10+ | optional; the API container uses an external PostgreSQL instance (see §4) |
 
 ## 2. Local development
 
@@ -25,6 +25,7 @@ dotnet user-secrets set "Jwt:Key"       "<at least 32 bytes>" --project src/JDB_
 dotnet user-secrets set "Jwt:Issuer"    "jdb_api"            --project src/JDB_Portfolio_API
 dotnet user-secrets set "Jwt:Audience"  "PortfolioApiUsers"  --project src/JDB_Portfolio_API
 dotnet user-secrets set "Notion:Token"  "secret_…"           --project src/JDB_Portfolio_API
+dotnet user-secrets set "Github:Token"  "<GitHub personal access token>" --project src/JDB_Portfolio_API
 
 # 3. apply migrations
 dotnet ef database update \
@@ -41,8 +42,9 @@ dotnet run --project src/JDB_Portfolio_API
 | `https` | https://localhost:7248 / http://localhost:5254 |
 | Swagger | http://localhost:5254/swagger |
 
-`Program.cs` also calls `Database.Migrate()` at startup, so a valid connection
-string is required just to boot. Set `Database__AutoMigrate=false` to skip it.
+`Program.cs` calls `Database.Migrate()` at startup when
+`Database:AutoMigrate` is enabled (default `true`), so a valid connection string
+is required to boot unless `Database__AutoMigrate=false`.
 
 ## 3. Configuration matrix
 
@@ -55,6 +57,8 @@ string is required just to boot. Set `Database__AutoMigrate=false` to skip it.
 | `Jwt:ExpirationInMinutes` | default 60 | `Jwt__ExpirationInMinutes` | optional |
 | `Notion:Token` | user-secrets | `Notion__Token` | App Service setting |
 | `Notion:Version` | default `2026-03-11` | `Notion__Version` | optional |
+| `Github:Token` | user-secrets | `Github__Token` | App Service setting |
+| `Github:BaseUrl` | `https://api.github.com` | `Github__BaseUrl` | optional |
 | `Cors:AllowedOrigins` | `appsettings.json` | `Cors__AllowedOrigins__0`, `__1`, … | App Service setting |
 | `Cors:DevelopmentOrigins` | `appsettings.json` | applied only when `ASPNETCORE_ENVIRONMENT=Development` | ignored |
 | `Swagger:Enabled` | `appsettings.json` (`false`) | `Swagger__Enabled` | optional; `true` exposes `/swagger` |
@@ -63,6 +67,13 @@ Origins are configuration so that a new domain or a Vercel preview deployment
 (`https://demo-git-my-branch-team.vercel.app`) is an added setting rather than a code
 change and a redeploy. Adding one is still a security review item — see
 `docs/api-reference.md` §6.
+
+The GitHub token stays server-side and is used only for upstream GitHub requests.
+Current GitHub endpoints are anonymous but return public repository data only;
+the API checks visibility before returning repository details or languages.
+Grant the GitHub token only the repository metadata access required for the
+intended repositories. Optional API-JWT access to private repository data is
+not implemented; see [plan 002](../plans/002-github-visibility-auth.md).
 
 Note: `docker/.env.example` sets `Jwt__ExpirationInMinutes`, matching the key
 the app reads.
@@ -85,9 +96,9 @@ ConnectionStrings__JDBConnection=Host=host.docker.internal;Port=5432;Database=jg
 
 `host.docker.internal` reaches a PostgreSQL running on the host; the compose
 file maps that name on Linux as well as Docker Desktop. For a hosted database
-use its host and the SSL settings it requires. `Program.cs` calls
-`Database.Migrate()` at startup, so the API applies pending migrations itself
-and fails to boot if the database is unreachable. Set `Database__AutoMigrate=false`
+use its host and the SSL settings it requires. When `Database:AutoMigrate` is
+enabled (default `true`), the API applies pending migrations at startup and
+fails to boot if the database is unreachable. Set `Database__AutoMigrate=false`
 to skip that step.
 
 Image build (works independently of compose):
@@ -146,8 +157,9 @@ deployment; this setting only prevents the app from also applying migrations
 during startup. It is separate from the GitHub `PRODUCTION_CONNECTION_STRING`
 secret used by that workflow.
 
-No test step exists. Tests now live in `tests/` (four xUnit projects, 188 tests) —
-add a `dotnet test src/JDB_Portfolio_API.slnx` step to the workflow.
+Tests live in `tests/` (four xUnit projects). The workflow currently
+does not run them; add a `dotnet test src/JDB_Portfolio_API.slnx` step when
+updating CI.
 
 Swagger is enabled when `ASPNETCORE_ENVIRONMENT=Development` or when the
 `Swagger:Enabled` setting is `true`. Production leaves it unset (off); turn it on

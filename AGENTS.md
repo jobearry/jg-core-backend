@@ -6,7 +6,7 @@ This file is the entry point only. Details live in [`.github/`](.github/) so thi
 document stays short and does not rot.
 
 **Read order for any task:** this file → `.github/rules/` for the area you touch →
-`.github/docs/` for context → `.github/plans/` for known debt.
+`.github/docs/` for context → `.github/plans/` only if an active plan applies.
 
 ---
 
@@ -21,13 +21,12 @@ Current status:
 - Read path is complete and deployed (Azure Web App).
 - **No write endpoints exist.** `AddNewAsync` was removed; `IRepository<T>` exposes
   only `GetAllAsync`.
-- DDD/clean-architecture refactor is **complete through Part 3** (2026-10-23), and
-  Part 4 is partly done (4.1, 4.2, 4.3, 4.5, and the config half of 4.8). The rest is
-  optional polish — see
-  [`.github/plans/001-clean-architecture-refactor.md`](.github/plans/001-clean-architecture-refactor.md).
+- DDD/clean-architecture refactor is complete. Current architecture, domain,
+  database, and API behavior is documented under [`.github/docs/`](.github/docs/);
+  lasting decisions are recorded in [`.github/docs/adr/`](.github/docs/adr/).
 - **Tests cover every invariant.** Four xUnit projects cover the Domain entities and
   value objects, the application services, the DTO mapping, the AutoMapper profile,
-  the endpoint contracts and the Notion adapter chain (188 tests).
+  the endpoint contracts and the Notion adapter chain.
 
 ---
 
@@ -161,6 +160,7 @@ Required configuration (user-secrets in dev, env vars in prod):
 | `Jwt:Key` | ≥ 32 bytes; also the `/auth/login` shared secret |
 | `Jwt:Issuer`, `Jwt:Audience`, `Jwt:ExpirationInMinutes` | token settings |
 | `Notion:Token`, `Notion:Version` | Notion integration |
+| `Github:Token` | GitHub API access for repository metadata |
 | `Cors:AllowedOrigins`, `Cors:DevelopmentOrigins` | browser origins; the second is applied in Development only |
 | `Swagger:Enabled` | optional; `true` exposes `/swagger` outside Development (default `false`) |
 
@@ -174,8 +174,8 @@ Each rule has a full explanation in `.github/rules/`.
    [architecture.md](.github/rules/architecture.md)
 2. **Domain purity** — no EF attributes, no `partial`, no `= null!`, no
    `CreatedAt`/`UpdatedAt`, no vendor types in Domain.
-3. **Endpoints return DTOs, not domain entities.** Satisfied as of plan 2.1
-   (2026-10-22). No `Domain.Entities` or `Domain.ValueObjects` type may appear in
+3. **Endpoints return DTOs, not domain entities.** No `Domain.Entities` or
+   `Domain.ValueObjects` type may appear in
    an endpoint signature or a response.
 4. **One repository per aggregate, one write entry point per aggregate.**
 5. **Value objects are `record`s with value equality and validating
@@ -211,13 +211,13 @@ Each rule has a full explanation in `.github/rules/`.
 | What is broken or debt-laden right now? | [docs/known-issues.md](.github/docs/known-issues.md) |
 | What does "aggregate", "VO", "bounded context" mean here? | [docs/glossary.md](.github/docs/glossary.md) |
 | Why was a decision made? | [docs/adr/](.github/docs/adr/) |
-| What refactor is planned? | [plans/001-clean-architecture-refactor.md](.github/plans/001-clean-architecture-refactor.md) |
+| What work is planned? | [`.github/plans/`](.github/plans/) (active plans only) |
 
 ---
 
 ## 8. Current state and known gaps (short version)
 
-- Domain entities now validate what they hold (plan 3.3): `Project`, `Recommendation`,
+- Domain entities now validate what they hold: `Project`, `Recommendation`,
   `TechStack` and `TechStackCategory` have validating constructors, no `partial`, no
   `= null!`, no audit columns, and `Experience.Projects` is a read-only collection.
   `Project.Id` is get-only. The aggregate boundary is **settled** (3.4, ADR-0003):
@@ -236,10 +236,11 @@ Each rule has a full explanation in `.github/rules/`.
 - No structured logging sink and no correlation id beyond `traceId`; failures do reach
   `ILogger` now (2.4), and a global handler turns stray exceptions into
   `ProblemDetails`.
-- Auth is a **service-token flow, not user authentication**: one shared key, a `sub`
-  of `portfolio-api`, and only `/auth/me` requires a token. The portfolio read
-  endpoints are anonymous **on purpose** (they feed a public CV site). Adding
-  `RequireAuthorization()` to them is a breaking change, not a hardening tweak.
+- Auth is a **service-token flow, not user authentication**: one shared key and a
+  `sub` of `portfolio-api`. Only `/auth/me` requires a token; portfolio, Notion,
+  and GitHub read endpoints are anonymous **on purpose**. GitHub routes return
+  public repository data only. Optional authenticated private-repository access
+  remains unimplemented; see [plan 002](.github/plans/002-github-visibility-auth.md).
 
 Recently fixed: the `Persistence` → `Application` dependency violation, the
 dead code, the duplicated repository fields, the untracked read queries, the
@@ -251,12 +252,11 @@ frozen duration — **but the existing rows still need their end dates
 backfilled**. Errors are typed and mapped to the right status in one place;
 `CancellationToken` runs end-to-end; unhandled exceptions become `ProblemDetails`;
 services log their failures. The CORS allow-list is configuration now, with localhost
-gated to Development, no credentials flag, and only `GET`/`POST`. Tests went from none
-to 188, including entity invariants, value-object equality, endpoint contracts and the
-CORS policy.
+gated to Development, no credentials flag, and only `GET`/`POST`. Tests now cover
+entity invariants, value-object equality, endpoint contracts and the CORS policy.
 
-Full reasoning and verification steps:
-[`.github/plans/001-clean-architecture-refactor.md`](.github/plans/001-clean-architecture-refactor.md).
+Current implementation details are in [`.github/docs/`](.github/docs/), with
+design rationale in [`.github/docs/adr/`](.github/docs/adr/).
 
 ---
 

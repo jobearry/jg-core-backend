@@ -26,9 +26,9 @@ Presentation    → Application, Persistence, ExternalService
 
 Violations to fix, not to copy:
 
-- `Persistence.csproj` referencing `Application` — **fixed 2026-10-22**, plan 1.1.
+- `Persistence.csproj` referencing `Application` — **fixed 2026-10-22**.
 - `Persistence/Repositories/EfPortfolioExperienceRepository.cs` importing
-  `JDB_Portfolio_API.Application.Common` — **fixed 2026-10-22**, plan 1.1.
+  `JDB_Portfolio_API.Application.Common` — **fixed 2026-10-22**.
 
 ### Enforcement
 
@@ -70,13 +70,10 @@ and the only thing a repository may return.
 5. Shared reference data (e.g. `TechStack`) is not owned by an aggregate that
    merely uses it — reference it by id or a small immutable `TechStackRef`.
 
-Current contradictions to resolve (plan 3.4 / ADR-0003):
-
-- `Experience` owns `List<Project>`, **and** `IPortfolioProjectRepository`
-  exposes `Project` as a root.
-- `Project.TechStacks` holds `TechStack` entities, but `TechStack` is shared
-  reference data.
-- `Project.Period` exists in the domain with no column and no mapping.
+Current boundary: `Project` is an aggregate root; `Experience.Projects` is a
+read-only projection, and `Project.TechStacks` contains immutable `TechStackRef`
+values. See [ADR-0003](../docs/adr/0003-aggregate-boundary.md) and
+[`domain-model.md`](../docs/domain-model.md).
 
 ## 4. Presentation rules
 

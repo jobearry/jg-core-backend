@@ -27,9 +27,11 @@ JWT carrying `sub=portfolio-api` and one `role=User` claim. There is no user sto
 - Compare secrets with `CryptographicOperations.FixedTimeEquals` (already done).
 - Reject a configured key shorter than 32 bytes (already done, returns 500 —
   correct, since it is a server misconfiguration).
-- The portfolio read endpoints are **anonymous by design** — they feed a public CV
-  site. Only `/auth/me` requires a token; adding `RequireAuthorization()` to the
-  others is a breaking change, not a hardening tweak (2.5).
+- Portfolio, Notion, and current GitHub read endpoints are **anonymous by design**.
+  GitHub endpoints return public repository data only, even when the server-side
+  GitHub token can access private repositories. Only `/auth/me` requires an API JWT.
+  Do not expose private GitHub metadata without implementing the approved
+  authorization design in plan 002.
 - A secure-by-default fallback policy is deliberately deferred until a write
   endpoint exists (KI-010). Do not flip it as a drive-by change.
 - Do not put secrets in query strings — they end up in logs and proxies.

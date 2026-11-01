@@ -13,7 +13,7 @@ public sealed class GithubEndpointsTests : IClassFixture<PortfolioApiFactory>
     }
 
     [Fact]
-    public async Task GetRepositoriesByOwner_ReturnsAllOwnerRepositories()
+    public async Task GetRepositoriesByOwner_ReturnsAllOwnerRepositoriesWithoutApiToken()
     {
         var response = await _client.GetAsync("/api/v1/github/owner/octocat/repositories");
 
@@ -26,7 +26,7 @@ public sealed class GithubEndpointsTests : IClassFixture<PortfolioApiFactory>
     }
 
     [Fact]
-    public async Task GetRepositoryLanguages_ReturnsLanguageByteCounts()
+    public async Task GetRepositoryLanguages_ReturnsLanguageByteCountsWithoutApiToken()
     {
         var response = await _client.GetAsync(
             "/api/v1/github/repository/octocat/hello-world/languages");
@@ -39,7 +39,7 @@ public sealed class GithubEndpointsTests : IClassFixture<PortfolioApiFactory>
     }
 
     [Fact]
-    public async Task GetRepositoryByOwnerAndId_ReturnsRepositoryDto()
+    public async Task GetRepositoryByOwnerAndId_ReturnsRepositoryDtoWithoutApiToken()
     {
         var response = await _client.GetAsync("/api/v1/github/owner/octocat/repositories/456");
 

@@ -14,7 +14,7 @@ public class GithubRepositoryReaderTests
     public async Task GetRepositoriesByOwnerAsync_MapsGitHubDtosToApplicationModels()
     {
         const string responseBody =
-            """[{"id":123,"name":"hello-world","full_name":"octocat/hello-world","owner":{"login":"octocat","id":1},"html_url":"https://github.com/octocat/hello-world","description":"Example","language":"C#","topics":["api"]}]""";
+            """[{"id":123,"name":"hello-world","full_name":"octocat/hello-world","private":false,"owner":{"login":"octocat","id":1},"html_url":"https://github.com/octocat/hello-world","description":"Example","language":"C#","topics":["api"]}]""";
         var client = new GithubClientService(
             new HttpClient(new StubHandler(responseBody)),
             new GithubAPISettings { BaseUrl = "https://api.github.test/" });

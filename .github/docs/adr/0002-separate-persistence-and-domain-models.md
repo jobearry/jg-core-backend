@@ -48,7 +48,7 @@ never materialised by EF.
 **Follow-up work**
 
 - Delete unused reverse mappings instead of leaving them broken.
-- Add mapping tests (plan 1.2 / 3.5).
+- Mapping behavior is covered in `tests/JDB_Portfolio_API.Persistence.Tests`.
 - Consider explicit mapping methods if the profile keeps producing defects.
 
 ## Alternatives considered

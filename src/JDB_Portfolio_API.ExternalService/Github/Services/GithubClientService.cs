@@ -38,7 +38,9 @@ public sealed class GithubClientService
                 $"users/{Uri.EscapeDataString(owner)}/repos?per_page={pageSize}&page={page}",
                 cancellationToken);
 
-            repositories.AddRange(results);
+            repositories.AddRange(results.Where(repository =>
+                IsPublic(repository) &&
+                string.Equals(repository.Owner.Login, owner, StringComparison.OrdinalIgnoreCase)));
             if (results.Count < pageSize)
             {
                 return repositories;
@@ -52,13 +54,20 @@ public sealed class GithubClientService
         CancellationToken cancellationToken) =>
         GetRepositoryByIdAsync(repositoryId, owner, cancellationToken);
 
-    public Task<Dictionary<string, long>> GetRepositoryLanguagesAsync(
+    public async Task<Dictionary<string, long>> GetRepositoryLanguagesAsync(
         string owner,
         string repository,
-        CancellationToken cancellationToken) =>
-        GetAsync<Dictionary<string, long>>(
+        CancellationToken cancellationToken)
+    {
+        var repositoryDetails = await GetAsync<GithubRepoDto>(
+            $"repos/{Uri.EscapeDataString(owner)}/{Uri.EscapeDataString(repository)}",
+            cancellationToken);
+        EnsurePublic(repositoryDetails);
+
+        return await GetAsync<Dictionary<string, long>>(
             $"repos/{Uri.EscapeDataString(owner)}/{Uri.EscapeDataString(repository)}/languages",
             cancellationToken);
+    }
 
     private async Task<GithubRepoDto> GetRepositoryByIdAsync(
         long repositoryId,
@@ -76,8 +85,24 @@ public sealed class GithubClientService
                 statusCode: HttpStatusCode.NotFound);
         }
 
+        EnsurePublic(repository);
         return repository;
     }
+
+    private static void EnsurePublic(GithubRepoDto repository)
+    {
+        if (!IsPublic(repository))
+        {
+            throw new HttpRequestException(
+                "GitHub repository is not public.",
+                inner: null,
+                statusCode: HttpStatusCode.NotFound);
+        }
+    }
+
+    private static bool IsPublic(GithubRepoDto repository) =>
+        !(repository.Private ?? throw new InvalidOperationException(
+            "GitHub repository visibility was missing."));
 
     private async Task<T> GetAsync<T>(string path, CancellationToken cancellationToken)
     {

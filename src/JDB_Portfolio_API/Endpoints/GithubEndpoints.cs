@@ -17,8 +17,9 @@ public static class GithubEndpoints
             .WithName("GetGithubRepositoriesByOwner")
             .WithTags("ExternalServices - GitHub")
             .WithSummary("Get all repositories for a GitHub owner")
-            .WithDescription("Returns all public repositories owned by the specified GitHub user.")
+            .WithDescription("Returns public repositories owned by the GitHub account for the specified owner.")
             .Produces<IReadOnlyList<GithubRepositoryDto>>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status502BadGateway)
             .ProducesProblem(StatusCodes.Status500InternalServerError);
 
@@ -33,7 +34,7 @@ public static class GithubEndpoints
             .WithName("GetGithubRepositoryLanguages")
             .WithTags("ExternalServices - GitHub")
             .WithSummary("Get repository languages")
-            .WithDescription("Returns the languages used in the repository and the byte count for each.")
+            .WithDescription("Returns language byte counts for a public repository.")
             .Produces<GithubRepositoryLanguagesDto>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status502BadGateway)
@@ -50,7 +51,7 @@ public static class GithubEndpoints
             .WithName("GetGithubRepositoryByOwnerAndId")
             .WithTags("ExternalServices - GitHub")
             .WithSummary("Get a GitHub repository by owner and ID")
-            .WithDescription("Fetches repository details by numeric ID and returns not found if it belongs to a different owner.")
+            .WithDescription("Fetches details for a public repository by numeric ID and returns not found if it belongs to a different owner.")
             .Produces<GithubRepositoryDto>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status502BadGateway)

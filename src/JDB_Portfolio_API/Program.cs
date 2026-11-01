@@ -46,11 +46,10 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 // One prefix, declared once. Endpoint files declare only the segment below it, so a
-// future /api/v2 is one edit here instead of a hunt through seven files.
+// future /api/v2 is one edit here instead of a hunt through endpoint files.
 //
-// The portfolio read endpoints are deliberately anonymous: they feed a public CV site.
-// Only /auth/me requires a token. Adding .RequireAuthorization() to this group is a
-// breaking change for the frontend, not a hardening tweak — see docs/api-reference.md.
+// Portfolio, Notion, and current GitHub reads are anonymous and return public data.
+// Optional authenticated access to private GitHub metadata is not implemented yet.
 var api = app.MapGroup("api/v1");
 
 //endpoints

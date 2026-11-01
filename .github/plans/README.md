@@ -1,10 +1,11 @@
 # Plans
 
-Numbered refactor and debt plans. Each plan is a working checklist, not prose.
+Numbered plans for work that has not been implemented. Completed implementation
+details belong in `.github/docs/`; lasting design decisions belong in ADRs.
 
-| # | Plan | Status | Scope |
-|---|---|---|---|
-| 001 | [Clean Architecture & DDD Refactor](001-clean-architecture-refactor.md) | Parts 1–3 done; Part 4 mostly done (4.4 deferred) | Whole solution |
+Active plans:
+
+- [002 — Optional authenticated GitHub visibility](002-github-visibility-auth.md)
 
 ## Conventions
 
@@ -15,8 +16,9 @@ Numbered refactor and debt plans. Each plan is a working checklist, not prose.
   optional — a plan item nobody can justify is a preference, not a task.
 - Checkboxes are the source of truth for progress. Tick them in the same PR that
   implements them, and add the PR number next to the item.
-- When a plan is finished, move it to `Status: Done` and leave it in place. Do
-  not delete history.
+- When a plan is finished, move its resulting system description into the
+  relevant docs, record lasting decisions in ADRs, and remove the completed
+  plan. Do not use plans as implementation history.
 - If a plan is superseded, mark `Status: Superseded by NNN` instead of editing
   the old items.
 

@@ -27,11 +27,10 @@ Rules:
 
 - One static class per area, `MapXxxEndpoints(this IEndpointRouteBuilder)`.
 - Register a single `app.MapGroup("/api/v1")` in `Program.cs` and map groups
-  under it. Do **not** hand-spell `"/api/v1/..."` in each endpoint (plan 2.5).
+  under it. Do **not** hand-spell `"/api/v1/..."` in each endpoint.
 - Bind services by parameter injection, not `[FromServices]` attributes.
 - Every endpoint takes `CancellationToken`.
-- Always translate the `Result` — never return `result.Value` unconditionally
-  (`PortfolioSkillEndpoints` currently does; plan 2.5).
+- Always translate the `Result` — never return `result.Value` unconditionally.
 
 ## 2. Routes
 
@@ -54,12 +53,13 @@ Rules:
 | Unauthorised | `403` | empty |
 | Not found | `404` | `ProblemDetails` |
 | Conflict | `409` | `ProblemDetails` |
-| Unhandled / database failure | `500` | `ProblemDetails` |
-| Dependency unavailable (Notion down) | `503` | `ProblemDetails` |
+| Unhandled application failure | `500` | `ProblemDetails` |
+| Database unavailable | `503` | `ProblemDetails` |
+| Upstream dependency failure (Notion or GitHub) | `502` | `ProblemDetails` |
 
-**Never `502`.** `502 Bad Gateway` describes a reverse proxy receiving an
-invalid response from an upstream. This API *is* the upstream. The current code
-returns 502 for everything (plan 2.2).
+Use `503` for this API's database being unavailable and `502` for an upstream
+dependency such as Notion or GitHub. Unexpected application failures return
+`500`. Keep the mapping centralized in `Endpoints/ApiResult.cs`.
 
 ## 4. DTOs
 
@@ -87,7 +87,7 @@ approach and apply it everywhere:
 2. FluentValidation + a filter, or
 3. Explicit checks returning `Results.ValidationProblem(...)`.
 
-`AuthDto` is validated by an explicit guard in `AuthEndpoints` (2.5): a missing or blank
+`AuthDto` is validated by an explicit guard in `AuthEndpoints`: a missing or blank
 `Key` returns `400 + validation_failed`. If another input DTO appears, follow the same
 shape — `Error.Validation(...)` → `400 + validation_failed` — rather than introducing a
 second error contract.
@@ -99,7 +99,8 @@ second error contract.
 - Every endpoint carries `.WithName(...)`, `.WithTags(...)`, `.Produces<T>(...)`,
   and `.ProducesProblem(...)`.
 - Document auth requirements with `.RequireAuthorization()` **only if it is
-  actually enforced** — today only `/auth/me` carries it.
+  actually enforced** — currently `/auth/me` is protected; portfolio, Notion,
+  and GitHub read endpoints are intentionally anonymous.
 - The Swagger UI is served at `/swagger`; the document is `v1/swagger.json`.
 
 ## 8. Authentication
@@ -107,11 +108,14 @@ second error contract.
 - `/api/v1/auth/login` exchanges a shared key for a JWT. This is a *service*
   token, not user authentication: one shared key, no user store, and a token
   carrying `sub=portfolio-api` and one role claim.
-- The portfolio read endpoints are **anonymous by design** — they feed a public CV
-  site. Only `/auth/me` requires a token. Adding `RequireAuthorization()` to the
-  others is a breaking change for the frontend, not a hardening tweak (2.5).
+- The portfolio, Notion, and current GitHub read endpoints are **anonymous by
+  design** — they feed public content. Only `/auth/me` requires a token. Adding
+  `RequireAuthorization()` to portfolio or Notion routes is a breaking change
+  for the frontend, not a hardening tweak. GitHub endpoints must return public
+  repository data only; optional JWT-based private access is tracked in plan 002.
 - Do not rename the endpoint or change the claims shape without an ADR; the
-  service-token decision is recorded in 2.5 and `docs/api-reference.md` §2.
+  service-token decision is recorded in
+  [`api-reference.md`](../docs/api-reference.md) §2.
 - Never accept a secret in a query string.
 
 ## 9. CORS

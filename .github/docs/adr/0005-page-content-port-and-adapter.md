@@ -2,7 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-10-23
-- **Related:** plan 001 items 3.2 and 4.1, [KI-045](../known-issues.md), [ADR-0001](0001-five-project-clean-architecture.md), [ADR-0004](0004-dto-boundary-at-api-edge.md)
+- **Related:** [KI-045](../known-issues.md), [ADR-0001](0001-five-project-clean-architecture.md), [ADR-0004](0004-dto-boundary-at-api-edge.md)
 
 ## Context
 

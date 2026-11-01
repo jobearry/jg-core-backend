@@ -27,7 +27,7 @@ table in sync when a package changes.
 
 | Package | Version | Purpose |
 |---|---|---|
-| `Microsoft.Extensions.Logging.Abstractions` | 10.0.10 | `ILogger<T>` — the logging **contract** only. No provider, no EF, no ASP.NET, so the composition root still decides where output goes. Added in plan 2.4: without it the Application layer cannot report a failure at all, which is why a 503 used to reach the client with nothing on the server to explain it |
+| `Microsoft.Extensions.Logging.Abstractions` | 10.0.10 | `ILogger<T>` — the logging **contract** only. No provider, no EF, no ASP.NET, so the composition root still decides where output goes |
 
 The only other reference is `Domain`.
 
@@ -78,21 +78,20 @@ approval (AGENTS.md §10).
 
 | Concern | Candidate | Why |
 |---|---|---|
-| Testing | `Testcontainers.PostgreSql` | xUnit and `Microsoft.AspNetCore.Mvc.Testing` are in place (four projects, 188 tests, repository ports faked). What is still missing is a **database-backed** test: nothing exercises the EF model or a migration against real PostgreSQL |
+| Testing | `Testcontainers.PostgreSql` | Four xUnit projects cover domain, application, persistence mapping, and API behavior, with repository ports faked. What is still missing is a **database-backed** test: nothing exercises the EF model or a migration against real PostgreSQL |
 | Assertions | `Shouldly` or `FluentAssertions` | optional; xUnit asserts are enough to start |
 | Validation | `FluentValidation.AspNetCore` or a hand-written endpoint filter | minimal APIs do not validate automatically |
-| Resilience | `Microsoft.Extensions.Http.Resilience` (Polly v8) | the Notion client now has a 15s timeout and one manual retry on 429/5xx (4.6); Polly would add circuit breaking |
+| Resilience | `Microsoft.Extensions.Http.Resilience` (Polly v8) | the Notion client now has a 15s timeout and one manual retry on 429/5xx; Polly would add circuit breaking |
 | Health checks | `Microsoft.Extensions.Diagnostics.HealthChecks` + Npgsql check | nothing to probe today |
-| Structured logging | Serilog / OpenTelemetry | `ILogger` reaches the application services (2.4), but there is no structured sink and no correlation id beyond `traceId` |
-| Analyzers (third-party) | `Microsoft.CodeAnalysis.NetAnalyzers` | SDK analyzers run by default, and a root `Directory.Build.props` now turns warnings into errors (4.5, 2026-10-23); the extra package is not needed yet |
+| Structured logging | Serilog / OpenTelemetry | `ILogger` reaches the application services, but there is no structured sink and no correlation id beyond `traceId` |
+| Analyzers (third-party) | `Microsoft.CodeAnalysis.NetAnalyzers` | SDK analyzers run by default, and a root `Directory.Build.props` turns warnings into errors (2026-10-23); the extra package is not needed yet |
 | API versioning | `Asp.Versioning.Http` | path version is hardcoded |
 | Migrations at deploy | EF bundle or a job step | `Migrate()` at startup is a race |
 
 ## 6. Why these choices
 
 - **Minimal APIs over controllers** — the surface is small and read-only; the
-  project already uses endpoint extension classes. `AddControllers()` is a
-  leftover and can be removed.
+  project uses endpoint extension classes and has no controller registrations.
 - **AutoMapper** — chosen to keep persistence entities out of the domain. It is
   a legitimate use, but the profile is currently the riskiest file in the
   solution. An alternative is explicit mapping methods, which would be more
