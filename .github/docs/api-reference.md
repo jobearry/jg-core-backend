@@ -15,20 +15,27 @@ OpenAPI: `/swagger` (Development only, or `Swagger:Enabled=true`) · Document: `
 | `GET` | `/api/v1/skill` | none* | — | `TechStackDto[]` |
 | `GET` | `/api/v1/overview` | none* | — | `DashboardItemDto[]` |
 | `GET` | `/api/v1/notion/{pageId}` | none* | path `pageId` | `NotionPageDto[]` |
-| `GET` | `/api/v1/notion/{pageId}/count` | none* | path `pageId` | `number` |
+| `GET` | `/api/v1/notion/{pageId}/count` | none* | path `pageId` | `OverviewItemDto` |
+| `GET` | `/api/v1/github/owner/{owner}/repositories` | none | path `owner` | `GithubRepositoryDto[]` |
+| `GET` | `/api/v1/github/owner/{owner}/repositories/count` | none | path `owner` | `OverviewItemDto` |
+| `GET` | `/api/v1/github/repository/{owner}/{repository}/languages` | none | path `owner`, `repository` | `GithubRepositoryLanguagesDto` |
+| `GET` | `/api/v1/github/owner/{owner}/repositories/{repositoryId}` | none | path `owner`, `repositoryId` (long) | `GithubRepositoryDto` |
 
-\* Anonymous **by design**: they feed the public CV site. `RequireAuthorization()` is
-applied only to `/auth/me`; there is no commented-out code left to uncomment (2.5).
+Portfolio, Notion, and current GitHub read endpoints are anonymous by design.
+The GitHub endpoints return public repository data only; possible authenticated
+access to private repository data is tracked in
+[plan 002](../plans/002-github-visibility-auth.md).
 
 Route nouns are **singular** (`/experience`, not `/experiences`). Keep that
 convention for consistency; a rename is a breaking change.
 
 ## 2. Authentication
 
-**The portfolio read endpoints are public by design.** They feed a public CV site, so
-no `RequireAuthorization()` is applied anywhere except `/auth/me`. This is deliberate,
-not an oversight — do not "harden" it by adding `RequireAuthorization()` without
-coordinating a frontend change.
+**Portfolio, Notion, and current GitHub read endpoints are public by design.**
+The GitHub endpoints are limited to public repository data even though the
+server-configured GitHub token may have broader upstream access. Optional
+authenticated access to private repository data is not implemented; see
+[plan 002](../plans/002-github-visibility-auth.md).
 
 What exists is a **service-token flow**, not a user login: one shared key, no user store,
 and a token that says so.
@@ -78,7 +85,7 @@ Requires a token. Returns claims from the presented token, grouped by claim type
 ## 3. Portfolio endpoints
 
 Responses are **DTOs** (`src/JDB_Portfolio_API.Application/DTO`), not domain
-entities (plan 2.1, ADR-0004). The domain model can now change without changing
+entities (ADR-0004). The domain model can now change without changing
 the wire contract.
 
 ### `GET /api/v1/experience?includeProjects=false`
@@ -120,7 +127,7 @@ Notes:
 - `company` is **never `null`**. A role always names a company; if you cannot
   disclose the client, use a truthful stand-in such as `"Self-employed"` or
   `"Contract — NDA"`. The column is `NOT NULL` with a non-blank `CHECK`
-  (plan 3.1a, migration `20261022150752_RequireCompanyName`), so the guarantee is
+  (migration `20261022150752_RequireCompanyName`), so the guarantee is
   enforced by the database rather than by the mapper.
 - `role` is **nullable**. `"role": null` means the role is deliberately not
   declared — it is not an error, and it does not affect the rest of the list.
@@ -151,7 +158,7 @@ Two keys are deliberately absent:
 
 - **`experienceId`** (removed 2026-10-22): a project is its own aggregate
   (ADR-0003, decision D3), and the link back to the role is internal.
-- **`period`** (removed 2026-10-22, plan 1.4): it had no column and no mapping,
+- **`period`** (removed 2026-10-22): it had no column and no mapping,
   so it was always `null`. A project has no dates of its own — those belong to
   the role it sits under.
 
@@ -187,11 +194,12 @@ Returns tech stacks ordered by id ascending, including category name.
 ]
 ```
 
-`createdAt` is **gone** (plan 2.1) — a persistence audit column no client asked
+`createdAt` is **gone** — a persistence audit column no client asked
 for.
 
-**This endpoint does not check `IsSuccess`** — on failure it returns `200` with
-an empty body. Plan item 2.5.
+On failure, this endpoint uses the same typed error mapping as the other
+portfolio endpoints; a database failure returns `503` with
+`database_unavailable`.
 
 ### `GET /api/v1/overview`
 
@@ -210,7 +218,7 @@ The three counts are still fetched sequentially — one scoped `DbContext` canno
 queries concurrently — and each one materialises rows rather than issuing `COUNT(*)`
 (KI-046). Unknown keys must be ignored by the client.
 
-### Breaking change — 2026-10-22 (plan 2.1)
+### Breaking change — 2026-10-22
 
 Every change a client has to absorb, in one place:
 
@@ -235,7 +243,7 @@ or `null` is still optional. The disruptive part is the `duration` object being
 flattened.
 
 One field did gain a guarantee later the same day: **`company` can no longer be
-`null`** (plan 3.1a, migration `20261022150752_RequireCompanyName`). No response
+`null`** (migration `20261022150752_RequireCompanyName`). No response
 changed shape — every stored row already had a company — but a client that
 branches on `company === null` can drop that branch. `role` is still nullable.
 
@@ -244,9 +252,9 @@ branches on `company === null` can drop that branch. `role` is still nullable.
 
 ### `GET /api/v1/notion/{pageId}`
 
-Fetches `https://api.notion.com/v1/pages/{pageId}/markdown`, then parses the
-markdown as XML wrapped in `<root>…</root>`, extracting `<page url="…">` nodes
-with an optional `<mention-date start="…"/>`.
+Fetches `https://api.notion.com/v1/pages/{pageId}/markdown`, then tolerantly
+extracts `<page url="…">` fragments and optional `<mention-date start="…"/>`
+values from the returned markdown. Malformed fragments are skipped.
 
 ```json
 [
@@ -256,17 +264,70 @@ with an optional `<mention-date start="…"/>`.
 
 ### `GET /api/v1/notion/{pageId}/count`
 
-Same call, returns just the array length as a bare number.
+Same call, returns the array length using the overview's counter shape:
+
+```json
+{ "key": "notionPages", "count": 1 }
+```
 
 Both endpoints fail with `502` if Notion errors or the parse throws — with
-`code` set to `notion_unavailable` or `notion_invalid_response` (see §5).
+`code` set to `notion_unavailable` or `notion_invalid_response` (see §6).
 
-## 5. Error behaviour
+## 5. GitHub endpoints
 
-Every failure is a `ProblemDetails` produced in exactly one place —
-`Endpoints/ApiResult.cs`. Endpoints no longer pick a status code; they call
-`result.ToHttpResult()`. The response carries a **machine-readable `code`**
-alongside the human-readable `detail`:
+These read endpoints are anonymous and call GitHub using the server-configured
+`Github:Token`. They return public repositories only: listing uses GitHub's
+public-user repository endpoint, and the repository detail and language routes
+check repository visibility before returning data. The GitHub token stays
+server-side and is never sent to the browser. The API JWT is not required.
+
+### `GET /api/v1/github/owner/{owner}/repositories`
+
+Lists public repositories for `{owner}` using GitHub's `/users/{owner}/repos`
+endpoint. Results are filtered case-insensitively by owner and private entries
+are excluded. The client follows GitHub's page size of 100. Repository entries
+are portfolio-owned DTOs, not GitHub's nested vendor response.
+
+### `GET /api/v1/github/owner/{owner}/repositories/count`
+
+Returns the number of public repositories owned by `{owner}`, using the same
+public, case-insensitive owner filter as the repository listing. The response uses
+the overview's counter shape:
+
+```json
+{ "key": "githubRepositories", "count": 2 }
+```
+
+### `GET /api/v1/github/repository/{owner}/{repository}/languages`
+
+Returns language byte counts only for a public repository. Private or unknown
+repositories return `404`. The response's `languages` object has language names
+as keys and GitHub byte counts as values:
+
+```json
+{
+  "languages": { "C#": 1234, "JavaScript": 567 }
+}
+```
+
+### `GET /api/v1/github/owner/{owner}/repositories/{repositoryId}`
+
+Returns the same repository DTO using the numeric repository ID, only when it
+belongs to the specified owner. A repository that does not exist or belongs to
+another owner returns `404`.
+
+An unknown, private, or wrong-owner repository returns `404` with code
+`github_repository_not_found`. GitHub endpoints do not require an API JWT.
+Other GitHub request failures return `502` with `code` `github_unavailable`;
+unreadable responses return `502` with `code` `github_invalid_response`.
+
+## 6. Error behaviour
+
+Application failures are translated to `ProblemDetails` by
+`Endpoints/ApiResult.cs`. Unhandled exceptions use `GlobalExceptionHandler`.
+Endpoints do not pick status codes; they call `result.ToHttpResult()`. The
+response carries a **machine-readable `code`** alongside the human-readable
+`detail`:
 
 ```json
 {
@@ -286,12 +347,12 @@ same status apart.
 
 | `ErrorKind` | Status | `code` | When |
 |---|---|---|---|
-| `NotFound` | `404` | `not_found` | a record that was asked for does not exist |
+| `NotFound` | `404` | `not_found`, `github_repository_not_found` | a record or GitHub repository that was asked for does not exist |
 | `Validation` | `400` | `validation_failed` | the caller sent something invalid |
 | `Unauthorized` | `401` | `invalid_credentials`, `unauthorized` | a missing or wrong credential |
 | `Conflict` | `409` | `conflict` | the request conflicts with current state |
 | `Infrastructure` | `503` | `database_unavailable` | our own PostgreSQL is unreachable |
-| `Upstream` | `502` | `notion_unavailable`, `notion_invalid_response` | Notion failed, or returned something unreadable |
+| `Upstream` | `502` | `notion_unavailable`, `notion_invalid_response`, `github_unavailable`, `github_invalid_response` | Notion or GitHub failed, or returned something unreadable |
 | `Unexpected` | `500` | `unexpected_error` | a bug |
 
 Why the two dependency kinds are different statuses: a database outage is
@@ -325,7 +386,7 @@ Debug, not Error. A client navigating away is not a server failure.
 
 The exception detail is written to the application log, where it belongs.
 
-## 6. CORS
+## 7. CORS
 
 An explicit allow-list, configured rather than hardcoded:
 

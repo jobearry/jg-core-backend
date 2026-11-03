@@ -27,7 +27,7 @@ Normative. C# / .NET 10, nullable reference types enabled in every project.
 | Endpoint file | `<Area>Endpoints` | `PortfolioProjectEndpoints` |
 
 Do not use `Base` in a type name unless it is genuinely `abstract` and provides
-shared behaviour (see plan 2.3).
+shared behaviour.
 
 ## 3. Nullability
 

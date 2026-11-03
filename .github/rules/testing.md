@@ -2,12 +2,12 @@
 
 ## 1. Why test-first here, specifically
 
-The repository currently has **zero tests**. That matters more than usual for two
+The solution has four xUnit test projects. They matter especially here for two
 reasons:
 
-1. **Every refactor in plan 001 is unverifiable without them.** Converting
-   `Role` from a class to a record, adding invariants to `Project`, changing the
-   mapping profile — none of these can be proven safe by reading the diff.
+1. **Domain and mapping behavior is easy to regress.** Value-object equality,
+   entity invariants, mapping profiles, and endpoint contracts need executable
+   proof, not just a plausible-looking diff.
 2. **AI-generated code is plausible-looking.** The failure mode is not a syntax
    error; it is code that compiles, reads well, and is subtly wrong (the
    `FinishedAt` mapping is exactly that). A test is the only cheap oracle.
@@ -32,13 +32,13 @@ is *not* required for trivial pass-through code — writing a test that asserts
 tests/
   JDB_Portfolio_API.Domain.Tests/          # no dependencies beyond Domain + xUnit
   JDB_Portfolio_API.Application.Tests/     # fakes for repositories
+  JDB_Portfolio_API.Persistence.Tests/     # AutoMapper profile
   JDB_Portfolio_API.Api.Tests/             # WebApplicationFactory, one per endpoint
 ```
 
-Adding xUnit requires approval (see AGENTS.md §10). Suggested baseline:
-`xunit`, `xunit.runner.visualstudio`, `Microsoft.NET.Test.Sdk`,
-`Microsoft.AspNetCore.Mvc.Testing` (API project only). Do **not** add a mocking
-library until a hand-written fake becomes painful.
+Use the existing test project and package conventions. Ask before adding a
+NuGet package (see AGENTS.md §10). Do **not** add a mocking library until a
+hand-written fake becomes painful.
 
 ## 3. The loop
 
@@ -48,7 +48,7 @@ library until a hand-written fake becomes painful.
 3. **Refactor** — improve names and structure with the test green.
 4. Commit. Repeat.
 
-Example for plan 3.3 (`Project` invariants):
+Example for a `Project` invariant:
 
 ```csharp
 [Fact]
@@ -94,8 +94,8 @@ dependencies.
 
 ## 7. Mapping tests are mandatory
 
-The mapping profile is the highest-risk file in the solution (see plan 1.2, 1.3,
-1.5). Every direction that is used must have a test:
+The mapping profile is a high-risk boundary. Every direction that is used must
+have a test:
 
 ```csharp
 [Fact]

@@ -205,25 +205,21 @@ Full guide: `src/JDB_Portfolio_API.Persistence/Migrations/MIGRATION_GUIDE.md`.
 ## 6. Design-time context
 
 `PortfolioContextFactory` builds a context for `dotnet ef`. It reads
-`appsettings.Development.json` (optional), then user secrets **if** the
-`JDB_USER_SECRETS_ID` environment variable names the id, then the
-`ConnectionStrings__JDBConnection` environment variable, falling back to the
-connection string in `appsettings.Development.json`.
+`appsettings.Development.json` (optional), the API project's User Secrets store,
+then the `ConnectionStrings__JDBConnection` environment variable. The environment
+variable takes precedence over both configuration files.
 
 ```bash
-export JDB_USER_SECRETS_ID=<your user-secrets id>   # optional
 export ConnectionStrings__JDBConnection="Host=…;Database=…;Username=…;Password=…"
 ```
 
-No GUID is hardcoded, so the factory works on any machine.
+The factory uses the same User Secrets ID declared in
+`src/JDB_Portfolio_API/JDB_Portfolio_API.csproj`; the ID is an identifier, not a
+secret. Keep the matching value in `PortfolioContextFactory` synchronized if the
+project's User Secrets ID changes.
 
-Prefer:
-
-```bash
-dotnet ef ... --startup-project src/JDB_Portfolio_API
-```
-
-or read `ConnectionStrings__JDBConnection` from the environment (plan 1.8).
+Run EF commands with `--startup-project src/JDB_Portfolio_API` as shown in the
+migration commands above. No extra user-secrets environment variable is needed.
 
 ## 7. Runtime migration
 
@@ -239,10 +235,10 @@ production without a migration.
 
 ## 8. Known schema gaps
 
-| Gap | Impact | Plan |
+| Gap | Impact | Follow-up |
 |---|---|---|
-| `experience.finished_at` exists but is **not backfilled** | past roles still report a growing duration until the end dates are filled in | 1.3 / D1 — data task |
-| `timestamp without time zone` everywhere | timezone bugs when the host TZ changes | 4.x |
+| `experience.finished_at` exists but is **not backfilled** | past roles still report a growing duration until the end dates are filled in | Backfill the existing role end dates |
+| `timestamp without time zone` everywhere | timezone bugs when the host TZ changes | Consider a separately reviewed schema migration |
 | No index on `project.experience_id` | sequential scan as data grows | — |
 | No unique constraint on `tech_stack.stack_name` | duplicates possible | — |
 | `project.updated_at` is never maintained | column is dead weight | — |

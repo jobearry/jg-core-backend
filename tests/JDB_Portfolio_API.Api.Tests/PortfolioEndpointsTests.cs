@@ -293,6 +293,15 @@ public class PortfolioEndpointsTests : IClassFixture<PortfolioApiFactory>
     }
 
     [Fact]
+    public async Task GetNotionPageCount_ReturnsOverviewItemShape()
+    {
+        var json = await GetJsonAsync("/api/v1/notion/some-page-id/count");
+
+        Assert.Equal("notionPages", json.GetProperty("key").GetString());
+        Assert.Equal(1, json.GetProperty("count").GetInt32());
+    }
+
+    [Fact]
     public async Task GetNotionPageCount_WhenNotionIsUnreachable_Returns502NotOkWithZero()
     {
         _factory.Notion.Failure = new HttpRequestException("no route to host");

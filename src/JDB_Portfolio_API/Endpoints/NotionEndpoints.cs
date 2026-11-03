@@ -28,11 +28,11 @@ public static class NotionEndpoints
             {
                 return result.ToHttpResult();
             }
-            return Results.Ok(result.Value!.Count);
+            return Results.Ok(new OverviewItemDto("notionPages", result.Value!.Count));
         })
         .WithName("GetNotionPageCount")
         .WithTags("ExternalServices - Notion")
-        .Produces<int>(StatusCodes.Status200OK)
+        .Produces<OverviewItemDto>(StatusCodes.Status200OK)
         .ProducesProblem(StatusCodes.Status502BadGateway);
     }
 }

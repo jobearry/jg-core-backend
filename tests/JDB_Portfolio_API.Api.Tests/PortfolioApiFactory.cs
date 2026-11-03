@@ -34,6 +34,8 @@ public sealed class PortfolioApiFactory : WebApplicationFactory<Program>
 
     public FakePageContentReader Notion { get; } = new();
 
+    public FakeGithubRepositoryReader Github { get; } = new();
+
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment(Environments.Production);
@@ -67,12 +69,14 @@ public sealed class PortfolioApiFactory : WebApplicationFactory<Program>
             services.RemoveAll<IPortfolioTechStackRepository>();
             services.RemoveAll<IPortfolioRecommendationRepository>();
             services.RemoveAll<IPageContentReader>();
+            services.RemoveAll<IGithubRepositoryReader>();
 
             services.AddSingleton<IPortfolioExperienceRepository>(Experience);
             services.AddSingleton<IPortfolioProjectRepository>(Projects);
             services.AddSingleton<IPortfolioTechStackRepository>(TechStacks);
             services.AddSingleton<IPortfolioRecommendationRepository>(Recommendations);
             services.AddSingleton<IPageContentReader>(Notion);
+            services.AddSingleton<IGithubRepositoryReader>(Github);
         });
     }
 }

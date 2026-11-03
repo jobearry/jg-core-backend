@@ -63,11 +63,13 @@ src/
 │
 └── JDB_Portfolio_API/                   ← presentation / composition root
     ├── Program.cs                       builder, middleware, endpoint mapping
-    ├── ConfigurationSettings.cs         DI extensions (all in one class; 4.1 splits it)
+    ├── ConfigurationSettings.cs         DI extensions: AddPresentation,
+    │                                    AddApplication, AddPersistence,
+    │                                    AddExternalServices
     ├── Adapters/                        NotionPageContentReader — bridges the Application
     │                                    port to the Notion client (ADR-0005)
     ├── Authentication/                  JwtTokenService, Swagger security filter
-    ├── ErrorHandling/                   GlobalExceptionHandler (2.4)
+    ├── ErrorHandling/                   GlobalExceptionHandler
     └── Endpoints/                       one static class per area + ApiResult
 ```
 
@@ -135,8 +137,9 @@ Two things to notice:
 ### Write (not built)
 
 There is no write path. `IRepository<T>` exposes only `GetAllAsync`, and `AddNewAsync`
-is gone. The target seam is `IUnitOfWork` (plan 4.4); `Project` is the aggregate root
-and `IPortfolioProjectRepository` its future write entry point (ADR-0003).
+is gone. Revisit whether an `IUnitOfWork` is needed when a write path is designed;
+`Project` is the aggregate root and `IPortfolioProjectRepository` its future write
+entry point (ADR-0003).
 
 ## 5. Composition root
 
@@ -161,24 +164,25 @@ app
                            .MapPortfolio*Endpoints() / .MapOverview()
 ```
 
-Issues:
+Current behavior:
 
-- `Database.Migrate()` runs at startup inside a scope, before the pipeline.
+- `Database.Migrate()` runs at startup inside a scope when
+  `Database:AutoMigrate` is enabled (default `true`).
 - Swagger is Development-only, or on when `Swagger:Enabled` is true.
-- There are no controllers and no `AddControllers()` / `MapControllers()` calls (4.1).
+- There are no controllers and no `AddControllers()` / `MapControllers()` calls.
 
 ## 6. Cross-cutting concerns
 
 | Concern | Today | Gap |
 |---|---|---|
-| Error handling | `try/catch` per service → `Result<T>` with a typed `Error` → one mapper in `ApiResult.cs` → `503`/`502`/`500`; `GlobalExceptionHandler` for anything outside a service (2.2, 2.4) | — |
+| Error handling | `try/catch` per service → `Result<T>` with a typed `Error` → one mapper in `ApiResult.cs` → `503`/`502`/`500`; `GlobalExceptionHandler` for anything outside a service | — |
 | Logging | `ILogger` in the Application services — warning for a dependency failure, error for a bug — plus the default ASP.NET request log | no structured sink, no correlation id; the provider's exception detail lives only in the log |
-| Validation | explicit `AuthDto` guard in `AuthEndpoints` → `400 + validation_failed` (2.5) | no other endpoint takes input |
+| Validation | explicit `AuthDto` guard in `AuthEndpoints` → `400 + validation_failed` | no other endpoint takes input |
 | Cancellation | `CancellationToken` is a required parameter from endpoint → service → repository → `ToListAsync(ct)` / `HttpClient.GetAsync(ct)` | — |
 | Mapping | AutoMapper for entity ↔ domain; hand-written `PortfolioDtoMapper` for domain → DTO (ADR-0004) | reverse maps are explicit but unused until a write path exists |
-| Auth | JWT **service token** (`sub=portfolio-api`); only `/auth/me` requires it, the portfolio endpoints are anonymous on purpose (2.5) | no user authentication; no secure-by-default fallback policy until a write endpoint exists |
+| Auth | JWT **service token** (`sub=portfolio-api`); only `/auth/me` requires it; portfolio, Notion, and GitHub reads are anonymous on purpose | no user authentication; optional private GitHub access is tracked in plan 002 |
 | Observability | none | no health check, no metrics, no tracing |
-| Resilience | Notion client: 15s timeout, one retry on 429/5xx | no circuit breaker; network failures are not retried (4.6) |
+| Resilience | Notion client: 15s timeout, one retry on 429/5xx | no circuit breaker; network failures are not retried |
 
 ## 7. Deployment topology
 
@@ -191,13 +195,14 @@ Issues:
 
 ## 8. Where this is going
 
-Plan [`001`](../plans/001-clean-architecture-refactor.md) Parts 1–3 are complete
-(2026-10-23): dependency direction is clean, the domain has invariants and value
-equality, DTOs sit at the edge, errors are typed, and 188 tests cover the invariants,
-mappings and endpoint contracts. Part 4 is under way: the composition root is split per
-layer (4.1, 4.2) and `Directory.Build.props` turns warnings into errors (4.5). What
-remains is the `IEntityTypeConfiguration` split (4.3), the Notion client/parser cleanup
-(4.6, 4.7), the overview query (4.8), and `IUnitOfWork` (4.4) before any write endpoint
-is added.
+The clean-architecture and DDD refactor is complete: dependency direction is
+clean, the domain has invariants and value equality, DTOs sit at the edge, errors
+are typed, and the test suite covers invariants, mappings, and endpoint contracts. The
+composition root and EF configuration are split by responsibility; the Notion
+client/parser and overview contract reflect their implemented behavior. Current
+design details are in this document and [`domain-model.md`](domain-model.md);
+schema details are in [`database.md`](database.md), and published contracts are
+in [`api-reference.md`](api-reference.md). Revisit a unit-of-work abstraction only
+if a write endpoint is introduced.
 
 Open architectural decisions are tracked as ADRs in [`adr/`](adr/).

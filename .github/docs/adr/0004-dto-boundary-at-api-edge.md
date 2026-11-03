@@ -1,8 +1,8 @@
 # ADR-0004 — DTO boundary at the API edge
 
 - **Status:** Accepted
-- **Date:** 2026-10-21 (proposed) · 2026-10-22 (decided — plan 001 decision D4)
-- **Related:** plan 2.1, [`../api-reference.md`](../api-reference.md)
+- **Date:** 2026-10-21 (proposed) · 2026-10-22 (decided)
+- **Related:** [`../api-reference.md`](../api-reference.md)
 
 ## Context
 
@@ -53,13 +53,12 @@ Domain types stop at the application boundary. Persistence types never cross it.
 
 **Follow-up work**
 
-- Remove `Domain.Entities.DashboardItem` and `Domain.ValueObjects.NotionPage`
-  once DTOs exist (plan 3.2). **`DashboardItem` removed 2026-10-22** (now
-  `Application/Models`); **`NotionPage` removed 2026-10-23** — the vendor model
-  moved to `ExternalService`, the core reads `Application.Models.PageContent`
-  through `IPageContentReader`, and `Presentation/Adapters` bridges the two
-  (ADR-0005).
-- Add `.ProducesProblem(...)` and contract tests per endpoint.
+- `DashboardItem` moved to `Application/Models` on 2026-10-22.
+  `NotionPage` moved to `ExternalService` on 2026-10-23; the core reads
+  `Application.Models.PageContent` through `IPageContentReader`, and
+  `Presentation/Adapters` bridges the two (ADR-0005).
+- Endpoint response shapes and error contracts are documented in
+  [`../api-reference.md`](../api-reference.md) and covered by API tests.
 
 ## Alternatives considered
 

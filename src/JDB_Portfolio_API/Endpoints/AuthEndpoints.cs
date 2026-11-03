@@ -8,10 +8,10 @@ namespace JDB_Portfolio_API.Endpoints;
 /// The service-token endpoints.
 /// </summary>
 /// <remarks>
-/// The portfolio read endpoints are <b>intentionally anonymous</b> — they feed a public
-/// CV site — so nothing here protects them. This pair exists so an operator (or a future
-/// write endpoint) can obtain and inspect a token; it is not a user login, because there
-/// is no user store and only one shared key.
+/// Portfolio, Notion, and current GitHub read endpoints are intentionally anonymous.
+/// This service-token flow is available for the protected /auth/me endpoint and future
+/// authenticated features; it is not a user login because there is no user store and
+/// only one shared key.
 /// </remarks>
 public static class AuthEndpoints
 {

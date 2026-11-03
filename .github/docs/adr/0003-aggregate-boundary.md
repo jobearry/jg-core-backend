@@ -1,8 +1,8 @@
 # ADR-0003 — Aggregate boundary for Experience and Project
 
-- **Status:** Accepted · **implemented 2026-10-23** (plan 001 item 3.4)
-- **Date:** 2026-10-21 (proposed) · 2026-10-22 (decided — plan 001 decision D3) · 2026-10-23 (enforced in code)
-- **Related:** plan 001 items 3.4 and D3, [`../domain-model.md`](../domain-model.md), [`../database.md`](../database.md)
+- **Status:** Accepted · **implemented 2026-10-23**
+- **Date:** 2026-10-21 (proposed) · 2026-10-22 (decided) · 2026-10-23 (enforced in code)
+- **Related:** [`../domain-model.md`](../domain-model.md), [`../database.md`](../database.md)
 
 ## Context
 
@@ -95,11 +95,11 @@ transaction:
 
 - ~~Decide whether `Project.Period` is modelled or deleted~~ — **deleted
   2026-10-22**: it had no column and no mapping, so it was always `null`.
-- ~~Add `finished_at` to `experience`~~ — **added and applied** (plan 1.3/D1,
+- ~~Add `finished_at` to `experience`~~ — **added and applied**
   `20261022064321_AddExperienceFinishedAt`). The **data backfill is still
   outstanding**: past roles currently report an ongoing duration.
 - ~~Replace `Project.TechStacks` with ids or a `TechStackRef` value object~~ —
-  **done 2026-10-23** (plan 3.4).
+  **done 2026-10-23**.
 
 ## Alternatives considered
 
