@@ -9,6 +9,10 @@ public interface IGithubRepositoryService
         string owner,
         CancellationToken cancellationToken);
 
+    Task<Result<OverviewItemDto>> GetRepositoryCountAsync(
+        string owner,
+        CancellationToken cancellationToken);
+
     Task<Result<GithubRepositoryDto>> GetRepositoryByOwnerAndIdAsync(
         string owner,
         long repositoryId,

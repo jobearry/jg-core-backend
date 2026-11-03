@@ -24,6 +24,21 @@ public static class GithubEndpoints
             .ProducesProblem(StatusCodes.Status500InternalServerError);
 
         routes.MapGet(
+            "github/owner/{owner}/repositories/count",
+            async (
+                IGithubRepositoryService service,
+                string owner,
+                CancellationToken cancellationToken) =>
+                (await service.GetRepositoryCountAsync(owner, cancellationToken)).ToHttpResult())
+            .WithName("GetGithubRepositoryCount")
+            .WithTags("ExternalServices - GitHub")
+            .WithSummary("Get the number of public repositories for a GitHub owner")
+            .WithDescription("Returns the count of public repositories owned by the GitHub account.")
+            .Produces<OverviewItemDto>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status502BadGateway)
+            .ProducesProblem(StatusCodes.Status500InternalServerError);
+
+        routes.MapGet(
             "github/repository/{owner}/{repository}/languages",
             async (
                 IGithubRepositoryService service,

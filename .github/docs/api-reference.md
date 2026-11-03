@@ -15,8 +15,9 @@ OpenAPI: `/swagger` (Development only, or `Swagger:Enabled=true`) · Document: `
 | `GET` | `/api/v1/skill` | none* | — | `TechStackDto[]` |
 | `GET` | `/api/v1/overview` | none* | — | `DashboardItemDto[]` |
 | `GET` | `/api/v1/notion/{pageId}` | none* | path `pageId` | `NotionPageDto[]` |
-| `GET` | `/api/v1/notion/{pageId}/count` | none* | path `pageId` | `number` |
+| `GET` | `/api/v1/notion/{pageId}/count` | none* | path `pageId` | `OverviewItemDto` |
 | `GET` | `/api/v1/github/owner/{owner}/repositories` | none | path `owner` | `GithubRepositoryDto[]` |
+| `GET` | `/api/v1/github/owner/{owner}/repositories/count` | none | path `owner` | `OverviewItemDto` |
 | `GET` | `/api/v1/github/repository/{owner}/{repository}/languages` | none | path `owner`, `repository` | `GithubRepositoryLanguagesDto` |
 | `GET` | `/api/v1/github/owner/{owner}/repositories/{repositoryId}` | none | path `owner`, `repositoryId` (long) | `GithubRepositoryDto` |
 
@@ -263,7 +264,11 @@ values from the returned markdown. Malformed fragments are skipped.
 
 ### `GET /api/v1/notion/{pageId}/count`
 
-Same call, returns just the array length as a bare number.
+Same call, returns the array length using the overview's counter shape:
+
+```json
+{ "key": "notionPages", "count": 1 }
+```
 
 Both endpoints fail with `502` if Notion errors or the parse throws — with
 `code` set to `notion_unavailable` or `notion_invalid_response` (see §6).
@@ -282,6 +287,16 @@ Lists public repositories for `{owner}` using GitHub's `/users/{owner}/repos`
 endpoint. Results are filtered case-insensitively by owner and private entries
 are excluded. The client follows GitHub's page size of 100. Repository entries
 are portfolio-owned DTOs, not GitHub's nested vendor response.
+
+### `GET /api/v1/github/owner/{owner}/repositories/count`
+
+Returns the number of public repositories owned by `{owner}`, using the same
+public, case-insensitive owner filter as the repository listing. The response uses
+the overview's counter shape:
+
+```json
+{ "key": "githubRepositories", "count": 2 }
+```
 
 ### `GET /api/v1/github/repository/{owner}/{repository}/languages`
 

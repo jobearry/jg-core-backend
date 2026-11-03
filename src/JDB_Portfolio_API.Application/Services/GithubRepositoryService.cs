@@ -31,6 +31,16 @@ public sealed class GithubRepositoryService : IGithubRepositoryService
             "fetch repositories for the GitHub owner",
             cancellationToken);
 
+    public Task<Result<OverviewItemDto>> GetRepositoryCountAsync(
+        string owner,
+        CancellationToken cancellationToken) =>
+        ExecuteAsync(
+            async ct => new OverviewItemDto(
+                "githubRepositories",
+                (await _reader.GetRepositoriesByOwnerAsync(owner, ct)).Count),
+            "count repositories for the GitHub owner",
+            cancellationToken);
+
     public Task<Result<GithubRepositoryDto>> GetRepositoryByOwnerAndIdAsync(
         string owner,
         long repositoryId,

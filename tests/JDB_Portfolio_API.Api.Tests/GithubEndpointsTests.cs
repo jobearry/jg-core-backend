@@ -26,6 +26,17 @@ public sealed class GithubEndpointsTests : IClassFixture<PortfolioApiFactory>
     }
 
     [Fact]
+    public async Task GetRepositoryCount_ReturnsPublicRepositoryCountWithoutApiToken()
+    {
+        var response = await _client.GetAsync("/api/v1/github/owner/octocat/repositories/count");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        Assert.Equal("githubRepositories", json.RootElement.GetProperty("key").GetString());
+        Assert.Equal(2, json.RootElement.GetProperty("count").GetInt32());
+    }
+
+    [Fact]
     public async Task GetRepositoryLanguages_ReturnsLanguageByteCountsWithoutApiToken()
     {
         var response = await _client.GetAsync(
