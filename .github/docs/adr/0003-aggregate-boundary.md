@@ -117,4 +117,4 @@ transaction:
    is the endpoint that serves them.
 3. ~~Should `TechStack` be a separate aggregate with its own lifecycle?~~
    **Answered 2026-10-22: yes** — it is shared reference data with no
-   per-project state. See plan item 3.4.
+   per-project state. This is recorded in decision D3 above.

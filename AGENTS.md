@@ -6,7 +6,13 @@ This file is the entry point only. Details live in [`.github/`](.github/) so thi
 document stays short and does not rot.
 
 **Read order for any task:** this file → `.github/rules/` for the area you touch →
-`.github/docs/` for context → `.github/plans/` only if an active plan applies.
+`.github/docs/` for context. Read or execute `.github/plan.md` only when the user
+explicitly asks.
+
+Do not create plans, checklists, roadmaps, or other planning artifacts unless the
+user explicitly requests one. There is one shared plan location, `.github/plan.md`,
+for every AI harness; do not create harness-specific copies or numbered plans.
+The presence of that file is not authorization to execute it.
 
 ---
 
@@ -103,7 +109,7 @@ AGENTS.md                        ← you are here
   rules/                         coding + architecture standards (read before editing)
   docs/                          current-state documentation
   docs/adr/                      architecture decision records
-  plans/                         numbered refactor plans / debt
+  plan.md                        the sole plan; use only when explicitly requested
   skills/                        task playbooks (add endpoint, migration, TDD, review)
   workflows/                     GitHub Actions
 src/
@@ -210,7 +216,7 @@ Each rule has a full explanation in `.github/rules/`.
 | What is broken or debt-laden right now? | [docs/known-issues.md](.github/docs/known-issues.md) |
 | What does "aggregate", "VO", "bounded context" mean here? | [docs/glossary.md](.github/docs/glossary.md) |
 | Why was a decision made? | [docs/adr/](.github/docs/adr/) |
-| What work is planned? | [`.github/plans/`](.github/plans/) (active plans only) |
+| What work is in the explicitly authorized plan? | [`.github/plan.md`](.github/plan.md) |
 
 ---
 
@@ -239,7 +245,8 @@ Each rule has a full explanation in `.github/rules/`.
   `sub` of `portfolio-api`. Only `/auth/me` requires a token; portfolio, Notion,
   and GitHub read endpoints are anonymous **on purpose**. GitHub routes return
   public repository data only. Optional authenticated private-repository access
-  remains unimplemented; see [plan 002](.github/plans/002-github-visibility-auth.md).
+  remains unimplemented; see [`.github/plan.md`](.github/plan.md) (execute only
+  when explicitly requested).
 
 Recently fixed: the `Persistence` → `Application` dependency violation, the
 dead code, the duplicated repository fields, the untracked read queries, the
@@ -305,6 +312,7 @@ Stop and ask the user before:
   problem.
 - Prefer the smallest diff that satisfies the task. No drive-by refactors.
 - If you find a defect outside the task scope, **record it** in
-  `docs/known-issues.md` (or the active plan) instead of fixing it silently.
+  `docs/known-issues.md` instead of fixing it silently. Do not add it to
+  `.github/plan.md` unless the user explicitly asks.
 - When you make a non-obvious decision, add an ADR in `docs/adr/`.
 - Cite file paths and line numbers when explaining a change.

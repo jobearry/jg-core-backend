@@ -88,8 +88,7 @@ erDiagram
   `experience.role` and `recommendation.career_position` are `NOT NULL`, but an
   empty value is *valid data*: it means the owner would rather not state the role
   or the career position. There is deliberately **no** `CHECK` constraint against
-  it — the plan originally proposed one and it was rejected, because it would make
-  a legitimate state impossible to express.
+  it: such a constraint would make a legitimate state impossible to express.
   The translation happens in `PortfolioMappingProfile`:
 
   - blank or whitespace in the database → `null` in the domain (`Role?`)

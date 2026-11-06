@@ -3,7 +3,7 @@
 - **Status:** Proposed
 - **Date:** YYYY-MM-DD
 - **Deciders:** names / roles
-- **Related:** plan item, issue, previous ADR
+- **Related:** `.github/plan.md` section (if applicable), issue, previous ADR
 
 ## Context
 

@@ -112,7 +112,8 @@ second error contract.
   design** — they feed public content. Only `/auth/me` requires a token. Adding
   `RequireAuthorization()` to portfolio or Notion routes is a breaking change
   for the frontend, not a hardening tweak. GitHub endpoints must return public
-  repository data only; optional JWT-based private access is tracked in plan 002.
+  repository data only; optional JWT-based private access is described in
+  [`.github/plan.md`](../plan.md) and requires explicit user authorization.
 - Do not rename the endpoint or change the claims shape without an ADR; the
   service-token decision is recorded in
   [`api-reference.md`](../docs/api-reference.md) §2.

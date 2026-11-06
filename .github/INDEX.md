@@ -2,12 +2,12 @@
 
 Everything an agent (or a new developer) needs beyond the root `AGENTS.md`.
 
-| Folder | Purpose | When to read |
+| Path | Purpose | When to read |
 |---|---|---|
 | [`rules/`](rules/) | Normative standards: what you **must** do when changing code | Before editing anything |
 | [`docs/`](docs/) | Descriptive: how the system works **today** | Before designing a change |
 | [`docs/adr/`](docs/adr/) | Architecture decision records: why a choice was made | Before revisiting a decision |
-| [`plans/`](plans/) | Active implementation plans with acceptance criteria | Before starting planned work |
+| [`plan.md`](plan.md) | The sole shared plan for all AI harnesses | Only when the user explicitly asks |
 | [`skills/`](skills/) | Step-by-step playbooks for recurring tasks | When performing that task |
 | [`workflows/`](workflows/) | GitHub Actions CI/CD definitions | When changing build or deploy |
 
@@ -41,11 +41,14 @@ Everything an agent (or a new developer) needs beyond the root `AGENTS.md`.
   either fix the code or change the rule — do not leave them contradicting.
 - **Docs are descriptive** ("is", "does"). Keep them current in the same commit
   as the code change.
-- **Plans cover unimplemented work only.** Keep current implementation details
-  in `docs/`, and decisions in `docs/adr/`. Remove a plan once its work is
-  complete and its resulting state is documented.
-- **Active plans are numbered** `NNN-kebab-title.md`, newest number wins, and
-  each has a status line. Update the plan's checkboxes as work lands.
+- Do not create plans, checklists, roadmaps, or other planning artifacts unless
+  the user explicitly asks. Do not infer permission to plan from a task request.
+- `.github/plan.md` is the only plan location and is shared by every AI harness.
+  Do not create numbered plans or harness-specific copies.
+- Read, modify, or execute `.github/plan.md` only when the user explicitly asks.
+  The existence of a plan is not authorization to execute it.
+- Keep current implementation details in `docs/` and lasting decisions in
+  `docs/adr/`.
 - **ADRs are immutable** once Accepted. Supersede rather than edit.
 - **Skills are playbooks** with YAML frontmatter (`name`, `description`) so they
   can be loaded by an agent runtime.

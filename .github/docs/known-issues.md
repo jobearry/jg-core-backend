@@ -85,4 +85,5 @@ Add a row with:
 1. an ID (`KI-NNN`, next free number);
 2. the observed behaviour, not the suspected cause;
 3. a reproducible evidence snippet (command, file:line, SQL);
-4. an active plan that will fix it, or `—` if no plan exists.
+4. an explicitly authorized `.github/plan.md` item that will fix it, or `—` if
+   no such item exists.

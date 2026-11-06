@@ -73,7 +73,8 @@ Current GitHub endpoints are anonymous but return public repository data only;
 the API checks visibility before returning repository details or languages.
 Grant the GitHub token only the repository metadata access required for the
 intended repositories. Optional API-JWT access to private repository data is
-not implemented; see [plan 002](../plans/002-github-visibility-auth.md).
+not implemented; see the [deferred proposal](../plan.md).
+Its presence is not authorization to implement it.
 
 Note: `docker/.env.example` sets `Jwt__ExpirationInMinutes`, matching the key
 the app reads.

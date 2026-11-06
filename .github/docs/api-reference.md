@@ -22,9 +22,9 @@ OpenAPI: `/swagger` (Development only, or `Swagger:Enabled=true`) · Document: `
 | `GET` | `/api/v1/github/owner/{owner}/repositories/{repositoryId}` | none | path `owner`, `repositoryId` (long) | `GithubRepositoryDto` |
 
 Portfolio, Notion, and current GitHub read endpoints are anonymous by design.
-The GitHub endpoints return public repository data only; possible authenticated
-access to private repository data is tracked in
-[plan 002](../plans/002-github-visibility-auth.md).
+The GitHub endpoints return public repository data only; optional authenticated
+access to private repository data is deferred in the [proposal](../plan.md) and
+requires explicit authorization before implementation.
 
 Route nouns are **singular** (`/experience`, not `/experiences`). Keep that
 convention for consistency; a rename is a breaking change.
@@ -34,8 +34,9 @@ convention for consistency; a rename is a breaking change.
 **Portfolio, Notion, and current GitHub read endpoints are public by design.**
 The GitHub endpoints are limited to public repository data even though the
 server-configured GitHub token may have broader upstream access. Optional
-authenticated access to private repository data is not implemented; see
-[plan 002](../plans/002-github-visibility-auth.md).
+authenticated access to private repository data is not implemented; see the
+[deferred proposal](../plan.md). Its presence is not
+authorization to implement it.
 
 What exists is a **service-token flow**, not a user login: one shared key, no user store,
 and a token that says so.
@@ -132,7 +133,7 @@ Notes:
 - `role` is **nullable**. `"role": null` means the role is deliberately not
   declared — it is not an error, and it does not affect the rest of the list.
   (Before 2026-10-22 a blank role threw inside the mapper and returned `500` for
-  every experience; see plan item 1.5.) The asymmetry with `company` is
+  every experience; the mapper now treats it as undisclosed.) The asymmetry with `company` is
   intentional: "not disclosed" is a real answer for a *role*, not for an employer.
 - `durationMonths` is whole **calendar** months, `int?`:
   - between `startedAt` and `finishedAt` when the role has ended,
@@ -217,6 +218,8 @@ label, icon, order and link, so adding a counter is additive and reordering them
 The three counts are still fetched sequentially — one scoped `DbContext` cannot run the
 queries concurrently — and each one materialises rows rather than issuing `COUNT(*)`
 (KI-046). Unknown keys must be ignored by the client.
+Notion page counts are exposed separately at `/api/v1/notion/{pageId}/count` and
+are not included in this response.
 
 ### Breaking change — 2026-10-22
 

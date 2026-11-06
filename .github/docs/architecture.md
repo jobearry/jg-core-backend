@@ -180,7 +180,7 @@ Current behavior:
 | Validation | explicit `AuthDto` guard in `AuthEndpoints` → `400 + validation_failed` | no other endpoint takes input |
 | Cancellation | `CancellationToken` is a required parameter from endpoint → service → repository → `ToListAsync(ct)` / `HttpClient.GetAsync(ct)` | — |
 | Mapping | AutoMapper for entity ↔ domain; hand-written `PortfolioDtoMapper` for domain → DTO (ADR-0004) | reverse maps are explicit but unused until a write path exists |
-| Auth | JWT **service token** (`sub=portfolio-api`); only `/auth/me` requires it; portfolio, Notion, and GitHub reads are anonymous on purpose | no user authentication; optional private GitHub access is tracked in plan 002 |
+| Auth | JWT **service token** (`sub=portfolio-api`); only `/auth/me` requires it; portfolio, Notion, and GitHub reads are anonymous on purpose | no user authentication; optional private GitHub access is deferred in [`.github/plan.md`](../plan.md) |
 | Observability | none | no health check, no metrics, no tracing |
 | Resilience | Notion client: 15s timeout, one retry on 429/5xx | no circuit breaker; network failures are not retried |
 

@@ -1,19 +1,22 @@
-# 002 — Optional authenticated GitHub visibility
+# Optional authenticated GitHub visibility
 
-**Status:** Planned — current GitHub endpoints remain anonymous and public-only.
+**Status:** Deferred proposal. Current GitHub endpoints remain anonymous and
+public-only. Do not implement or modify this plan unless the user explicitly
+asks.
 
 ## Scope
 
-Change only the three GitHub read endpoints. Portfolio and Notion access, the
-GitHub token's server-side storage, and the existing `/auth/login` and
-`/auth/me` contracts are out of scope.
+Change only the GitHub read surface: repository listing, count, detail, and
+language endpoints. Portfolio and Notion access, the GitHub token's server-side
+storage, and the existing `/auth/login` and `/auth/me` contracts are out of
+scope.
 
 ## Goal
 
 Allow anonymous requests to keep receiving public GitHub repository data, while
 valid API-JWT requests may receive private repository metadata available to the
 configured GitHub token. The current public-only behavior remains in effect
-until this plan is approved and implemented.
+unless this plan is explicitly authorized and implemented.
 
 ## Decisions needed
 
@@ -23,7 +26,7 @@ until this plan is approved and implemented.
 
 ## Work items
 
-### 1. [ ] Add optional API-JWT behavior
+### 1. Add optional API-JWT behavior
 
 - **What:** No `Authorization` header selects the public-only behavior; a valid
   API JWT selects the authorized behavior; an invalid or expired Bearer token
@@ -36,24 +39,26 @@ until this plan is approved and implemented.
   users, so every holder can access the same private repository metadata.
 - **Effort:** M
 
-### 2. [ ] Select repository visibility by caller
+### 2. Select repository visibility by caller
 
 - **What:** Anonymous list requests use GitHub's public-user repository
   endpoint. Authorized requests may list the configured token account's
   repositories, including private ones, filtered to the requested owner.
-  Repository detail and language requests follow the same public/authorized
-  visibility rule and continue to validate the requested owner.
+  Repository count, detail, and language requests follow the same
+  public/authorized visibility rule and continue to validate the requested
+  owner.
 - **Why:** Avoid exposing private metadata to anonymous callers while keeping
   the endpoint shapes consistent across all three routes.
 - **How to verify:** Client/service tests assert the correct GitHub path and
-  results for each caller mode, private repositories are absent anonymously,
-  and owner mismatch or inaccessible repositories return `404`.
+  results for each caller mode, including repository counts; private
+  repositories are absent anonymously, and owner mismatch or inaccessible
+  repositories return `404`.
 - **Risk:** The configured GitHub token may see more private repositories than
   intended. Keep it server-side, minimally scoped, and never treat the API JWT
   as proof of a user's GitHub identity.
 - **Effort:** M
 
-### 3. [ ] Update contracts and operational guidance
+### 3. Update contracts and operational guidance
 
 - **What:** Update endpoint OpenAPI metadata, API-reference and operations
   documentation, and security rules to describe optional authentication,
