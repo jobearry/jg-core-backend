@@ -18,6 +18,4 @@ services:
       - Jwt__Audience=${Jwt__Audience}
       - Jwt__Expires=${Jwt__Expires}
 
-      # need to learn more on this
       - DOTNET_ENVIRONMENT=${DOTNET_ENVIRONMENT}
-      - DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=${DOTNET_SYSTEM_GLOBALIZATION_INVARIANT}
