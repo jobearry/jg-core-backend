@@ -1,0 +1,21 @@
+# Comments are provided throughout this file to help you get started.
+# If you need more help, visit the Docker Compose reference guide at
+# https://docs.docker.com/go/compose/reference/
+
+# Here the instructions define your application as a service called "server".
+# This service is built from the Dockerfile in the repository root context.
+services:
+  server:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+      target: final
+    ports:
+      - 5031:8080
+    environment:
+      - Jwt__Key=${Jwt__Key}
+      - Jwt__Issuer=${Jwt__Issuer}
+      - Jwt__Audience=${Jwt__Audience}
+      - Jwt__Expires=${Jwt__Expires}
+
+      - DOTNET_ENVIRONMENT=${DOTNET_ENVIRONMENT}
