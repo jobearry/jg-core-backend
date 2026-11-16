@@ -22,7 +22,8 @@ slice architecture. Built with assistance of Github Copilot, and Ollama (Qwen2.5
 
 ## Current Features
 - `Auth` - JWT login (`POST /api/v1/auth/login`, rate limited) and current-user claims (`GET /api/v1/auth/me`).
-- `Health check` - `GET /healthz` (anonymous).
+- `Health` - anonymous diagnostic status (`GET /api/v1/health`: version, environment, uptime).
+- `Health check` - anonymous framework probe (`GET /healthz`).
 
 Portfolio data and the Notion integration were removed — that data is served by
 a separate backend now. EF Core / SQL Server are no longer used.

@@ -1,4 +1,5 @@
 using Generic.Features.Auth;
+using Generic.Features.Health;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
@@ -23,6 +24,7 @@ public static class DependencyInjection
     public static IEndpointRouteBuilder MapFeatures(this IEndpointRouteBuilder endpoints)
     {
         endpoints.MapAuthEndpoints();
+        endpoints.MapHealthEndpoints();
         return endpoints;
     }
 }

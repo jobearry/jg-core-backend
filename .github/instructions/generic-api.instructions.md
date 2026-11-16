@@ -14,6 +14,10 @@ pipeline; it contains **no** feature logic.
   Bearer JWT security definition + global security requirement.
 - `Configuration/AuthenticationConfiguration.cs` — binds `JwtOptions`, registers
   `AddJwtBearer` with issuer/audience/lifetime/issuer-signing-key validation.
+  Fails fast at startup with an actionable message when `Jwt` is missing or
+  the key is shorter than 32 bytes — never let a `null` `JwtOptions` through.
+  Development ships a loudly-labelled insecure key in `appsettings.Development.json`;
+  Production requires real `Jwt__*` environment variables.
 - `Configuration/CorsConfiguration.cs` — `AllowSPA` policy
   (`http://localhost:4200` + the production Vercel origins).
 - `Configuration/RateLimitConfiguration.cs` — named fixed-window policies from

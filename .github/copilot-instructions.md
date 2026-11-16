@@ -62,7 +62,7 @@ only when matching files are in scope.
 Vertical slice ASP.NET Core Web API; three projects:
 
 - `Generic/Generic.API` — host: `Program.cs`, startup configuration, Dockerfile entry point.
-- `Generic/Generic.Features` — feature slices. Currently `Auth/` (JWT login, `me`).
+- `Generic/Generic.Features` — feature slices. Currently `Auth/` (JWT login, `me`) and `Health/` (diagnostic status).
 - `Generic/Generic.Infra` — shared infrastructure (`JwtOptions`, `GlobalExceptionHandler`, DI wiring).
 
 The previous portfolio CRUD/Notion implementation was removed; an external
@@ -80,6 +80,12 @@ dotnet run --project Generic/Generic.API/Generic.API.csproj
 docker compose --project-directory . -f docker/compose.yaml up --build
 docker build -f docker/Dockerfile -t myapp .
 ```
+
+Local `dotnet run` works out of the box in Development (an insecure, loudly
+labelled dev-only key baked into `appsettings.Development.json` signs tokens
+and must never be used elsewhere). Production/staging must provide `Jwt__Key`,
+`Jwt__Issuer`, `Jwt__Audience`, `Jwt__Expires` via environment variables or
+user secrets — startup fails fast with a clear error if they're missing.
 
 ## Change guidance (applies everywhere)
 

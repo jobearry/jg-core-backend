@@ -9,7 +9,7 @@ public static class SwaggerConfiguration
         var contactInfo = new OpenApiContact
         {
             Name = "Jonathan Golimlim",
-            Url = new Uri("https://ng-web-resume.vercel.app/")
+            Url = new Uri("https://jgolimlim-portfolio.vercel.app/")
         };
         services.AddSwaggerGen(options =>
         {
