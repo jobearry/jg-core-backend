@@ -1,28 +1,28 @@
-# Portfolio_API
+# jg-generic-api (monorepo)
 
-![.NET 8](https://img.shields.io/badge/.NET-8.0-blue?style=for-the-badge) 
-![C#](https://img.shields.io/badge/C%23-10.0-blue?style=for-the-badge) 
-![EF Core](https://img.shields.io/badge/EF_Core-8.0-512BD4?style=for-the-badge) 
-![Azure App Service](https://img.shields.io/badge/Azure-App%20Service-blue?style=for-the-badge) 
-![Azure SQL Database](https://img.shields.io/badge/Azure-Sql%20Database-blue?style=for-the-badge) 
-
-Multi-purpose backend for personal projects and demos. This repository hosts a .NET 8 Web API and made with assistance of Github Copilot, and Ollama (Qwen2.5-Coder:7b)
+Monorepo for personal projects. Currently hosts a .NET 10 Web API for the
+portfolio backend, organized using vertical slice architecture. Built with
+assistance of Github Copilot, and Ollama (Qwen2.5-Coder:7b).
 
 ## Tech stack
-- .NET 8 Web API (C#)
-- Entity Framework Core (EF Core)
-- Azure SQL Database
+- .NET 10 Web API (C#)
+- Vertical slice architecture (host + feature slices)
+- JWT authentication
+- Swashbuckle (Swagger/OpenAPI)
 - Azure App Service for deployment
-- VS Code + REST Client for local testing
+- Docker / Docker Compose
 
-## Files & paths of interest
-- `Portfolio_API/Controllers/` — API endpoints
-- `Portfolio_API.Services/` — Business logic
-- `Portfolio_API.Mapper/` — DTO Mapping
-- `Portfolio_API.DataAccess/Contexts/` — `ResumeDbContext`
-- `Portfolio_API.DataAccess/Repositories/` — domain repositories
-- `Portfolio_API/Portfolio_API.http` — REST Client and requests
+## Repository layout
+- `Generic/` — the .NET solution (`Generic.sln`), buildable and deployable on its own
+  - `Generic.API/` — host project: `Program.cs`, Swagger/auth/CORS wiring, `Generic.API.http`
+  - `Generic.Features/` — feature slices (currently `Auth/`)
+  - `Generic.Infra/` — shared infrastructure (configuration binding, DI wiring)
+- `docker/` — Dockerfile and compose file (build context is repo root)
+- `.github/` — CI (restore/build `Generic/Generic.sln`) and deploy workflows
 
 ## Current Features
-- `Notion Integration` - Integrated Notion API to view specific Notion pages.
-- `Resume Details` - Connected to Azure SQL Database. Contains resume contents.
+- `Auth` - JWT login (`POST /api/v1/auth/login`, rate limited) and current-user claims (`GET /api/v1/auth/me`).
+- `Health check` - `GET /healthz` (anonymous).
+
+Portfolio data and the Notion integration were removed — that data is served by
+a separate backend now. EF Core / SQL Server are no longer used.

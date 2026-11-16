@@ -1,14 +1,11 @@
 # Comments are provided throughout this file to help you get started.
 # If you need more help, visit the Docker Compose reference guide at
-# https://docs.docker.com/go/compose-spec-reference/
+# https://docs.docker.com/go/compose/reference/
 
 # Here the instructions define your application as a service called "server".
 # This service is built from the Dockerfile in the repository root context.
-# You can add other services your application may depend on here, such as a
-# database or a cache. For examples, see the Awesome Compose repository:
-# https://github.com/docker/awesome-compose
 services:
-  server: 
+  server:
     build:
       context: .
       dockerfile: docker/Dockerfile
@@ -20,33 +17,7 @@ services:
       - Jwt__Issuer=${Jwt__Issuer}
       - Jwt__Audience=${Jwt__Audience}
       - Jwt__Expires=${Jwt__Expires}
-      - ConnectionStrings__DefaultConnection=${ConnectionStrings__DefaultConnection}
-      - ConnectionStrings__JDBConnection=${ConnectionStrings__JDBConnection}
-      - AzureAd__TenantId=${AzureAd__TenantId}
-      - AzureAd__Instance=${AzureAd__Instance}
-      - AzureAd__ClientSecret=${AzureAd__ClientSecret}
-      - AzureAd__ClientId=${AzureAd__ClientId}
-      - AzureAd__Audience=${AzureAd__Audience}
-      - AzureAd__Scope=${AzureAd__Scope}
-      - Notion__Token=${Notion__Token}
-      - Notion__Version=${Notion__Version}
-      
+
       # need to learn more on this
       - DOTNET_ENVIRONMENT=${DOTNET_ENVIRONMENT}
       - DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=${DOTNET_SYSTEM_GLOBALIZATION_INVARIANT}
-    depends_on:
-      - sqlserver
-
-  sqlserver:
-    image: mcr.microsoft.com/mssql/server:2022-latest
-    container_name: sqlserver
-    ports:
-      - "1433:1433"
-    environment:
-      - ACCEPT_EULA=Y
-      - SA_PASSWORD=${SA_PASSWORD}
-    volumes:
-      - sql_data:/var/opt/mssql
-
-volumes: 
-  sql_data:

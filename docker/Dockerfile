@@ -1,23 +1,31 @@
 # syntax=docker/dockerfile:1
 
-FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:8.0-alpine AS build
+# Defaults to linux/amd64 so plain `docker build` works without BuildKit;
+# Buildx/Compose set BUILDPLATFORM automatically for cross-arch builds.
+ARG BUILDPLATFORM=linux/amd64
+
+FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:10.0-alpine AS build
 
 COPY . /source
 
-WORKDIR /source/Portfolio_API
+WORKDIR /source/Generic/Generic.API
 
-# This is the architecture you’re building for, which is passed in by the builder.
-# Placing it here allows the previous steps to be cached across architectures.
-ARG TARGETARCH
+# This is the architecture you're building for. Buildx passes TARGETARCH
+# automatically; defaults to amd64 for plain `docker build`.
+ARG TARGETARCH=amd64
 
 # Build the application.
-# Leverage a cache mount to /root/.nuget/packages so that subsequent builds don't have to re-download packages.
-# If TARGETARCH is "amd64", replace it with "x64" - "x64" is .NET's canonical name for this and "amd64" doesn't
-#   work in .NET 6.0.
-RUN --mount=type=cache,id=nuget,target=/root/.nuget/packages \
-    dotnet publish -a ${TARGETARCH/amd64/x64} --use-current-runtime --self-contained false -o /app
+# Buildx passes TARGETARCH automatically (amd64|arm64|aarch64); map it to
+# .NET's canonical RID names. Defaults to amd64 for plain `docker build`.
+RUN arch="${TARGETARCH:-amd64}"; \
+    case "$arch" in \
+      amd64|x86_64) rid=x64 ;; \
+      arm64|aarch64) rid=arm64 ;; \
+      *) rid="$arch" ;; \
+    esac; \
+    dotnet publish -a "$rid" --use-current-runtime --self-contained false -o /app
 
-FROM mcr.microsoft.com/dotnet/aspnet:8.0-alpine AS final
+FROM mcr.microsoft.com/dotnet/aspnet:10.0-alpine AS final
 WORKDIR /app
 
 # Install ICU globalization libraries
@@ -32,5 +40,5 @@ COPY --from=build /app .
 # Run as non-privileged user
 USER $APP_UID
 
-ENTRYPOINT ["dotnet", "Portfolio_API.dll"]
+ENTRYPOINT ["dotnet", "Generic.API.dll"]
 

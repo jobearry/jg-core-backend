@@ -15,16 +15,16 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '8.0'   # adjust to your project’s target
+          dotnet-version: '10.0.x'   # adjust to your project’s target
 
       - name: Restore dependencies
-        run: dotnet restore
+        run: dotnet restore Generic/Generic.sln
 
       - name: Build
-        run: dotnet build --configuration Release --no-restore
+        run: dotnet build Generic/Generic.sln --configuration Release --no-restore
 
       - name: Publish
-        run: dotnet publish -c Release -o ./publish
+        run: dotnet publish Generic/Generic.API/Generic.API.csproj -c Release --no-build -o ./publish
 
       # 🔑 Authenticate with Azure using Service Principal 
       - name: Azure Login
