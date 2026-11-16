@@ -1,8 +1,8 @@
 # jg-generic-api (monorepo)
 
-Monorepo for personal projects. Currently hosts a .NET 10 Web API for the
-portfolio backend, organized using vertical slice architecture. Built with
-assistance of Github Copilot, and Ollama (Qwen2.5-Coder:7b).
+Monorepo for personal projects. Currently hosts a .NET 10 Web API providing
+the Auth service (and future personal backends), organized using vertical
+slice architecture. Built with assistance of Github Copilot, and Ollama (Qwen2.5-Coder:7b).
 
 ## Tech stack
 - .NET 10 Web API (C#)
