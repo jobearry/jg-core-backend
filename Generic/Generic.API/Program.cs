@@ -1,6 +1,7 @@
 using Generic.API.Configuration;
 using Generic.Features;
 using Generic.Infra;
+using Microsoft.AspNetCore.HttpOverrides;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -12,11 +13,14 @@ builder.Services.AddFeatures();
 builder.Services.AddAuthentication(builder.Configuration);
 builder.Services.AddCorsOrigins();
 builder.Services.AddHealthChecks();
+builder.Services.AddForwardedHeadersConfig();
 builder.Services.AddRateLimitingConfig();
 
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
+// Must run before anything that reads the scheme or client IP (HTTPS redirect, rate limiting).
+app.UseForwardedHeaders();
 app.UseExceptionHandler();
 
 if (app.Environment.IsDevelopment())

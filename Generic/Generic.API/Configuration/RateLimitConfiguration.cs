@@ -13,7 +13,7 @@ public static class RateLimitConfiguration
 
             options.AddPolicy(RateLimitPolicies.AuthLogin, httpContext =>
                 RateLimitPartition.GetFixedWindowLimiter(
-                    httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+                    ResolvePartitionKey(httpContext),
                     _ => new FixedWindowRateLimiterOptions
                     {
                         PermitLimit = 5,
@@ -23,5 +23,23 @@ public static class RateLimitConfiguration
         });
 
         return services;
+    }
+
+    private static string ResolvePartitionKey(HttpContext httpContext)
+    {
+        var remoteIp = httpContext.Connection.RemoteIpAddress;
+        if (remoteIp is null)
+        {
+            return "unknown";
+        }
+
+        // A caller can surface as ::ffff:203.0.113.5 or 203.0.113.5 depending on the hop.
+        // Normalize so one caller always maps to one partition.
+        if (remoteIp.IsIPv4MappedToIPv6)
+        {
+            remoteIp = remoteIp.MapToIPv4();
+        }
+
+        return remoteIp.ToString();
     }
 }
