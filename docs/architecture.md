@@ -186,12 +186,13 @@ Current behavior:
 
 ## 7. Deployment topology
 
-- **CI:** GitHub Actions on push to `main` — restore, build Release, publish,
-  Azure OIDC login, `azure/webapps-deploy`.
-- **Host:** Azure Web App (`jdb-portfolio-api`), single instance.
+- **CI:** GitHub Actions on every push and pull request — restore, build
+  Release, `dotnet test`. Two path-filtered deploy workflows ship the apps.
+- **Hosts:** Azure Web Apps (`jdbweb` for the host, `jdb-portfolio-api` for
+  Portfolio) until the single-host merge; single instance each.
 - **Database:** PostgreSQL, connection via `ConnectionStrings__JDBConnection`.
-- **Docker:** multi-stage image; `docker-compose.yml` runs the API only and
-  expects an external PostgreSQL supplied through `.env`.
+- **Docker:** multi-stage images; `docker/compose.portfolio.yaml` runs the API
+  only and expects an external PostgreSQL supplied through `.env`.
 
 ## 8. Where this is going
 

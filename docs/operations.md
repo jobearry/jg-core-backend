@@ -81,6 +81,11 @@ the app reads.
 
 ## 4. Docker
 
+Two images exist until the single-host merge (phase 4):
+`docker/JGBackend.Dockerfile` + `docker/compose.yaml` for the host, and
+`docker/Portfolio.Dockerfile` + `docker/compose.portfolio.yaml` for the
+Portfolio API. The rest of this section covers the Portfolio stack.
+
 The compose file runs the **API only**. PostgreSQL is external.
 
 ```bash
@@ -119,10 +124,21 @@ The container listens on `8080` (`ASPNETCORE_URLS=http://+:8080`), runs as
 
 ## 5. Deployment
 
-`.github/workflows/main_jdb-portfolio-api.yml`:
+Two deployables exist until the single-host merge (phase 4):
 
-1. Trigger: push to `main`, or manual dispatch. Runs are serialized by a
-   `production-deploy` concurrency group.
+| Workflow | App | Trigger |
+|---|---|---|
+| `.github/workflows/deploy.yaml` | `jdbweb` (`JGBackend`) | push to `master` touching `src/JGBackend/**` or `src/Core/**` |
+| `.github/workflows/deploy-portfolio.yaml` | `jdb-portfolio-api` (`Portfolio`) | push to `master` touching `src/Portfolio/**` |
+
+Both are path-filtered so an app ships only when its own code changes;
+`.github/workflows/ci.yaml` builds and tests the whole solution on every push
+and pull request.
+
+`deploy-portfolio.yaml`:
+
+1. Trigger: push to `master` under `src/Portfolio/`, or manual dispatch. Runs are
+   serialized by a `portfolio-production-deploy` concurrency group.
 2. `dotnet restore` → `dotnet tool restore` → `has-pending-model-changes` gate (fails
    if the model changed without a migration) → `dotnet build -c Release` →
    `dotnet publish -o ./publish`.
@@ -158,9 +174,9 @@ deployment; this setting only prevents the app from also applying migrations
 during startup. It is separate from the GitHub `PRODUCTION_CONNECTION_STRING`
 secret used by that workflow.
 
-Tests live in `tests/` (four xUnit projects). The workflow currently
-does not run them; add a `dotnet test JGBackend.sln` step when
-updating CI.
+Tests live in `tests/` (four xUnit projects under `tests/Portfolio/`). CI runs
+them with `dotnet test JGBackend.sln`; the deploy workflows do not, because CI
+already gates the branch.
 
 Swagger is enabled when `ASPNETCORE_ENVIRONMENT=Development` or when the
 `Swagger:Enabled` setting is `true`. Production leaves it unset (off); turn it on
@@ -193,3 +209,22 @@ for a smoke test and off again.
 | Rate limiting | none | `AddRateLimiter` on `/auth/login` at minimum |
 | Backup / restore | not documented | define an RPO/RTO for the Neon PostgreSQL instance |
 | Config validation | none | fail fast at startup if `Jwt:Key` < 32 bytes |
+
+## 8. Post-restructure handoff
+
+The repository restructure (phase 1) moved code, docs, and workflows but did not
+touch anything outside the git repository. These items are owned by the human
+and are **still open**; they must be done before the phases that follow can
+deploy, and the reminder is due when the single-host merge (phase 4) lands.
+
+| Item | Why it matters |
+|---|---|
+| Rename the GitHub repository to `jg-core-backend` | the layout is named for the monorepo target, and the rename invalidates anything that keys off the repository name — most importantly the OIDC federated credential |
+| Review the Azure federated credential subject | it is currently `repo:jobearry/jg-generic-api:ref:refs/heads/master`. After the rename it must be `repo:jobearry/jg-core-backend:ref:refs/heads/master` or `azure/login@v2` fails in both deploy workflows |
+| Confirm repository secrets | `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID`, and `PRODUCTION_CONNECTION_STRING` (Portfolio only) |
+| Review the `jdbweb` App Service | app settings, the CORS allow-list (`Cors:AllowedOrigins`), and the custom domain/SSL binding, all of which must still match the frontend |
+| Retire `jdb-portfolio-api` | it survives only until phase 4 collapses the two hosts into one |
+| Update the local clone | the folder name and the `origin` remote still reference the old repository name |
+
+`docker/Dockerfile.dockerignore` is also dead (KI-047) and is removed in phase 4
+along with the second Dockerfile.

@@ -86,13 +86,13 @@ Rules:
   many; disable it when migrations are applied out of band.
 - The design-time factory uses the API project's `UserSecretsId` to load the
   same User Secrets store; keep the ID in `PortfolioContextFactory` synchronized
-  with `Portfolio.csproj`.
+  with `Portfolio.API.csproj`.
 
 ## 6. Configuration
 
 - Connection string key: `ConnectionStrings:JDBConnection`.
 - Development: User Secrets on the **API** project; the shared project ID is
-  declared in `Portfolio.csproj` and used by the design-time factory.
+  declared in `Portfolio.API.csproj` and used by the design-time factory.
 - Production: environment variable
   `ConnectionStrings__JDBConnection` (double underscore).
 - Never commit a connection string, even a localhost one.

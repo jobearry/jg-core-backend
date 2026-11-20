@@ -4,8 +4,8 @@
 
 | Environment | Mechanism |
 |---|---|
-| Local | `dotnet user-secrets` on `src/Portfolio/Portfolio.API` |
-| Docker | `.env` (git-ignored) → env vars in `docker-compose.yml` |
+| Local | `dotnet user-secrets` on `src/Portfolio/Portfolio.API` (Portfolio) and `src/JGBackend` (host) |
+| Docker | `.env` (git-ignored) → env vars in `docker/compose*.yaml` |
 | Azure | App Service configuration / Key Vault |
 
 Rules:
@@ -101,12 +101,17 @@ test(domain): cover Period invariants
 
 ## 8. CI/CD
 
-`.github/workflows/main_jdb-portfolio-api.yml`:
+`.github/workflows/`:
 
-- Triggers on push to `main` and manual dispatch.
-- Restores, builds `Release`, publishes, logs into Azure via OIDC, deploys.
-- Builds and publishes the application but currently does **not** run the four
-  existing xUnit test projects. Add a `dotnet test` step when updating CI.
+| Workflow | Trigger | Does |
+|---|---|---|
+| `ci.yaml` | every push and pull request | restore, build `Release`, `dotnet test` the whole solution |
+| `deploy.yaml` | push to `master` under `src/JGBackend/**` or `src/Core/**` | publish and deploy `jdbweb` |
+| `deploy-portfolio.yaml` | push to `master` under `src/Portfolio/**` | migration gate, build, `dotnet ef database update`, deploy `jdb-portfolio-api` |
+
+Deploy runs log into Azure via OIDC and use `azure/webapps-deploy`. CI is the
+only place the tests run, which is why every project must stay in
+`JGBackend.sln`.
 
 Never commit secrets to the workflow. Use `secrets.*` and OIDC federated
 credentials (`AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID`).
@@ -117,9 +122,6 @@ credentials (`AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID`).
 
 Already tracked and worth a decision:
 
-- `.vscode/settings.json` is committed and only pins the default solution
-  (`dotnet.defaultSolution`). That is harmless and useful — keep it, but do not
-  add machine-specific paths or extensions to it.
-- `opencode.json` is committed and points at `http://127.0.0.1:8081/v1`. Local
-  endpoints are not secrets, but they are machine-specific; either keep it as a
-  documented local default or git-ignore it.
+- `opencode.jsonc` is committed and holds only `$schema` and the `instructions`
+  list. That is harness configuration, not machine-specific state — keep it that
+  way and do not add local provider endpoints or model overrides to it.

@@ -21,7 +21,8 @@ dotnet add tests/Portfolio/Portfolio.Domain.Tests reference \
   src/Portfolio/Portfolio.Domain/Portfolio.Domain.csproj
 ```
 
-Then add `dotnet test` to `.github/workflows/main_jdb-portfolio-api.yml`.
+Then add the project to `JGBackend.sln`; `.github/workflows/ci.yaml` runs
+`dotnet test` on the whole solution, so no workflow edit is needed.
 
 ## 1. Red — state the behaviour as a test
 
