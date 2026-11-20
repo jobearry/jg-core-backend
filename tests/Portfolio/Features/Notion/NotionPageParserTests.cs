@@ -1,4 +1,4 @@
-using Portfolio.ExternalService.Notion.Utils;
+using Portfolio.Features.Notion;
 
 namespace Portfolio.Api.Tests;
 

@@ -1,9 +1,7 @@
 using System.Net;
 using System.Text;
 using System.Text.Json;
-using Portfolio.Adapters;
-using Portfolio.Application.Models;
-using Portfolio.ExternalService.Notion.Services;
+using Portfolio.Features.Notion;
 
 namespace Portfolio.Api.Tests;
 

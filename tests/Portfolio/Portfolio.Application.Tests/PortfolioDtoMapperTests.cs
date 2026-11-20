@@ -1,11 +1,11 @@
 using Portfolio.Application.DTO;
-using Portfolio.Application.Models;
 using Portfolio.Domain.Entities;
 using Portfolio.Domain.ValueObjects;
 using Portfolio.Features.Experience;
 using Portfolio.Features.Project;
 using Portfolio.Features.Skill;
 using Portfolio.Features.Recommendation;
+using Portfolio.Features.Notion;
 using System.Text.Json;
 
 namespace Portfolio.Application.Tests;

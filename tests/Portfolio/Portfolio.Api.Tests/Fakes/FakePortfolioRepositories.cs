@@ -1,5 +1,4 @@
-using Portfolio.Application.Abstractions;
-using Portfolio.Application.Models;
+using Portfolio.Features.Notion;
 using Portfolio.Domain.Entities;
 using Portfolio.Domain.Interfaces;
 using Portfolio.Domain.ValueObjects;

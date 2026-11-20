@@ -13,6 +13,13 @@
     <Compile Include="..\Portfolio\Features\Skill\SkillEndpoints.cs" Link="Features\Skill\SkillEndpoints.cs" />
     <Compile Include="..\Portfolio\Features\Recommendation\RecommendationEndpoints.cs" Link="Features\Recommendation\RecommendationEndpoints.cs" />
     <Compile Include="..\Portfolio\Features\Overview\OverviewEndpoints.cs" Link="Features\Overview\OverviewEndpoints.cs" />
+    <Compile Include="..\Portfolio\Features\Notion\NotionEndpoints.cs" Link="Features\Notion\NotionEndpoints.cs" />
+    <Compile Include="..\Portfolio\Features\Notion\NotionSettings.cs" Link="Features\Notion\NotionSettings.cs" />
+    <Compile Include="..\Portfolio\Features\Notion\NotionClientService.cs" Link="Features\Notion\NotionClientService.cs" />
+    <Compile Include="..\Portfolio\Features\Notion\NotionPageParserUtility.cs" Link="Features\Notion\NotionPageParserUtility.cs" />
+    <Compile Include="..\Portfolio\Features\Notion\NotionPage.cs" Link="Features\Notion\NotionPage.cs" />
+    <Compile Include="..\Portfolio\Features\Notion\NotionPageMarkdownDto.cs" Link="Features\Notion\NotionPageMarkdownDto.cs" />
+    <Compile Include="..\Portfolio\Features\Notion\NotionPageContentReader.cs" Link="Features\Notion\NotionPageContentReader.cs" />
   </ItemGroup>
 
   <ItemGroup>

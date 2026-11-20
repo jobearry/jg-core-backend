@@ -5,6 +5,7 @@ using Portfolio.Features.Project;
 using Portfolio.Features.Skill;
 using Portfolio.Features.Recommendation;
 using Portfolio.Features.Overview;
+using Portfolio.Features.Notion;
 using Portfolio.Persistence.Contexts;
 using Microsoft.EntityFrameworkCore;
 

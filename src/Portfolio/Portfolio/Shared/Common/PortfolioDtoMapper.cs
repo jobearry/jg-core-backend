@@ -1,4 +1,3 @@
-using Portfolio.Application.Models;
 using Portfolio.Domain.Entities;
 using Portfolio.Features.Experience;
 using Portfolio.Features.Project;
@@ -79,12 +78,6 @@ public static class PortfolioDtoMapper
             recommendation.Description,
             recommendation.CareerPosition?.Value,
             recommendation.PostedAt);
-
-    public static NotionPageDto ToDto(this PageContent pageContent) =>
-        new(
-            pageContent.Url,
-            pageContent.Date,
-            pageContent.Title);
 
     /// <summary>
     /// Whole calendar months between two dates — what a CV actually displays.

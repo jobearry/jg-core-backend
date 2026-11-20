@@ -1,36 +1,31 @@
-﻿using Portfolio.Application.Abstractions;
-using Portfolio.Application.Common;
-using Portfolio.Application.DTO;
-using Portfolio.Application.Models;
+﻿using Portfolio.Application.Common;
 using Microsoft.Extensions.Logging;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
 
-namespace Portfolio.Application.Services;
+namespace Portfolio.Features.Notion;
 
-public class PortfolioService
+/// <summary>
+/// The Notion use case: read the pages and turn upstream failures into typed results.
+/// </summary>
+public sealed class GetNotionPageHandler
 {
-    private readonly IPageContentReader _pageContentReader;
-    private readonly ILogger<PortfolioService> _logger;
+    private readonly IPageContentReader _reader;
+    private readonly ILogger<GetNotionPageHandler> _logger;
 
-    public PortfolioService(
-        IPageContentReader pageContentReader,
-        ILogger<PortfolioService> logger)
+    public GetNotionPageHandler(
+        IPageContentReader reader,
+        ILogger<GetNotionPageHandler> logger)
     {
-        _pageContentReader = pageContentReader;
+        _reader = reader;
         _logger = logger;
     }
 
-    public async Task<Result<List<NotionPageDto>>> GetNotionPageAsync(
-        string pageID,
+    public async Task<Result<List<NotionPageDto>>> HandleAsync(
+        string pageId,
         CancellationToken cancellationToken)
     {
         try
         {
-            var page = await _pageContentReader.ReadPageAsync(pageID, cancellationToken);
+            var page = await _reader.ReadPageAsync(pageId, cancellationToken);
             return Result<List<NotionPageDto>>.Success(
                 page.Select(notionPage => notionPage.ToDto()).ToList());
         }
@@ -53,5 +48,4 @@ public class PortfolioService
             return Result<List<NotionPageDto>>.Failure(error);
         }
     }
-
 }

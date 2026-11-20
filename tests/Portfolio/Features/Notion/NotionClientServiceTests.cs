@@ -1,6 +1,6 @@
 using System.Net;
 using System.Text;
-using Portfolio.ExternalService.Notion.Services;
+using Portfolio.Features.Notion;
 
 namespace Portfolio.Api.Tests;
 

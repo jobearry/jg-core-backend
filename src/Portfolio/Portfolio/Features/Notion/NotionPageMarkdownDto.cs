@@ -1,9 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
+﻿namespace Portfolio.Features.Notion;
 
-namespace Portfolio.ExternalService.Notion.DTO;
-
+/// <summary>
+/// The vendor's markdown response envelope.
+/// </summary>
 public class NotionPageMarkdownDto
 {
     public string Object { get; set; } = string.Empty;
@@ -12,5 +11,4 @@ public class NotionPageMarkdownDto
     public bool Truncated { get; set; }
     public List<string> UnknownBlockIds { get; set; } = new List<string>();
     public string RequestId { get; set; } = string.Empty;
-
 }

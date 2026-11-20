@@ -21,6 +21,11 @@
     <Compile Include="..\Portfolio\Features\Recommendation\GetRecommendationHandler.cs" Link="Features\Recommendation\GetRecommendationHandler.cs" />
     <Compile Include="..\Portfolio\Features\Overview\OverviewItemDto.cs" Link="Features\Overview\OverviewItemDto.cs" />
     <Compile Include="..\Portfolio\Features\Overview\GetOverviewHandler.cs" Link="Features\Overview\GetOverviewHandler.cs" />
+    <Compile Include="..\Portfolio\Features\Notion\NotionPageDto.cs" Link="Features\Notion\NotionPageDto.cs" />
+    <Compile Include="..\Portfolio\Features\Notion\PageContent.cs" Link="Features\Notion\PageContent.cs" />
+    <Compile Include="..\Portfolio\Features\Notion\IPageContentReader.cs" Link="Features\Notion\IPageContentReader.cs" />
+    <Compile Include="..\Portfolio\Features\Notion\NotionMapper.cs" Link="Features\Notion\NotionMapper.cs" />
+    <Compile Include="..\Portfolio\Features\Notion\GetNotionPageHandler.cs" Link="Features\Notion\GetNotionPageHandler.cs" />
   </ItemGroup>
 
   <ItemGroup>

@@ -24,6 +24,10 @@
     <Compile Include="..\Features\Skill\SkillEndpointsTests.cs" Link="Features\Skill\SkillEndpointsTests.cs" />
     <Compile Include="..\Features\Recommendation\RecommendationEndpointsTests.cs" Link="Features\Recommendation\RecommendationEndpointsTests.cs" />
     <Compile Include="..\Features\Overview\OverviewEndpointsTests.cs" Link="Features\Overview\OverviewEndpointsTests.cs" />
+    <Compile Include="..\Features\Notion\NotionEndpointsTests.cs" Link="Features\Notion\NotionEndpointsTests.cs" />
+    <Compile Include="..\Features\Notion\NotionClientServiceTests.cs" Link="Features\Notion\NotionClientServiceTests.cs" />
+    <Compile Include="..\Features\Notion\NotionPageContentReaderTests.cs" Link="Features\Notion\NotionPageContentReaderTests.cs" />
+    <Compile Include="..\Features\Notion\NotionPageParserTests.cs" Link="Features\Notion\NotionPageParserTests.cs" />
   </ItemGroup>
 
   <ItemGroup>

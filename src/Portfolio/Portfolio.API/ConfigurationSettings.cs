@@ -11,8 +11,7 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
 using System.Text;
 using System.Net.Http.Headers;
-using Portfolio.ExternalService.Notion.Services;
-using Portfolio.ExternalService.Notion.Settings;
+using Portfolio.Features.Notion;
 using Portfolio.ExternalService.Github.Services;
 using Portfolio.ExternalService.Github.Settings;
 using Portfolio.Application.Services;
@@ -36,7 +35,7 @@ namespace Portfolio
         /// </summary>
         public static void AddApplication(this IServiceCollection services)
         {
-            services.AddScoped<PortfolioService>();
+            services.AddScoped<GetNotionPageHandler>();
             services.AddScoped<GetExperienceHandler>();
             services.AddScoped<GetProjectHandler>();
             services.AddScoped<GetRecommendationHandler>();
