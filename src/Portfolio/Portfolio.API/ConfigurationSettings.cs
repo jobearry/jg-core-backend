@@ -20,6 +20,7 @@ using Portfolio.Features.Experience;
 using Portfolio.Features.Project;
 using Portfolio.Features.Skill;
 using Portfolio.Features.Recommendation;
+using Portfolio.Features.Overview;
 using Portfolio.Authentication;
 using Portfolio.ErrorHandling;
 using Portfolio.Persistence.Repositories;
@@ -40,6 +41,7 @@ namespace Portfolio
             services.AddScoped<GetProjectHandler>();
             services.AddScoped<GetRecommendationHandler>();
             services.AddScoped<GetSkillHandler>();
+            services.AddScoped<GetOverviewHandler>();
             services.AddScoped<IGithubRepositoryService, GithubRepositoryService>();
         }
 

@@ -19,6 +19,8 @@
     <Compile Include="..\Portfolio\Features\Skill\GetSkillHandler.cs" Link="Features\Skill\GetSkillHandler.cs" />
     <Compile Include="..\Portfolio\Features\Recommendation\RecommendationDto.cs" Link="Features\Recommendation\RecommendationDto.cs" />
     <Compile Include="..\Portfolio\Features\Recommendation\GetRecommendationHandler.cs" Link="Features\Recommendation\GetRecommendationHandler.cs" />
+    <Compile Include="..\Portfolio\Features\Overview\OverviewItemDto.cs" Link="Features\Overview\OverviewItemDto.cs" />
+    <Compile Include="..\Portfolio\Features\Overview\GetOverviewHandler.cs" Link="Features\Overview\GetOverviewHandler.cs" />
   </ItemGroup>
 
   <ItemGroup>

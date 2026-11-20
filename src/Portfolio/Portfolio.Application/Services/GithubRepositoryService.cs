@@ -4,6 +4,7 @@ using Portfolio.Application.Abstractions;
 using Portfolio.Application.Common;
 using Portfolio.Application.DTO;
 using Portfolio.Application.Models;
+using Portfolio.Features.Overview;
 using Microsoft.Extensions.Logging;
 
 namespace Portfolio.Application.Services;

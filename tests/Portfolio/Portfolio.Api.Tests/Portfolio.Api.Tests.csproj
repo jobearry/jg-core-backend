@@ -23,6 +23,7 @@
     <Compile Include="..\Features\Project\ProjectEndpointsTests.cs" Link="Features\Project\ProjectEndpointsTests.cs" />
     <Compile Include="..\Features\Skill\SkillEndpointsTests.cs" Link="Features\Skill\SkillEndpointsTests.cs" />
     <Compile Include="..\Features\Recommendation\RecommendationEndpointsTests.cs" Link="Features\Recommendation\RecommendationEndpointsTests.cs" />
+    <Compile Include="..\Features\Overview\OverviewEndpointsTests.cs" Link="Features\Overview\OverviewEndpointsTests.cs" />
   </ItemGroup>
 
   <ItemGroup>

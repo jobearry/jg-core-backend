@@ -1,4 +1,4 @@
-namespace Portfolio.Application.DTO;
+namespace Portfolio.Features.Overview;
 
 /// <summary>
 /// One counter on the overview. <c>Key</c> is the stable identifier (<c>projects</c>,

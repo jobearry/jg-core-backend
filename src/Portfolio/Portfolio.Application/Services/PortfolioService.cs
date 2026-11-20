@@ -2,11 +2,6 @@
 using Portfolio.Application.Common;
 using Portfolio.Application.DTO;
 using Portfolio.Application.Models;
-using Portfolio.Domain.Entities;
-using Portfolio.Domain.Interfaces;
-using Portfolio.Features.Project;
-using Portfolio.Features.Skill;
-using Portfolio.Features.Recommendation;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
@@ -19,22 +14,13 @@ namespace Portfolio.Application.Services;
 public class PortfolioService
 {
     private readonly IPageContentReader _pageContentReader;
-    private readonly IProjectRepository _projectRepository;
-    private readonly ISkillRepository _techStackRepository;
-    private readonly IRecommendationRepository _recommendationRepository;
     private readonly ILogger<PortfolioService> _logger;
 
     public PortfolioService(
         IPageContentReader pageContentReader,
-        IProjectRepository projectRepository,
-        ISkillRepository techStackRepository,
-        IRecommendationRepository recommendationRepository,
         ILogger<PortfolioService> logger)
     {
         _pageContentReader = pageContentReader;
-        _projectRepository = projectRepository;
-        _techStackRepository = techStackRepository;
-        _recommendationRepository = recommendationRepository;
         _logger = logger;
     }
 
@@ -68,59 +54,4 @@ public class PortfolioService
         }
     }
 
-    public async Task<Result<List<OverviewItemDto>>> GetOverview(CancellationToken cancellationToken)
-    {
-        try
-        {
-            // Deliberately sequential. All three repositories share the scoped
-            // PortfolioContext, and EF Core forbids concurrent operations on one
-            // context — Task.WhenAll here throws "A second operation was started on
-            // this context instance". Parallelism needs a context per query, which
-            // costs more than it saves for three counts.
-            var projects = await _projectRepository.GetAllWithTechStacksAsync(cancellationToken);
-            var skills = await _techStackRepository.GetAllAsync(cancellationToken);
-            var recommendations = await _recommendationRepository.GetAllAsync(cancellationToken);
-
-            // Keys are the contract; the client owns labels, icons and order. Only add a
-            // key here when the client has a tile for it.
-            var counters = new List<OverviewItemDto>
-            {
-                new("projects", projects.Count()),
-                new("skills", skills.Count()),
-                new("recommendations", recommendations.Count())
-            };
-
-            return Result<List<OverviewItemDto>>.Success(counters);
-        }
-        catch (OperationCanceledException)
-        {
-            throw;
-        }
-        catch (Exception ex)
-        {
-            // This used to catch HttpRequestException, which these repositories never
-            // throw — so a real database failure escaped as an unhandled 500. It is
-            // classified and logged properly now.
-            var error = ResultErrors.From(ex, "build the dashboard overview");
-
-            if (error.Kind == ErrorKind.Unexpected)
-            {
-                _logger.LogError(
-                    ex,
-                    "Unexpected failure while trying to {Operation} ({ErrorCode}).",
-                    "build the dashboard overview",
-                    error.Code);
-            }
-            else
-            {
-                _logger.LogWarning(
-                    ex,
-                    "Dependency failure while trying to {Operation} ({ErrorCode}).",
-                    "build the dashboard overview",
-                    error.Code);
-            }
-
-            return Result<List<OverviewItemDto>>.Failure(error);
-        }
-    }
 }

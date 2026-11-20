@@ -36,37 +36,7 @@ public class PortfolioEndpointsTests : IClassFixture<PortfolioApiFactory>
         Seed();
     }
 
-    // -------------------------------------------------------------- other endpoints
-
-    [Fact]
-    public async Task GetOverview_ReturnsStableKeysAndCounts()
-    {
-        var json = await GetJsonAsync("/api/v1/overview");
-
-        Assert.Equal(3, json.GetArrayLength());
-
-        // Plan 4.x: the key is the contract; labels/icons/order live in the client.
-        Assert.Equal("projects", json[0].GetProperty("key").GetString());
-        Assert.Equal(1, json[0].GetProperty("count").GetInt32());
-        Assert.Equal("skills", json[1].GetProperty("key").GetString());
-        Assert.Equal(1, json[1].GetProperty("count").GetInt32());
-        Assert.Equal("recommendations", json[2].GetProperty("key").GetString());
-        Assert.Equal(2, json[2].GetProperty("count").GetInt32());
-    }
-
     // ---------------------------------------------------------------- failure paths
-
-    [Fact]
-    public async Task GetOverview_WhenTheDatabaseFails_Returns503NotAnUnhandled500()
-    {
-        // GetOverview used to catch HttpRequestException, which the repositories never
-        // throw, so a real database failure escaped entirely.
-        _factory.TechStacks.Failure = new FakeDbException("could not connect");
-
-        var response = await _client.GetAsync("/api/v1/overview");
-
-        Assert.Equal(HttpStatusCode.ServiceUnavailable, response.StatusCode);
-    }
 
     // ---------------------------------------------------------------------- notion
 

@@ -4,6 +4,7 @@ using Portfolio.Features.Experience;
 using Portfolio.Features.Project;
 using Portfolio.Features.Skill;
 using Portfolio.Features.Recommendation;
+using Portfolio.Features.Overview;
 using Portfolio.Persistence.Contexts;
 using Microsoft.EntityFrameworkCore;
 
@@ -66,7 +67,7 @@ api.MapExperienceEndpoints();
 api.MapProjectEndpoints();
 api.MapRecommendationEndpoints();
 api.MapSkillEndpoints();
-api.MapOverview();
+api.MapOverviewEndpoints();
 
 app.Run();
 
