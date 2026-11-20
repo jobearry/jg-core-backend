@@ -81,7 +81,7 @@ the app reads.
 
 ## 4. Docker
 
-Two images exist until the single-host merge (phase 4):
+Two images exist until phase 4 collapses them into one:
 `docker/JGBackend.Dockerfile` + `docker/compose.yaml` for the host, and
 `docker/Portfolio.Dockerfile` + `docker/compose.portfolio.yaml` for the
 Portfolio API. The rest of this section covers the Portfolio stack.
@@ -124,7 +124,7 @@ The container listens on `8080` (`ASPNETCORE_URLS=http://+:8080`), runs as
 
 ## 5. Deployment
 
-Two deployables exist until the single-host merge (phase 4):
+Two deployables exist until phase 4 collapses the two hosts into one:
 
 | Workflow | App | Trigger |
 |---|---|---|
@@ -215,7 +215,7 @@ for a smoke test and off again.
 The repository restructure (phase 1) moved code, docs, and workflows but did not
 touch anything outside the git repository. These items are owned by the human
 and are **still open**; they must be done before the phases that follow can
-deploy, and the reminder is due when the single-host merge (phase 4) lands.
+deploy, and the reminder is due when all phases finish (end of phase 4).
 
 | Item | Why it matters |
 |---|---|
