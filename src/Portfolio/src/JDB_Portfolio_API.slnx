@@ -1,0 +1,19 @@
+<Solution>
+  <Folder Name="/1.0 Presentation/">
+    <Project Path="JDB_Portfolio_API/JDB_Portfolio_API.csproj" />
+  </Folder>
+  <Folder Name="/2.0 Core/">
+    <Project Path="JDB_Portfolio_API.Application/JDB_Portfolio_API.Application.csproj" />
+    <Project Path="JDB_Portfolio_API.Domain/JDB_Portfolio_API.Domain.csproj" />
+  </Folder>
+  <Folder Name="/3.0 Infrastructure/">
+    <Project Path="JDB_Portfolio_API.ExternalService/JDB_Portfolio_API.ExternalService.csproj" />
+    <Project Path="JDB_Portfolio_API.Persistence/JDB_Portfolio_API.Persistence.csproj" />
+  </Folder>
+  <Folder Name="/4.0 Tests/">
+    <Project Path="../tests/JDB_Portfolio_API.Api.Tests/JDB_Portfolio_API.Api.Tests.csproj" />
+    <Project Path="../tests/JDB_Portfolio_API.Application.Tests/JDB_Portfolio_API.Application.Tests.csproj" />
+    <Project Path="../tests/JDB_Portfolio_API.Domain.Tests/JDB_Portfolio_API.Domain.Tests.csproj" />
+    <Project Path="../tests/JDB_Portfolio_API.Persistence.Tests/JDB_Portfolio_API.Persistence.Tests.csproj" />
+  </Folder>
+</Solution>

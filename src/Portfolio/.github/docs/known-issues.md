@@ -1,0 +1,89 @@
+# Known issues
+
+Live register of defects and debt. **Update this file when you find or fix
+something**, even if you do not fix it now. Current implementation details live
+in the relevant architecture, domain, database, and API docs; design rationale
+lives in [`adr/`](adr/).
+
+Severity: **P0** blocks running the project · **P1** wrong behaviour or broken
+architecture rule · **P2** correctness/robustness risk · **P3** cleanup.
+
+## P0 — blocks running
+
+None known.
+
+## P1 — wrong behaviour or rule violation
+
+| ID | Issue | Evidence | Historical reference |
+|---|---|---|---|
+| KI-003 | ~~No tests at all~~ **RESOLVED 2026-10-23** | Four xUnit projects cover domain invariants, application services, persistence mapping, API contracts, and the Notion adapter chain | 3.5 |
+| KI-004 | ~~Domain entities are the public API contract~~ **RESOLVED 2026-10-22** | endpoints return `Application/DTO` records; `PortfolioDtoMapper` maps explicitly. No `Domain.Entities`/`Domain.ValueObjects` type appears in an endpoint signature or response. Proven by the wire-shape guards in `PortfolioDtoMapperTests` | 2.1 / D4 |
+| KI-005 | `Period.FinishedAt` was always null after mapping, so `Duration` grew daily for past roles | **code fixed 2026-10-22** — `finished_at` column added (migration `20261022064321_AddExperienceFinishedAt`), entity + context + mapping updated, regression tests added. **Still open: the data.** Existing rows have `finished_at IS NULL`, which now correctly means *ongoing*. The past roles need their end dates backfilled by hand | 1.3 / D1 |
+| KI-006 | ~~`/api/v1/skill` returns `200` with `null` on failure~~ **RESOLVED 2026-10-22** | it goes through `ApiResult.ToHttpResult()` like its siblings, so a database failure returns `503` + `database_unavailable` instead of a success-shaped empty body. Pinned by `GetSkill_WhenTheDatabaseFails_Returns503NotAnEmpty200` | 2.5 |
+| KI-007 | ~~Every failure returns `502` and leaks the exception message~~ **RESOLVED 2026-10-22** | errors are typed (`ErrorKind` + machine-readable `code`) and mapped to a status in one place (`Endpoints/ApiResult.cs`): `404/400/401/409/503/502/500`. Exception text is no longer published. `/skill` now uses the same mapper, and `GlobalExceptionHandler` covers exceptions thrown outside a service | 2.2 |
+| KI-008 | ~~`Role`, `Company`, `Period` have reference equality~~ **RESOLVED 2026-10-22** | all three are `sealed record`s with `get`-only properties, so equality is by value, they work as dictionary keys, and a generated `with` expression cannot bypass validation. `Company` also stopped treating `""` as a value. Pinned by equality/`GetHashCode`/dictionary tests in `Domain.Tests` | 3.1 |
+| KI-009 | ~~Anemic entities: `Project`, `TechStack`, `TechStackCategory` have no invariants; `Recommendation.Description` unvalidated~~ **RESOLVED 2026-10-22** | every entity has a validating constructor and private setters; `partial`, `= null!`, `CreatedAt` and `UpdatedAt` are gone; `Experience.Projects` and `Project.TechStacks` are read-only with `Replace…` mutators; `PersonName` and `Description` reject blank. Pinned by the entity tests in `Domain.Tests/Entities` | 3.3 |
+| KI-010 | ~~Authorization is not enforced on any portfolio endpoint~~ **RESOLVED 2026-10-22 (by decision)** | Portfolio, Notion, and GitHub read endpoints are intentionally anonymous; GitHub responses are restricted to public repositories. `/auth/me` requires the service JWT. Tokens carry `sub`, and `NameClaimType` reads it, so `User.Identity.Name` is populated. A global fallback policy remains deferred; authorization is applied explicitly per endpoint | — |
+
+## P2 — correctness and robustness risk
+
+| ID | Issue | Evidence | Historical reference |
+|---|---|---|---|
+| KI-011 | ~~TechStack reverse mapping maps `string` → `int`~~ **RESOLVED 2026-10-22** | the bad `.ForMember(TechStackCategoryId, MapFrom(src => src.Category))` is gone; the id is now explicitly ignored and resolved by a lookup at write time. Proven by `Map_TechStack_To_TechStackEntity_LeavesTheCategoryIdUnset` | 1.2 / D2 |
+| KI-012 | ~~`Project.Period` has no column and no mapping~~ **RESOLVED 2026-10-22** | the domain property was deleted. The `"period": null` key no longer appears in `GET /api/v1/project` | 1.4 |
+| KI-013 | ~~Empty-string `role` / `career_position` throws inside AutoMapper and 500s the whole collection~~ **RESOLVED 2026-10-22** | blank/whitespace is interpreted as "not disclosed": the mapping returns `null` (`ToRole`) and writes `''` back (`ToStoredRole`), and the entity properties are `Role?`. `Role` itself stays strict. Pinned by `UndeclaredRoleMappingTests` | 1.5 |
+| KI-014 | ~~Services catch `HttpRequestException` around database calls; that type never occurs there~~ **RESOLVED 2026-10-22** | the wrong catch is gone. `PortfolioServiceBase` classifies by exception type (`DbException` → 503, `HttpRequestException` → 502, anything else → 500), and `PortfolioService.GetOverview` no longer catches `HttpRequestException` around its database calls at all — that catch was dead and hid a real unhandled 500 | 2.4 |
+| KI-015 | ~~No `CancellationToken` anywhere; abandoned requests keep querying~~ **RESOLVED 2026-10-22** | threaded end-to-end: endpoint → service → repository → `ToListAsync(ct)` → `HttpClient.GetAsync(ct)`. The port signatures take the token as a **required** parameter, so a new call site cannot forget it, and `ExecuteAsync` hands the token to the operation instead of letting it capture one. Pinned by `GetAllExperienceAsync_PassesTheCallersCancellationTokenToTheRepository` and an endpoint-level check | 2.4 |
+| KI-016 | ~~No application logging and no global exception handler~~ **RESOLVED 2026-10-22** | the Application services log through `ILogger` (warning for a dependency failure, error for a bug) and exception detail is retained in logs. `GlobalExceptionHandler` (`IExceptionHandler`) turns anything that escapes an endpoint into the same `ProblemDetails` shape, with `499` for a client that disconnected. Note: the default ASP.NET request logging is still the only other logging — there is no structured sink or correlation beyond `traceId` | 2.4 |
+| KI-019 | All timestamps are `timestamp without time zone` | `PortfolioContext.cs` column types | 4.x |
+| KI-036 | User Secrets silently override environment variables in the local app configuration | `Program.cs:9` calls `AddUserSecrets<Program>()` after `CreateBuilder(args)`, adding that provider after environment variables and command-line args. On a machine with this app's User Secrets configured, those values can win over environment overrides such as `ConnectionStrings__JDBConnection`. This is a local configuration-precedence issue, not by itself a vulnerability. Azure App Service does not normally have the developer's `secrets.json`; production impact would require someone to explicitly provision that file on the server | 4.x |
+| KI-037 | ~~The only remaining build warning is in `ExternalService`~~ **RESOLVED 2026-10-22** | `NotionClientService` now checks `result?.Markdown is null` and throws an explicit `InvalidOperationException` (classified as `502 → notion_invalid_response`) instead of dereferencing a possibly-null result. `dotnet build --no-incremental` is now **0 warnings, 0 errors**, which is what the definition of done requires | 2.4 |
+| KI-039 | EF Core version skew: Npgsql 10.0.3 targets EF Core 10.0.4, the solution uses 10.0.10 | `Npgsql.EntityFrameworkCore.PostgreSQL` 10.0.3 declares `Microsoft.EntityFrameworkCore.Relational >= 10.0.4`, so NuGet resolves 10.0.4 where EF Design's 10.0.10 does not flow (`PrivateAssets="all"`). Visible as `MSB3277` in `Persistence.Tests` and later in `Api.Tests`. **Mitigated 2026-10-22:** `Microsoft.EntityFrameworkCore.Relational` 10.0.10 is now pinned in `Persistence.csproj`, so the whole graph aligns and `MSB3277` no longer appears anywhere. **The root fix is still upgrading Npgsql to 10.0.10** — a dependency upgrade, so it needs approval | 4.x |
+| KI-040 | `Experience.Projects` is mapped by convention before the hand-built `AfterMap` overwrites it | `PortfolioMappingProfile` — `ExperienceEntity → Experience` maps `Projects` (entity) from `Projects` (domain) by name, which would build detached entities, and only then does `AfterMap` replace the collection. Now explicitly ignored. The same pattern remains on `Experience → ExperienceEntity` | 3.3 |
+| KI-041 | ~~`Recommendation.PersonName` rejects `null` but not whitespace~~ **RESOLVED 2026-10-22 (3.3)** | The constructor used `personName ?? throw`, so <code>person_name = ''</code> passed and rendered as a nameless testimonial — and it did not crash the mapping (unlike `Role`), which is why it never surfaced as a `500`. Plan 3.3 made both `PersonName` and `Description` reject blank/whitespace. No database constraint was added (same reasoning as 1.5), so a blank row is still possible at the schema level; verified 0 such rows in the data | 3.3 |
+| KI-043 | A database that is unreachable at startup kills the process instead of logging a typed failure and retrying | `Program.cs:35` calls `dbContext.Database.Migrate()` unguarded, so Npgsql's `SocketException(111)` escapes `Main` as an unhandled exception. Combined with `restart: unless-stopped`, the container crash-loops on every DB blip (or a wrong `Host=` in a connection string) with no backoff and no single `ILogger` summary. Startup is the one path outside `GlobalExceptionHandler`'s reach and the only one that ignores rule 6's "typed errors" for dependency failures | 4.x |
+| KI-044 | `Company` and `Role` keep surrounding whitespace, so `"Acme"` and `" Acme "` are different values | Neither VO calls `Trim()`. Since 3.1 they are `record`s with value equality, so whitespace variants become distinct keys, distinct `==` results and (once CRUD exists) distinct "companies". The 3.1a `CHECK (btrim(company_name) <> '')` rejects an all-whitespace name but deliberately says nothing about padding | 3.3 |
+| KI-045 | ~~`NotionPage` and `INotionService` live in Domain, so the core names a vendor~~ **RESOLVED 2026-10-23** | The port and its model moved to `Application` (`IPageContentReader`, `PageContent`), the vendor model to `ExternalService/Notion/Models/NotionPage.cs`, and the bridge to `Presentation/Adapters/NotionPageContentReader`. AGENTS §6 rule 2 is unchanged and no csproj reference was added: the adapter lives in the composition root, the only project that sees both. `Domain` is now vendor-free. See ADR-0005 | 3.2 |
+
+## P3 — cleanup and polish
+
+| ID | Issue | Evidence | Historical reference |
+|---|---|---|---|
+| KI-025 | ~~`AddControllers()` / `MapControllers()` are registered but no controllers exist~~ **RESOLVED 2026-10-23** | Removed with the 4.1 composition-root split; `Program.cs` no longer calls either | 4.1 |
+| KI-026 | ~~`/auth/me` is `async` with no `await` (CS1998)~~ **RESOLVED 2026-10-22** | the lambda is synchronous now. JWT issuance moved out of the endpoint entirely into `JwtTokenService` (interface `IAuthTokenService` in Application), so it is unit-tested without HTTP | 2.5 |
+| KI-027 | ~~Notion client rethrows `new HttpRequestException(msg)`, losing the inner exception~~ **RESOLVED 2026-10-23** | There is no catch-all rethrow any more. A non-success response throws `HttpRequestException` with the status code, and network/timeout exceptions escape unchanged, so the logger keeps the original detail | 4.6 |
+| KI-028 | ~~Notion client uses an absolute URL despite `BaseAddress`, sets headers in the constructor, and has no retry/timeout~~ **RESOLVED 2026-10-23** | Base address, auth headers and a 15s timeout are configured in `AddExternalServices`; the client requests `v1/pages/{id}/markdown` and retries once on 429/5xx | 4.6 |
+| KI-029 | ~~Notion markdown is parsed as XML wrapped in `<root>`, fragile to malformed input or a literal `</root>`~~ **RESOLVED 2026-10-23** | Tolerant `<page>` scan; an unclosed card is skipped and the remaining cards are returned. Tag stripping, entity decoding and whitespace collapsing are unit-tested | 4.7 |
+| KI-030 | ~~`/overview` hardcodes display copy and runs three counts sequentially~~ **RESOLVED 2026-10-23** | Copy is gone: the endpoint returns `{ key, count }` and the client owns labels, icons and order, so tiles are order-independent and additive. Queries stay sequential — one scoped `PortfolioContext` cannot run them concurrently. Counting by loading rows is KI-046 | 4.8 |
+| KI-033 | `opencode.json` is committed and points at `127.0.0.1` | repo root | decide |
+| KI-034 | No health-check endpoint; nothing to probe in Azure | `Program.cs` | 4.x |
+| KI-035 | ~~`Experience.Description`/`Responsibility`/`Type` are not explicitly mapped~~ **RESOLVED 2026-10-22** | they are name-mapped and AutoMapper **does** write to the private setters. Proven by `Map_ExperienceEntity_To_Experience_PopulatesDescriptionResponsibilityAndType` in `Persistence.Tests`. The behaviour was never broken — only unverified | 3.3 |
+| KI-046 | `/overview` counts by materialising every row (projects with tech stacks, tech stacks, recommendations), not by `COUNT(*)` | `PortfolioService.GetOverview` calls the three list methods; cost grows with table size. A `CountAsync` port method per repository would issue three counts, but it widens three Domain ports | 4.x |
+
+## Resolved
+
+| ID | Issue | How it was resolved |
+|---|---|---|
+| KI-001 | `docker compose up` failed: `api` depended on an undefined `db` service | the `depends_on` block and the `Host=db` connection string were removed; the compose stack now takes a full connection string from `docker/.env` and expects an external database (2026-10-22) |
+| KI-002 | `Persistence` referenced `Application`, breaking the dependency rule | the `ProjectReference` was removed from `Persistence.csproj` and the dead `using JDB_Portfolio_API.Application.Common;` was deleted from `EfPortfolioExperienceRepository.cs:2`; the `using` was the only `Application` usage in the project. The project graph now matches the rule (2026-10-22) |
+| KI-017 | ~~Design-time factory hardcoded a developer's user-secrets GUID~~ **RESOLVED 2026-11-01** | `PortfolioContextFactory` uses the API project's User Secrets ID directly, so EF commands load the existing API secrets without an extra environment variable. The ID is a project identifier, not a secret; keep it synchronized with `JDB_Portfolio_API.csproj` |
+| KI-018 | `Database.Migrate()` at startup can race with other replicas | **RESOLVED for production 2026-10-23** — the GitHub Actions workflow applies migrations before deployment, and the Azure App Service setting `Database__AutoMigrate=false` disables startup migration in production. The code default remains `true` for environments without an override; see `operations.md` §5 |
+| KI-020 | `IPortfolioTechStackRepository` registered twice | the duplicate registration in `ConfigurationSettings.cs` was removed (2026-10-22) |
+| KI-021 | Read queries track entities and use a 4-level cartesian join | `.AsNoTracking()` on all read paths and `.AsSplitQuery()` on the two multi-level includes — the experience (4-level) and project (3-level) queries (2026-10-22) |
+| KI-022 | Dead types: `IMapper<,,>`, `IService<T>`, `ExperienceId`, `NotionEntity`, `PortfolioNotionPage`, `GetCountAsync`, `GetByIdAsync` | all deleted. `GetCountAsync`/`GetByIdAsync` were removed from `IRepository<T>` and `BasePortfolioRepository` (2026-10-22) |
+| KI-023 | `BaseService<T>` duplicates each service's repository field and adds no behaviour | `BaseService<T>` and `IService<T>` were replaced by `PortfolioServiceBase<T, TRepository>`, which holds the repository as a `protected` field and provides the shared `ExecuteAsync` catch-and-wrap behaviour. Each service now keeps one repository field; the unreachable `??` fallbacks were removed (2026-10-22) |
+| KI-024 | `dotnet-ef` is not installed and there is no tool manifest, yet docs say `dotnet tool restore` | a root-level `dotnet-tools.json` already existed with `dotnet-ef` 10.0.10. `dotnet tool restore` and `dotnet ef --version` both work (2026-10-22) — the register entry was stale, not the repository |
+| KI-031 | `docker/.env.example` set `Jwt__Expires`, a key the app does not read | replaced with `Jwt__ExpirationInMinutes` (2026-10-22) |
+| KI-032 | `jdb_pgdata` volume declared but unused | the volume declaration was removed with the `db` service (2026-10-22) |
+| KI-038 | App Service still ran migrations at startup after deployment migrations were enabled | The workflow applies migrations before deployment, and the owner confirmed that production is aligned with the Azure App Service setting `Database__AutoMigrate=false` (2026-10-23). The setting prevents duplicate startup migration; CI remains responsible for future migrations. See `operations.md` §5 |
+| KI-042 | `docker build` failed with `MSB3202` on all four `tests/` projects | adding the test projects to `src/JDB_Portfolio_API.slnx` silently broke the image: `docker/Dockerfile` restored the **solution**, but only `src/*.csproj` files are copied into the build context, so restore looked for `../tests/**/*.csproj` and found nothing. The restore step now targets `src/JDB_Portfolio_API/JDB_Portfolio_API.csproj`, which pulls in exactly the web project and its transitive project references, so tests no longer need to exist in the image build (2026-10-22) |
+
+## How to report a new issue
+
+Add a row with:
+
+1. an ID (`KI-NNN`, next free number);
+2. the observed behaviour, not the suspected cause;
+3. a reproducible evidence snippet (command, file:line, SQL);
+4. an explicitly authorized `.github/plan.md` item that will fix it, or `—` if
+   no such item exists.

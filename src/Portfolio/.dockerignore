@@ -1,0 +1,12 @@
+# Build output
+**/bin
+**/obj
+
+# IDE / tooling
+**/.vs
+**/.vscode
+
+# Source control
+.git/
+.gitignore
+.dockerignore

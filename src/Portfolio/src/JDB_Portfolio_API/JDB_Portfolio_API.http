@@ -1,0 +1,19 @@
+@JDB_Portfolio_API_HostAddress = http://localhost:5254
+
+GET {{JDB_Portfolio_API_HostAddress}}/api/v1/project
+Accept: application/json
+
+###
+
+GET {{JDB_Portfolio_API_HostAddress}}/api/v1/github/owner/octocat/repositories
+Accept: application/json
+
+###
+
+GET {{JDB_Portfolio_API_HostAddress}}/api/v1/github/repository/octocat/hello-world/languages
+Accept: application/json
+
+###
+
+GET {{JDB_Portfolio_API_HostAddress}}/api/v1/github/owner/octocat/repositories/1296269
+Accept: application/json

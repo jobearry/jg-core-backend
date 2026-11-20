@@ -1,0 +1,53 @@
+# =============================================================================
+# Spins up:
+#   - api : the ASP.NET Core Web API (built from the ../Dockerfile)
+#
+# The database is NOT part of this stack. The api connects to an existing
+# PostgreSQL supplied through ConnectionStrings__JDBConnection in docker/.env:
+# a server you run yourself, or a hosted one.
+# =============================================================================
+
+name: jdb-portfolio-api
+
+services:
+  api:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    image: jdb-portfolio-api:latest
+    container_name: jdb_portfolio_api
+    restart: unless-stopped
+    # Makes host.docker.internal resolve on Linux too, so a PostgreSQL running
+    # on the host is reachable from the container.
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      # "Development" enables Swagger UI; set to Production for deployments.
+      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Development}
+      # The container always listens on plain HTTP at 8080.
+      ASPNETCORE_URLS: http://+:8080
+
+      # `__` separators map to `:` config sections, so these bind the app's
+      # Jwt:* / Notion:* sections (see ConfigurationSettings.cs). Values come
+      # from docker/.env; the ":?" form fails fast if a required var is missing.
+      Notion__Version: ${Notion__Version:-2026-03-11}
+      Notion__Token: ${Notion__Token:?}
+
+      Jwt__Key: ${Jwt__Key:?}
+      Jwt__Issuer: ${Jwt__Issuer:?}
+      Jwt__Audience: ${Jwt__Audience:?}
+      Jwt__ExpirationInMinutes: ${Jwt__ExpirationInMinutes:-60}
+
+      # Required. There is no bundled database, so the full Npgsql connection
+      # string comes from docker/.env. `host.docker.internal` reaches a
+      # PostgreSQL running on the host.
+      ConnectionStrings__JDBConnection: ${ConnectionStrings__JDBConnection:?}
+    ports:
+      # Host port configurable via API_PORT; container port is always 8080.
+      - "${API_PORT:-8080}:8080"
+    networks:
+      - jdb_network
+
+networks:
+  jdb_network:
+    driver: bridge
