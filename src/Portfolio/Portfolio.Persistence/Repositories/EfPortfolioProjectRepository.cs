@@ -1,19 +1,16 @@
-﻿using AutoMapper;
-using Portfolio.Domain.Entities;
+﻿using Portfolio.Domain.Entities;
 using Portfolio.Domain.Interfaces;
 using Portfolio.Persistence.Contexts;
 using Portfolio.Persistence.Entities;
+using Portfolio.Persistence.Mappers;
 using Microsoft.EntityFrameworkCore;
-using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace Portfolio.Persistence.Repositories;
 
-public class EfPortfolioProjectRepository: BasePortfolioRepository<Project, ProjectEntity>, IPortfolioProjectRepository
+public class EfPortfolioProjectRepository : BasePortfolioRepository<Project, ProjectEntity>, IPortfolioProjectRepository
 {
-    public EfPortfolioProjectRepository(PortfolioContext context, IMapper mapper)
-        : base(context, mapper) { }
+    public EfPortfolioProjectRepository(PortfolioContext context)
+        : base(context, ProjectMapper.ToDomain) { }
 
     public async Task<List<Project>> GetAllProjectsWithTechStacksAsync(CancellationToken cancellationToken)
     {
@@ -23,6 +20,6 @@ public class EfPortfolioProjectRepository: BasePortfolioRepository<Project, Proj
                                           .ThenInclude(pt => pt.TechStack)
                                           .ThenInclude(ts => ts.TechStackCategory)
                                           .ToListAsync(cancellationToken);
-        return _mapper.Map<List<Project>>(projectEntities);
+        return projectEntities.Select(ProjectMapper.ToDomain).ToList();
     }
 }

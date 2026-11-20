@@ -6,4 +6,12 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <ItemGroup>
+    <Compile Include="..\Portfolio\Shared\Common\Company.cs" Link="ValueObjects\Company.cs" />
+    <Compile Include="..\Portfolio\Shared\Common\Period.cs" Link="ValueObjects\Period.cs" />
+    <Compile Include="..\Portfolio\Shared\Common\Role.cs" Link="ValueObjects\Role.cs" />
+    <Compile Include="..\Portfolio\Shared\Common\TechStackRef.cs" Link="ValueObjects\TechStackRef.cs" />
+    <Compile Include="..\Portfolio\Shared\Common\TechStack.cs" Link="Entities\TechStack.cs" />
+  </ItemGroup>
+
 </Project>

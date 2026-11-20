@@ -19,7 +19,6 @@ using Portfolio.Application.Services;
 using Portfolio.Authentication;
 using Portfolio.ErrorHandling;
 using Portfolio.Persistence.Repositories;
-using Portfolio.Persistence.Profiles;
 using System.IdentityModel.Tokens.Jwt;
 
 namespace Portfolio
@@ -41,9 +40,9 @@ namespace Portfolio
         }
 
         /// <summary>
-        /// Registers the persistence adapters: the EF Core context, one repository per
-        /// aggregate, and the AutoMapper profile that maps persistence entities to domain
-        /// entities. Repository ports are declared in Domain; implementations live here.
+        /// Registers the persistence adapters: the EF Core context and one repository per
+        /// aggregate. Repositories map persistence entities to domain entities with the
+        /// hand-written mappers. Ports are declared in Domain; implementations live here.
         /// </summary>
         public static void AddPersistence(this IServiceCollection services, IConfiguration configuration)
         {
@@ -58,8 +57,6 @@ namespace Portfolio
             services.AddScoped<IPortfolioProjectRepository, EfPortfolioProjectRepository>();
             services.AddScoped<IPortfolioTechStackRepository, EfPortfolioTechStackRepository>();
             services.AddScoped<IPortfolioRecommendationRepository, EfPortfolioRecommendationRepository>();
-
-            services.AddMapper();
         }
 
         /// <summary>
@@ -120,15 +117,6 @@ namespace Portfolio
             services.AddProblemDetails();
         }
 
-        public static void AddMapper(this IServiceCollection services)
-        {
-            services.AddAutoMapper(a =>
-                {
-
-                },
-                typeof(PortfolioMappingProfile).Assembly
-            );
-        }
         public static void AddSwaggerConfig(this IServiceCollection services, IConfiguration configuration)
         {
             var contactInfo = new OpenApiContact

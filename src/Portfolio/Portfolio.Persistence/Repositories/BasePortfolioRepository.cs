@@ -1,10 +1,6 @@
-﻿using AutoMapper;
-using Portfolio.Domain.Interfaces;
+﻿using Portfolio.Domain.Interfaces;
 using Portfolio.Persistence.Contexts;
 using Microsoft.EntityFrameworkCore;
-using System.Collections.Generic;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace Portfolio.Persistence.Repositories;
 
@@ -14,19 +10,19 @@ public abstract class BasePortfolioRepository<TDomain, TEntity> : IRepository<TD
 {
     protected readonly PortfolioContext _context;
     protected readonly DbSet<TEntity> _dbSet;
-    protected readonly IMapper _mapper;
+    private readonly Func<TEntity, TDomain> _map;
 
-    protected BasePortfolioRepository(PortfolioContext context, IMapper mapper)
+    protected BasePortfolioRepository(PortfolioContext context, Func<TEntity, TDomain> map)
     {
         _context = context;
-        _mapper = mapper;
         _dbSet = context.Set<TEntity>();
+        _map = map;
     }
 
     public async Task<List<TDomain>> GetAllAsync(CancellationToken cancellationToken)
     {
         var entities = await _dbSet.AsNoTracking().ToListAsync(cancellationToken);
 
-        return _mapper.Map<List<TDomain>>(entities);
+        return entities.Select(_map).ToList();
     }
 }

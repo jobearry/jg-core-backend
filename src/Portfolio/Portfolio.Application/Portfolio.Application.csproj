@@ -7,6 +7,13 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="..\Portfolio\Shared\Common\Error.cs" Link="Common\Error.cs" />
+    <Compile Include="..\Portfolio\Shared\Common\Result.cs" Link="Common\Result.cs" />
+    <Compile Include="..\Portfolio\Shared\Common\ResultErrors.cs" Link="Common\ResultErrors.cs" />
+    <Compile Include="..\Portfolio\Shared\Common\PortfolioDtoMapper.cs" Link="DTO\PortfolioDtoMapper.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
     <!-- Logging *contracts* only (ILogger<T>). No implementation, no EF, no ASP.NET:
          the composition root decides where log output actually goes. Without this the
          Application layer cannot report a failure at all, which is why a 503 used to

@@ -1,20 +1,16 @@
-﻿using AutoMapper;
-using Portfolio.Domain.Entities;
+﻿using Portfolio.Domain.Entities;
 using Portfolio.Domain.Interfaces;
-using Portfolio.Domain.ValueObjects;
 using Portfolio.Persistence.Contexts;
 using Portfolio.Persistence.Entities;
+using Portfolio.Persistence.Mappers;
 using Microsoft.EntityFrameworkCore;
-using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace Portfolio.Persistence.Repositories;
 
-public class EfPortfolioExperienceRepository: BasePortfolioRepository<Experience, ExperienceEntity>, IPortfolioExperienceRepository
+public class EfPortfolioExperienceRepository : BasePortfolioRepository<Experience, ExperienceEntity>, IPortfolioExperienceRepository
 {
-    public EfPortfolioExperienceRepository(PortfolioContext context, IMapper mapper)
-        : base(context, mapper) { }
+    public EfPortfolioExperienceRepository(PortfolioContext context)
+        : base(context, ExperienceMapper.ToDomain) { }
 
     public async Task<List<Experience>> GetAllExperienceWithProjectsAsync(CancellationToken cancellationToken)
     {
@@ -26,6 +22,6 @@ public class EfPortfolioExperienceRepository: BasePortfolioRepository<Experience
                                              .ThenInclude(e => e.TechStackCategory)
                                              .ToListAsync(cancellationToken);
 
-        return _mapper.Map<List<Experience>>(experienceEntities);
+        return experienceEntities.Select(ExperienceMapper.ToDomain).ToList();
     }
 }

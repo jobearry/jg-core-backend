@@ -7,7 +7,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="AutoMapper" Version="16.3.0" />
     <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.10" />
     <!-- Npgsql 10.0.3 pulls EF.Relational 10.0.4, while everything else here is
          10.0.10. That skew produces MSB3277 in any project that references this one
@@ -27,6 +26,10 @@
     <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="10.0.10" />
     <PackageReference Include="Microsoft.Extensions.Configuration.UserSecrets" Version="10.0.10" />
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="..\Portfolio\Shared\Persistence\**\*.cs" LinkBase="Shared\Persistence" />
   </ItemGroup>
 
   <ItemGroup>
