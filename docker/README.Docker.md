@@ -1,20 +1,34 @@
+# JGBackend — Docker
+
+Image for the `src/JGBackend` host.
+
 ### Building and running your application
 
-From the repository root, start your application by running:
-`docker compose --project-directory . -f docker/compose.yaml up --build`.
+From the repository root:
+
+```sh
+docker compose -f docker/compose.yaml up --build
+```
 
 Your application will be available at http://localhost:5031.
 
 ### Deploying your application to the cloud
 
-From the repository root, build your image, e.g.:
-`docker build -f docker/Dockerfile -t myapp .`.
-If your cloud uses a different CPU architecture than your development
-machine (e.g., you are on a Mac M1 and your cloud provider is amd64),
-you'll want to build the image for that platform, e.g.:
-`docker build --platform=linux/amd64 -f docker/Dockerfile -t myapp .`.
+From the repository root:
 
-Then, push it to your registry, e.g. `docker push myregistry.com/myapp`.
+```sh
+docker build -f docker/JGBackend.Dockerfile -t jg-backend .
+```
+
+If your cloud uses a different CPU architecture than your development machine
+(e.g. you are on a Mac M1 and your cloud provider is amd64), build for that
+platform:
+
+```sh
+docker build --platform=linux/amd64 -f docker/JGBackend.Dockerfile -t jg-backend .
+```
+
+Then push it to your registry, e.g. `docker push myregistry.com/jg-backend`.
 
 Consult Docker's [getting started](https://docs.docker.com/go/get-started-sharing/)
 docs for more detail on building and pushing.

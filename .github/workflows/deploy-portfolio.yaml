@@ -1,0 +1,82 @@
+name: Deploy Portfolio to Azure
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - 'src/Portfolio/**'
+      - 'tests/Portfolio/**'
+      - 'Directory.Build.props'
+      - 'JGBackend.sln'
+      - 'dotnet-tools.json'
+      - '.github/workflows/deploy-portfolio.yaml'
+  workflow_dispatch:
+
+# Serialize deploys: two overlapping runs would race each other and the database.
+concurrency:
+  group: portfolio-production-deploy
+  cancel-in-progress: false
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restore dependencies
+        run: dotnet restore JGBackend.sln
+
+      - name: Restore .NET tools
+        run: dotnet tool restore
+
+      # Fails when the model changed but no migration was written. Needs no database:
+      # the placeholder is only read by the design-time factory, never dialled.
+      - name: Check for pending model changes
+        env:
+          ConnectionStrings__JDBConnection: "Host=unused;Database=unused;Username=unused;Password=unused"
+        run: >
+          dotnet ef migrations has-pending-model-changes
+          --project src/Portfolio/Portfolio.Persistence
+          --startup-project src/Portfolio/Portfolio.API
+
+      - name: Build with dotnet
+        run: dotnet build JGBackend.sln --configuration Release --no-restore
+
+      - name: dotnet publish
+        run: dotnet publish src/Portfolio/Portfolio.API/Portfolio.API.csproj -c Release --no-restore -o ./publish
+
+      # Schema changes run here, once, before the app is replaced. A failure
+      # stops the deploy and leaves the running app untouched.
+      - name: Apply database migrations
+        env:
+          ConnectionStrings__JDBConnection: ${{ secrets.PRODUCTION_CONNECTION_STRING }}
+        run: |
+          if [ -z "$ConnectionStrings__JDBConnection" ]; then
+            echo "::error::PRODUCTION_CONNECTION_STRING is not set; refusing to deploy without migrations."
+            exit 1
+          fi
+          dotnet ef database update \
+            --project src/Portfolio/Portfolio.Persistence \
+            --startup-project src/Portfolio/Portfolio.API
+
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Deploy to jdb-portfolio-api azure webapp
+        uses: azure/webapps-deploy@v2
+        with:
+          app-name: jdb-portfolio-api
+          package: ./publish
+          clean: true
