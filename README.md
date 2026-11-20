@@ -1,8 +1,17 @@
-# jg-generic-api (monorepo)
+# Generic API
+[![CI](https://img.shields.io/github/actions/workflow/status/jobearry/jg-generic-api/ci.yaml?branch=master)](https://github.com/jobearry/jg-generic-api/actions/workflows/ci.yaml)
+[![.NET](https://img.shields.io/badge/.NET-10.0-512BD4?logo=dotnet&logoColor=white)](https://dotnet.microsoft.com/en-us/download/dotnet/10.0)
+[![C#](https://img.shields.io/badge/C%23-14-9B4F96?logo=csharp&logoColor=white)](https://learn.microsoft.com/dotnet/csharp/)
+[![ASP.NET Core](https://img.shields.io/badge/ASP.NET%20Core-Minimal%20APIs-512BD4?logo=dotnet&logoColor=white)](https://learn.microsoft.com/aspnet/core/fundamentals/minimal-apis)
+[![Vertical Slice Architecture](https://img.shields.io/badge/Architecture-Vertical%20Slice-8A2BE2)](https://www.jimmybogard.com/vertical-slice-architecture/)
+[![JWT](https://img.shields.io/badge/Auth-JWT%20(HMAC--SHA256)-E8590C)](https://jwt.io/)
+[![Swagger](https://img.shields.io/badge/Swagger-OpenAPI%20v1-85EA2D?logo=swagger&logoColor=black)](https://swagger.io/tools/swagger-ui/)
+[![Azure App Service](https://img.shields.io/badge/Azure-App%20Service-0078D4?logo=microsoftazure&logoColor=white)](https://azure.microsoft.com/products/app-service)
+[![Docker](https://img.shields.io/badge/Docker-alpine-2496ED?logo=docker&logoColor=white)](https://www.docker.com/)
 
 Monorepo for personal projects. Currently hosts a .NET 10 Web API providing
 the Auth service (and future personal backends), organized using vertical
-slice architecture. Built with assistance of Github Copilot, and Ollama (Qwen2.5-Coder:7b).
+slice architecture. Built with assistance of Github Copilot, and Opencode.
 
 ## Tech stack
 - .NET 10 Web API (C#)
