@@ -39,34 +39,6 @@ public class PortfolioEndpointsTests : IClassFixture<PortfolioApiFactory>
     // -------------------------------------------------------------- other endpoints
 
     [Fact]
-    public async Task GetSkill_DoesNotExposeCreatedAt()
-    {
-        var json = await GetJsonAsync("/api/v1/skill");
-        var techStack = Assert.Single(json.EnumerateArray());
-
-        Assert.Equal("C#", techStack.GetProperty("stackName").GetString());
-        Assert.False(techStack.TryGetProperty("createdAt", out _));
-    }
-
-    /// <summary>
-    /// Plan 2.5. This endpoint used to ignore <c>IsSuccess</c> and answer <c>200</c> with
-    /// a null body on failure, which a client could not tell apart from "there are no
-    /// skills". It goes through the shared mapper now.
-    /// </summary>
-    [Fact]
-    public async Task GetSkill_WhenTheDatabaseFails_Returns503NotAnEmpty200()
-    {
-        _factory.TechStacks.Failure = new FakeDbException("could not connect");
-
-        var response = await _client.GetAsync("/api/v1/skill");
-
-        Assert.Equal(HttpStatusCode.ServiceUnavailable, response.StatusCode);
-
-        var problem = await GetProblemAsync(response);
-        Assert.Equal("database_unavailable", problem.GetProperty("code").GetString());
-    }
-
-    [Fact]
     public async Task GetRecommendation_FlattensCareerPositionAndAllowsUndeclared()
     {
         var json = await GetJsonAsync("/api/v1/recommendation");

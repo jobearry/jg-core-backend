@@ -19,7 +19,7 @@ public abstract class BasePortfolioRepository<TDomain, TEntity> : IRepository<TD
         _map = map;
     }
 
-    public async Task<List<TDomain>> GetAllAsync(CancellationToken cancellationToken)
+    public virtual async Task<List<TDomain>> GetAllAsync(CancellationToken cancellationToken)
     {
         var entities = await _dbSet.AsNoTracking().ToListAsync(cancellationToken);
 

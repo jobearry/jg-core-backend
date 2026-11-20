@@ -21,6 +21,7 @@
   <ItemGroup>
     <Compile Include="..\Features\Experience\ExperienceEndpointsTests.cs" Link="Features\Experience\ExperienceEndpointsTests.cs" />
     <Compile Include="..\Features\Project\ProjectEndpointsTests.cs" Link="Features\Project\ProjectEndpointsTests.cs" />
+    <Compile Include="..\Features\Skill\SkillEndpointsTests.cs" Link="Features\Skill\SkillEndpointsTests.cs" />
   </ItemGroup>
 
   <ItemGroup>

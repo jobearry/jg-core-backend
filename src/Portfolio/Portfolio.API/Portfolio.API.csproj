@@ -10,6 +10,7 @@
   <ItemGroup>
     <Compile Include="..\Portfolio\Features\Experience\ExperienceEndpoints.cs" Link="Features\Experience\ExperienceEndpoints.cs" />
     <Compile Include="..\Portfolio\Features\Project\ProjectEndpoints.cs" Link="Features\Project\ProjectEndpoints.cs" />
+    <Compile Include="..\Portfolio\Features\Skill\SkillEndpoints.cs" Link="Features\Skill\SkillEndpoints.cs" />
   </ItemGroup>
 
   <ItemGroup>

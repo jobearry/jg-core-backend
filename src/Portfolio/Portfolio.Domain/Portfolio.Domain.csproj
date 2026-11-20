@@ -14,6 +14,7 @@
     <Compile Include="..\Portfolio\Shared\Common\TechStack.cs" Link="Entities\TechStack.cs" />
     <Compile Include="..\Portfolio\Features\Experience\IExperienceRepository.cs" Link="Features\Experience\IExperienceRepository.cs" />
     <Compile Include="..\Portfolio\Features\Project\IProjectRepository.cs" Link="Features\Project\IProjectRepository.cs" />
+    <Compile Include="..\Portfolio\Features\Skill\ISkillRepository.cs" Link="Features\Skill\ISkillRepository.cs" />
   </ItemGroup>
 
 </Project>

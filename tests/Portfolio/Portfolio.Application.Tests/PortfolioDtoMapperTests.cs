@@ -4,6 +4,7 @@ using Portfolio.Domain.Entities;
 using Portfolio.Domain.ValueObjects;
 using Portfolio.Features.Experience;
 using Portfolio.Features.Project;
+using Portfolio.Features.Skill;
 using System.Text.Json;
 
 namespace Portfolio.Application.Tests;

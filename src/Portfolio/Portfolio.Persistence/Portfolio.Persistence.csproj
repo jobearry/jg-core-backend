@@ -32,6 +32,7 @@
     <Compile Include="..\Portfolio\Shared\Persistence\**\*.cs" LinkBase="Shared\Persistence" />
     <Compile Include="..\Portfolio\Features\Experience\EfExperienceRepository.cs" Link="Features\Experience\EfExperienceRepository.cs" />
     <Compile Include="..\Portfolio\Features\Project\EfProjectRepository.cs" Link="Features\Project\EfProjectRepository.cs" />
+    <Compile Include="..\Portfolio\Features\Skill\EfSkillRepository.cs" Link="Features\Skill\EfSkillRepository.cs" />
   </ItemGroup>
 
   <ItemGroup>

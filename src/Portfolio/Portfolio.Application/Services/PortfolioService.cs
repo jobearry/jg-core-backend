@@ -5,6 +5,7 @@ using Portfolio.Application.Models;
 using Portfolio.Domain.Entities;
 using Portfolio.Domain.Interfaces;
 using Portfolio.Features.Project;
+using Portfolio.Features.Skill;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
@@ -18,14 +19,14 @@ public class PortfolioService
 {
     private readonly IPageContentReader _pageContentReader;
     private readonly IProjectRepository _projectRepository;
-    private readonly IPortfolioTechStackRepository _techStackRepository;
+    private readonly ISkillRepository _techStackRepository;
     private readonly IPortfolioRecommendationRepository _recommendationRepository;
     private readonly ILogger<PortfolioService> _logger;
 
     public PortfolioService(
         IPageContentReader pageContentReader,
         IProjectRepository projectRepository,
-        IPortfolioTechStackRepository techStackRepository,
+        ISkillRepository techStackRepository,
         IPortfolioRecommendationRepository recommendationRepository,
         ILogger<PortfolioService> logger)
     {
@@ -76,7 +77,7 @@ public class PortfolioService
             // this context instance". Parallelism needs a context per query, which
             // costs more than it saves for three counts.
             var projects = await _projectRepository.GetAllWithTechStacksAsync(cancellationToken);
-            var skills = await _techStackRepository.GetAllTechStacksAsync(cancellationToken);
+            var skills = await _techStackRepository.GetAllAsync(cancellationToken);
             var recommendations = await _recommendationRepository.GetAllRecommendationsAsync(cancellationToken);
 
             // Keys are the contract; the client owns labels, icons and order. Only add a

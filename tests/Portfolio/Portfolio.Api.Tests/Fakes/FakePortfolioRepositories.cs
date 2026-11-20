@@ -5,6 +5,7 @@ using Portfolio.Domain.Interfaces;
 using Portfolio.Domain.ValueObjects;
 using Portfolio.Features.Experience;
 using Portfolio.Features.Project;
+using Portfolio.Features.Skill;
 using System.Threading;
 
 namespace Portfolio.Api.Tests.Fakes;
@@ -61,15 +62,13 @@ public sealed class FakeProjectRepository : IProjectRepository
         Task.FromResult(Projects);
 }
 
-public sealed class FakeTechStackRepository : IPortfolioTechStackRepository
+public sealed class FakeTechStackRepository : ISkillRepository
 {
     public List<TechStack> TechStacks { get; } = new();
 
     public Exception? Failure { get; set; }
 
     public Task<List<TechStack>> GetAllAsync(CancellationToken cancellationToken) => Respond();
-
-    public Task<List<TechStack>> GetAllTechStacksAsync(CancellationToken cancellationToken) => Respond();
 
     private Task<List<TechStack>> Respond() =>
         Failure is null

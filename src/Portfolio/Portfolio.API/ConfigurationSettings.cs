@@ -18,6 +18,7 @@ using Portfolio.ExternalService.Github.Settings;
 using Portfolio.Application.Services;
 using Portfolio.Features.Experience;
 using Portfolio.Features.Project;
+using Portfolio.Features.Skill;
 using Portfolio.Authentication;
 using Portfolio.ErrorHandling;
 using Portfolio.Persistence.Repositories;
@@ -37,7 +38,7 @@ namespace Portfolio
             services.AddScoped<GetExperienceHandler>();
             services.AddScoped<GetProjectHandler>();
             services.AddScoped<PortfolioRecommendationService>();
-            services.AddScoped<PortfolioSkillService>();
+            services.AddScoped<GetSkillHandler>();
             services.AddScoped<IGithubRepositoryService, GithubRepositoryService>();
         }
 
@@ -57,7 +58,7 @@ namespace Portfolio
 
             services.AddScoped<IExperienceRepository, EfExperienceRepository>();
             services.AddScoped<IProjectRepository, EfProjectRepository>();
-            services.AddScoped<IPortfolioTechStackRepository, EfPortfolioTechStackRepository>();
+            services.AddScoped<ISkillRepository, EfSkillRepository>();
             services.AddScoped<IPortfolioRecommendationRepository, EfPortfolioRecommendationRepository>();
         }
 
