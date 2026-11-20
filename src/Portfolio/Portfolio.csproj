@@ -1,12 +1,14 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
-    <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UserSecretsId>57d40eab-5101-40e4-9e11-4895f9a689f0</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.10" />
     <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.10" />
     <!-- Npgsql 10.0.3 pulls EF.Relational 10.0.4, while everything else here is
          10.0.10. That skew produces MSB3277 in any project that references this one
@@ -21,23 +23,8 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="Microsoft.Extensions.Configuration" Version="10.0.10" />
-    <PackageReference Include="Microsoft.Extensions.Configuration.FileExtensions" Version="10.0.10" />
-    <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="10.0.10" />
-    <PackageReference Include="Microsoft.Extensions.Configuration.UserSecrets" Version="10.0.10" />
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.3" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Compile Include="..\Portfolio\Shared\Persistence\**\*.cs" LinkBase="Shared\Persistence" />
-    <Compile Include="..\Portfolio\Features\Experience\EfExperienceRepository.cs" Link="Features\Experience\EfExperienceRepository.cs" />
-    <Compile Include="..\Portfolio\Features\Project\EfProjectRepository.cs" Link="Features\Project\EfProjectRepository.cs" />
-    <Compile Include="..\Portfolio\Features\Skill\EfSkillRepository.cs" Link="Features\Skill\EfSkillRepository.cs" />
-    <Compile Include="..\Portfolio\Features\Recommendation\EfRecommendationRepository.cs" Link="Features\Recommendation\EfRecommendationRepository.cs" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="..\Portfolio.Domain\Portfolio.Domain.csproj" />
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="10.2.3" />
   </ItemGroup>
 
 </Project>

@@ -24,7 +24,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\..\src\Portfolio\Portfolio.Persistence\Portfolio.Persistence.csproj" />
+    <ProjectReference Include="..\..\..\src\Portfolio\Portfolio.csproj" />
   </ItemGroup>
 
   <ItemGroup>

@@ -6,7 +6,7 @@ namespace Portfolio.Persistence.Contexts;
 
 public class PortfolioContextFactory : IDesignTimeDbContextFactory<PortfolioContext>
 {
-    // Must match the API project's UserSecretsId in Portfolio.API.csproj.
+    // Must match the UserSecretsId in Portfolio.csproj.
     private const string UserSecretsId = "57d40eab-5101-40e4-9e11-4895f9a689f0";
 
     /// <summary>
