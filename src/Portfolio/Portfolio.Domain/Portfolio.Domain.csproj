@@ -15,6 +15,7 @@
     <Compile Include="..\Portfolio\Features\Experience\IExperienceRepository.cs" Link="Features\Experience\IExperienceRepository.cs" />
     <Compile Include="..\Portfolio\Features\Project\IProjectRepository.cs" Link="Features\Project\IProjectRepository.cs" />
     <Compile Include="..\Portfolio\Features\Skill\ISkillRepository.cs" Link="Features\Skill\ISkillRepository.cs" />
+    <Compile Include="..\Portfolio\Features\Recommendation\IRecommendationRepository.cs" Link="Features\Recommendation\IRecommendationRepository.cs" />
   </ItemGroup>
 
 </Project>

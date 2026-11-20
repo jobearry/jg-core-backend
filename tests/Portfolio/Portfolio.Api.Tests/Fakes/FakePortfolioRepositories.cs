@@ -6,6 +6,7 @@ using Portfolio.Domain.ValueObjects;
 using Portfolio.Features.Experience;
 using Portfolio.Features.Project;
 using Portfolio.Features.Skill;
+using Portfolio.Features.Recommendation;
 using System.Threading;
 
 namespace Portfolio.Api.Tests.Fakes;
@@ -76,15 +77,13 @@ public sealed class FakeTechStackRepository : ISkillRepository
             : Task.FromException<List<TechStack>>(Failure);
 }
 
-public sealed class FakeRecommendationRepository : IPortfolioRecommendationRepository
+public sealed class FakeRecommendationRepository : IRecommendationRepository
 {
     public List<Recommendation> Recommendations { get; } = new();
 
     public Task<List<Recommendation>> GetAllAsync(CancellationToken cancellationToken) =>
         Task.FromResult(Recommendations);
 
-    public Task<List<Recommendation>> GetAllRecommendationsAsync(CancellationToken cancellationToken) =>
-        Task.FromResult(Recommendations);
 }
 
 /// <summary>

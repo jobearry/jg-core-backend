@@ -17,6 +17,8 @@
     <Compile Include="..\Portfolio\Features\Project\GetProjectHandler.cs" Link="Features\Project\GetProjectHandler.cs" />
     <Compile Include="..\Portfolio\Features\Skill\TechStackDto.cs" Link="Features\Skill\TechStackDto.cs" />
     <Compile Include="..\Portfolio\Features\Skill\GetSkillHandler.cs" Link="Features\Skill\GetSkillHandler.cs" />
+    <Compile Include="..\Portfolio\Features\Recommendation\RecommendationDto.cs" Link="Features\Recommendation\RecommendationDto.cs" />
+    <Compile Include="..\Portfolio\Features\Recommendation\GetRecommendationHandler.cs" Link="Features\Recommendation\GetRecommendationHandler.cs" />
   </ItemGroup>
 
   <ItemGroup>

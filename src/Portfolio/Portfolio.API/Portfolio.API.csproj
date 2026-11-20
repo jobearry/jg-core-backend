@@ -11,6 +11,7 @@
     <Compile Include="..\Portfolio\Features\Experience\ExperienceEndpoints.cs" Link="Features\Experience\ExperienceEndpoints.cs" />
     <Compile Include="..\Portfolio\Features\Project\ProjectEndpoints.cs" Link="Features\Project\ProjectEndpoints.cs" />
     <Compile Include="..\Portfolio\Features\Skill\SkillEndpoints.cs" Link="Features\Skill\SkillEndpoints.cs" />
+    <Compile Include="..\Portfolio\Features\Recommendation\RecommendationEndpoints.cs" Link="Features\Recommendation\RecommendationEndpoints.cs" />
   </ItemGroup>
 
   <ItemGroup>

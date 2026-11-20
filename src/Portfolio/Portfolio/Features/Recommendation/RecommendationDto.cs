@@ -1,4 +1,4 @@
-namespace Portfolio.Application.DTO;
+namespace Portfolio.Features.Recommendation;
 
 /// <summary>
 /// The published shape of a testimonial. <c>CareerPosition</c> is nullable:

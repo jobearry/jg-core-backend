@@ -6,6 +6,7 @@ using Portfolio.Domain.Entities;
 using Portfolio.Domain.Interfaces;
 using Portfolio.Features.Project;
 using Portfolio.Features.Skill;
+using Portfolio.Features.Recommendation;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
@@ -20,14 +21,14 @@ public class PortfolioService
     private readonly IPageContentReader _pageContentReader;
     private readonly IProjectRepository _projectRepository;
     private readonly ISkillRepository _techStackRepository;
-    private readonly IPortfolioRecommendationRepository _recommendationRepository;
+    private readonly IRecommendationRepository _recommendationRepository;
     private readonly ILogger<PortfolioService> _logger;
 
     public PortfolioService(
         IPageContentReader pageContentReader,
         IProjectRepository projectRepository,
         ISkillRepository techStackRepository,
-        IPortfolioRecommendationRepository recommendationRepository,
+        IRecommendationRepository recommendationRepository,
         ILogger<PortfolioService> logger)
     {
         _pageContentReader = pageContentReader;
@@ -78,7 +79,7 @@ public class PortfolioService
             // costs more than it saves for three counts.
             var projects = await _projectRepository.GetAllWithTechStacksAsync(cancellationToken);
             var skills = await _techStackRepository.GetAllAsync(cancellationToken);
-            var recommendations = await _recommendationRepository.GetAllRecommendationsAsync(cancellationToken);
+            var recommendations = await _recommendationRepository.GetAllAsync(cancellationToken);
 
             // Keys are the contract; the client owns labels, icons and order. Only add a
             // key here when the client has a tile for it.

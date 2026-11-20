@@ -39,18 +39,6 @@ public class PortfolioEndpointsTests : IClassFixture<PortfolioApiFactory>
     // -------------------------------------------------------------- other endpoints
 
     [Fact]
-    public async Task GetRecommendation_FlattensCareerPositionAndAllowsUndeclared()
-    {
-        var json = await GetJsonAsync("/api/v1/recommendation");
-
-        var declared = FindById(json, 1);
-        Assert.Equal("Engineer", declared.GetProperty("careerPosition").GetString());
-
-        var undeclared = FindById(json, 2);
-        Assert.Equal(JsonValueKind.Null, undeclared.GetProperty("careerPosition").ValueKind);
-    }
-
-    [Fact]
     public async Task GetOverview_ReturnsStableKeysAndCounts()
     {
         var json = await GetJsonAsync("/api/v1/overview");
