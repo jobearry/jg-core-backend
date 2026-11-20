@@ -1,22 +1,23 @@
 using System.Net;
 using System.Text.Json;
-using Portfolio.Application.Abstractions;
 using Portfolio.Application.Common;
-using Portfolio.Application.DTO;
-using Portfolio.Application.Models;
 using Portfolio.Features.Overview;
 using Microsoft.Extensions.Logging;
 
-namespace Portfolio.Application.Services;
+namespace Portfolio.Features.Github;
 
-public sealed class GithubRepositoryService : IGithubRepositoryService
+/// <summary>
+/// The GitHub use cases: map public repository data to the wire DTOs and turn upstream
+/// failures into typed results.
+/// </summary>
+public sealed class GithubHandler
 {
     private readonly IGithubRepositoryReader _reader;
-    private readonly ILogger<GithubRepositoryService> _logger;
+    private readonly ILogger<GithubHandler> _logger;
 
-    public GithubRepositoryService(
+    public GithubHandler(
         IGithubRepositoryReader reader,
-        ILogger<GithubRepositoryService> logger)
+        ILogger<GithubHandler> logger)
     {
         _reader = reader;
         _logger = logger;

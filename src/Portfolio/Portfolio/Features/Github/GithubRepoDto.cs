@@ -1,8 +1,10 @@
 using System.Text.Json.Serialization;
-using Portfolio.ExternalService.Github.Dto;
 
-namespace Portfolio.ExternalService.Github.Models;
+namespace Portfolio.Features.Github;
 
+/// <summary>
+/// The subset of GitHub's repository response this API reads.
+/// </summary>
 public sealed class GithubRepoDto
 {
     [JsonPropertyName("id")]

@@ -20,6 +20,12 @@
     <Compile Include="..\Portfolio\Features\Notion\NotionPage.cs" Link="Features\Notion\NotionPage.cs" />
     <Compile Include="..\Portfolio\Features\Notion\NotionPageMarkdownDto.cs" Link="Features\Notion\NotionPageMarkdownDto.cs" />
     <Compile Include="..\Portfolio\Features\Notion\NotionPageContentReader.cs" Link="Features\Notion\NotionPageContentReader.cs" />
+    <Compile Include="..\Portfolio\Features\Github\GithubEndpoints.cs" Link="Features\Github\GithubEndpoints.cs" />
+    <Compile Include="..\Portfolio\Features\Github\GithubAPISettings.cs" Link="Features\Github\GithubAPISettings.cs" />
+    <Compile Include="..\Portfolio\Features\Github\GithubRepoDto.cs" Link="Features\Github\GithubRepoDto.cs" />
+    <Compile Include="..\Portfolio\Features\Github\GithubOwnerDto.cs" Link="Features\Github\GithubOwnerDto.cs" />
+    <Compile Include="..\Portfolio\Features\Github\GithubClientService.cs" Link="Features\Github\GithubClientService.cs" />
+    <Compile Include="..\Portfolio\Features\Github\GithubRepositoryReader.cs" Link="Features\Github\GithubRepositoryReader.cs" />
   </ItemGroup>
 
   <ItemGroup>

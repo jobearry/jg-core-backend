@@ -1,5 +1,8 @@
-namespace Portfolio.Application.Models;
+namespace Portfolio.Features.Github;
 
+/// <summary>
+/// A public repository as read from GitHub, before it is mapped to the wire DTO.
+/// </summary>
 public sealed record GithubRepository(
     long Id,
     string Name,

@@ -1,6 +1,5 @@
 ﻿using Portfolio.Application.Settings;
-using Portfolio.Application.Abstractions;
-using Portfolio.Adapters;
+using Portfolio.Application.Services;
 using Portfolio.Domain.Entities;
 using Portfolio.Domain.Interfaces;
 using Portfolio.Persistence.Contexts;
@@ -12,9 +11,7 @@ using Microsoft.OpenApi;
 using System.Text;
 using System.Net.Http.Headers;
 using Portfolio.Features.Notion;
-using Portfolio.ExternalService.Github.Services;
-using Portfolio.ExternalService.Github.Settings;
-using Portfolio.Application.Services;
+using Portfolio.Features.Github;
 using Portfolio.Features.Experience;
 using Portfolio.Features.Project;
 using Portfolio.Features.Skill;
@@ -41,7 +38,7 @@ namespace Portfolio
             services.AddScoped<GetRecommendationHandler>();
             services.AddScoped<GetSkillHandler>();
             services.AddScoped<GetOverviewHandler>();
-            services.AddScoped<IGithubRepositoryService, GithubRepositoryService>();
+            services.AddScoped<GithubHandler>();
         }
 
         /// <summary>

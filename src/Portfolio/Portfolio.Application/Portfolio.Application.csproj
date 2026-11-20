@@ -26,6 +26,10 @@
     <Compile Include="..\Portfolio\Features\Notion\IPageContentReader.cs" Link="Features\Notion\IPageContentReader.cs" />
     <Compile Include="..\Portfolio\Features\Notion\NotionMapper.cs" Link="Features\Notion\NotionMapper.cs" />
     <Compile Include="..\Portfolio\Features\Notion\GetNotionPageHandler.cs" Link="Features\Notion\GetNotionPageHandler.cs" />
+    <Compile Include="..\Portfolio\Features\Github\GithubRepositoryDto.cs" Link="Features\Github\GithubRepositoryDto.cs" />
+    <Compile Include="..\Portfolio\Features\Github\GithubRepository.cs" Link="Features\Github\GithubRepository.cs" />
+    <Compile Include="..\Portfolio\Features\Github\IGithubRepositoryReader.cs" Link="Features\Github\IGithubRepositoryReader.cs" />
+    <Compile Include="..\Portfolio\Features\Github\GithubHandler.cs" Link="Features\Github\GithubHandler.cs" />
   </ItemGroup>
 
   <ItemGroup>

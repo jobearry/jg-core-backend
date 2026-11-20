@@ -1,11 +1,13 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
-using Portfolio.ExternalService.Github.Models;
-using Portfolio.ExternalService.Github.Settings;
 
-namespace Portfolio.ExternalService.Github.Services;
+namespace Portfolio.Features.Github;
 
+/// <summary>
+/// The GitHub call itself. It returns only public repositories: a private or private-by-
+/// visibility repository is treated as not found even when the server-side token can see it.
+/// </summary>
 public sealed class GithubClientService
 {
     private readonly HttpClient _httpClient;

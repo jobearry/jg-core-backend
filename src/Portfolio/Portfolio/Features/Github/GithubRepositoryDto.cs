@@ -1,4 +1,4 @@
-namespace Portfolio.Application.DTO;
+namespace Portfolio.Features.Github;
 
 /// <summary>Repository information returned by the GitHub repository endpoints.</summary>
 public sealed record GithubRepositoryDto(

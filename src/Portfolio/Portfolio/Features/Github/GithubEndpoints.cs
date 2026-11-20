@@ -1,8 +1,7 @@
-using Portfolio.Application.DTO;
-using Portfolio.Application.Services;
+using Portfolio.Endpoints;
 using Portfolio.Features.Overview;
 
-namespace Portfolio.Endpoints;
+namespace Portfolio.Features.Github;
 
 public static class GithubEndpoints
 {
@@ -11,10 +10,10 @@ public static class GithubEndpoints
         routes.MapGet(
             "github/owner/{owner}/repositories",
             async (
-                IGithubRepositoryService service,
+                GithubHandler handler,
                 string owner,
                 CancellationToken cancellationToken) =>
-                (await service.GetRepositoriesByOwnerAsync(owner, cancellationToken)).ToHttpResult())
+                (await handler.GetRepositoriesByOwnerAsync(owner, cancellationToken)).ToHttpResult())
             .WithName("GetGithubRepositoriesByOwner")
             .WithTags("ExternalServices - GitHub")
             .WithSummary("Get all repositories for a GitHub owner")
@@ -27,10 +26,10 @@ public static class GithubEndpoints
         routes.MapGet(
             "github/owner/{owner}/repositories/count",
             async (
-                IGithubRepositoryService service,
+                GithubHandler handler,
                 string owner,
                 CancellationToken cancellationToken) =>
-                (await service.GetRepositoryCountAsync(owner, cancellationToken)).ToHttpResult())
+                (await handler.GetRepositoryCountAsync(owner, cancellationToken)).ToHttpResult())
             .WithName("GetGithubRepositoryCount")
             .WithTags("ExternalServices - GitHub")
             .WithSummary("Get the number of public repositories for a GitHub owner")
@@ -42,11 +41,11 @@ public static class GithubEndpoints
         routes.MapGet(
             "github/repository/{owner}/{repository}/languages",
             async (
-                IGithubRepositoryService service,
+                GithubHandler handler,
                 string owner,
                 string repository,
                 CancellationToken cancellationToken) =>
-                (await service.GetRepositoryLanguagesAsync(owner, repository, cancellationToken)).ToHttpResult())
+                (await handler.GetRepositoryLanguagesAsync(owner, repository, cancellationToken)).ToHttpResult())
             .WithName("GetGithubRepositoryLanguages")
             .WithTags("ExternalServices - GitHub")
             .WithSummary("Get repository languages")
@@ -59,15 +58,15 @@ public static class GithubEndpoints
         routes.MapGet(
             "github/owner/{owner}/repositories/{repositoryId:long}",
             async (
-                IGithubRepositoryService service,
+                GithubHandler handler,
                 string owner,
                 long repositoryId,
                 CancellationToken cancellationToken) =>
-                (await service.GetRepositoryByOwnerAndIdAsync(owner, repositoryId, cancellationToken)).ToHttpResult())
+                (await handler.GetRepositoryByOwnerAndIdAsync(owner, repositoryId, cancellationToken)).ToHttpResult())
             .WithName("GetGithubRepositoryByOwnerAndId")
             .WithTags("ExternalServices - GitHub")
             .WithSummary("Get a GitHub repository by owner and ID")
-            .WithDescription("Fetches details for a public repository by numeric ID and returns not found if it belongs to a different owner.")
+            .WithDescription("Fetches details for a public repository by owner and ID and returns not found if it belongs to a different owner.")
             .Produces<GithubRepositoryDto>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status502BadGateway)

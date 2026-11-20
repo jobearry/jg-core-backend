@@ -1,10 +1,6 @@
 using System.Net;
 using System.Text;
-using Portfolio.Adapters;
-using Portfolio.Application.Abstractions;
-using Portfolio.Application.Models;
-using Portfolio.ExternalService.Github.Services;
-using Portfolio.ExternalService.Github.Settings;
+using Portfolio.Features.Github;
 
 namespace Portfolio.Api.Tests;
 

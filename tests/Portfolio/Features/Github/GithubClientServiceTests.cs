@@ -1,8 +1,7 @@
 using System.Net;
 using System.Text;
 using System.Text.Json;
-using Portfolio.ExternalService.Github.Services;
-using Portfolio.ExternalService.Github.Settings;
+using Portfolio.Features.Github;
 
 namespace Portfolio.Api.Tests;
 

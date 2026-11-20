@@ -28,6 +28,9 @@
     <Compile Include="..\Features\Notion\NotionClientServiceTests.cs" Link="Features\Notion\NotionClientServiceTests.cs" />
     <Compile Include="..\Features\Notion\NotionPageContentReaderTests.cs" Link="Features\Notion\NotionPageContentReaderTests.cs" />
     <Compile Include="..\Features\Notion\NotionPageParserTests.cs" Link="Features\Notion\NotionPageParserTests.cs" />
+    <Compile Include="..\Features\Github\GithubEndpointsTests.cs" Link="Features\Github\GithubEndpointsTests.cs" />
+    <Compile Include="..\Features\Github\GithubClientServiceTests.cs" Link="Features\Github\GithubClientServiceTests.cs" />
+    <Compile Include="..\Features\Github\GithubRepositoryReaderTests.cs" Link="Features\Github\GithubRepositoryReaderTests.cs" />
   </ItemGroup>
 
   <ItemGroup>

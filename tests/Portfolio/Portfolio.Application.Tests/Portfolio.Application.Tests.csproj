@@ -17,6 +17,7 @@
   <ItemGroup>
     <Compile Include="..\Features\Experience\FakeExperienceRepository.cs" Link="Features\Experience\FakeExperienceRepository.cs" />
     <Compile Include="..\Features\Experience\GetExperienceHandlerTests.cs" Link="Features\Experience\GetExperienceHandlerTests.cs" />
+    <Compile Include="..\Features\Github\GithubHandlerTests.cs" Link="Features\Github\GithubHandlerTests.cs" />
   </ItemGroup>
 
   <ItemGroup>

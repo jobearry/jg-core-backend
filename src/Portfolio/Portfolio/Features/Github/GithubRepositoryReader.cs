@@ -1,10 +1,9 @@
-using Portfolio.Application.Abstractions;
-using Portfolio.Application.Models;
-using Portfolio.ExternalService.Github.Models;
-using Portfolio.ExternalService.Github.Services;
+namespace Portfolio.Features.Github;
 
-namespace Portfolio.Adapters;
-
+/// <summary>
+/// Bridges <see cref="IGithubRepositoryReader"/> to the GitHub client, keeping the
+/// vendor DTOs inside the slice.
+/// </summary>
 public sealed class GithubRepositoryReader : IGithubRepositoryReader
 {
     private readonly GithubClientService _client;

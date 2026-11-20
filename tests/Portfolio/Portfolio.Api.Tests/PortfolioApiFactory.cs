@@ -1,7 +1,7 @@
 using Portfolio.Api.Tests.Fakes;
-using Portfolio.Application.Abstractions;
 using Portfolio.Domain.Interfaces;
 using Portfolio.Features.Notion;
+using Portfolio.Features.Github;
 using Portfolio.Features.Experience;
 using Portfolio.Features.Project;
 using Portfolio.Features.Skill;

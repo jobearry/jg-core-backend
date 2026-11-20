@@ -1,5 +1,6 @@
 using System.Net;
 using System.Text.Json;
+using Portfolio.Features.Github;
 
 namespace Portfolio.Api.Tests;
 

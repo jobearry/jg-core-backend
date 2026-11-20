@@ -1,5 +1,4 @@
-using Portfolio.Application.Abstractions;
-using Portfolio.Application.Models;
+using Portfolio.Features.Github;
 
 namespace Portfolio.Api.Tests.Fakes;
 

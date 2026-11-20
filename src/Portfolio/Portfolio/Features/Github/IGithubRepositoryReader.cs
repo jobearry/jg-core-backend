@@ -1,7 +1,8 @@
-using Portfolio.Application.Models;
+namespace Portfolio.Features.Github;
 
-namespace Portfolio.Application.Abstractions;
-
+/// <summary>
+/// Reads public repository data from GitHub.
+/// </summary>
 public interface IGithubRepositoryReader
 {
     Task<IReadOnlyList<GithubRepository>> GetRepositoriesByOwnerAsync(
@@ -17,5 +18,4 @@ public interface IGithubRepositoryReader
         string owner,
         string repository,
         CancellationToken cancellationToken);
-
 }

@@ -1,22 +1,20 @@
 using System.Net;
-using Portfolio.Application.Abstractions;
 using Portfolio.Application.Common;
-using Portfolio.Application.Models;
-using Portfolio.Application.Services;
+using Portfolio.Features.Github;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Portfolio.Application.Tests;
 
-public sealed class GithubRepositoryServiceTests
+public sealed class GithubHandlerTests
 {
     [Fact]
     public async Task GetRepositoryByOwnerAndIdAsync_WhenGitHubReturnsNotFound_ReturnsNotFoundError()
     {
-        var service = new GithubRepositoryService(
+        var handler = new GithubHandler(
             new NotFoundReader(),
-            NullLogger<GithubRepositoryService>.Instance);
+            NullLogger<GithubHandler>.Instance);
 
-        var result = await service.GetRepositoryByOwnerAndIdAsync("octocat", 456, CancellationToken.None);
+        var result = await handler.GetRepositoryByOwnerAndIdAsync("octocat", 456, CancellationToken.None);
 
         Assert.False(result.IsSuccess);
         Assert.Equal(ErrorKind.NotFound, result.Error!.Kind);
