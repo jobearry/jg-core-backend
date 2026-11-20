@@ -30,6 +30,7 @@
 
   <ItemGroup>
     <Compile Include="..\Portfolio\Shared\Persistence\**\*.cs" LinkBase="Shared\Persistence" />
+    <Compile Include="..\Portfolio\Features\Experience\EfExperienceRepository.cs" Link="Features\Experience\EfExperienceRepository.cs" />
   </ItemGroup>
 
   <ItemGroup>

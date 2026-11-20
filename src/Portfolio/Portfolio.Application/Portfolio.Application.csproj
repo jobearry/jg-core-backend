@@ -11,6 +11,8 @@
     <Compile Include="..\Portfolio\Shared\Common\Result.cs" Link="Common\Result.cs" />
     <Compile Include="..\Portfolio\Shared\Common\ResultErrors.cs" Link="Common\ResultErrors.cs" />
     <Compile Include="..\Portfolio\Shared\Common\PortfolioDtoMapper.cs" Link="DTO\PortfolioDtoMapper.cs" />
+    <Compile Include="..\Portfolio\Features\Experience\ExperienceDto.cs" Link="Features\Experience\ExperienceDto.cs" />
+    <Compile Include="..\Portfolio\Features\Experience\GetExperienceHandler.cs" Link="Features\Experience\GetExperienceHandler.cs" />
   </ItemGroup>
 
   <ItemGroup>

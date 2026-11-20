@@ -2,6 +2,7 @@ using Portfolio.Application.DTO;
 using Portfolio.Application.Models;
 using Portfolio.Domain.Entities;
 using Portfolio.Domain.ValueObjects;
+using Portfolio.Features.Experience;
 using System.Text.Json;
 
 namespace Portfolio.Application.Tests;

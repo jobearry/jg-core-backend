@@ -3,7 +3,7 @@ using Portfolio.Persistence.Entities;
 
 namespace Portfolio.Persistence.Tests;
 
-public class ExperienceEntityMappingTests : MappingTestBase
+public class ExperienceMapperTests : MappingTestBase
 {
     private static readonly DateTime StartedAt = new(2020, 1, 1, 0, 0, 0, DateTimeKind.Utc);
     private static readonly DateTime FinishedAt = new(2021, 6, 30, 0, 0, 0, DateTimeKind.Utc);
@@ -29,9 +29,8 @@ public class ExperienceEntityMappingTests : MappingTestBase
 
     /// <summary>
     /// The domain entity declares <c>Description</c>, <c>Responsibility</c> and
-    /// <c>Type</c> with private setters. AutoMapper considers them mapped because
-    /// the names match, but a private setter is not a public one — so this asserts
-    /// that they are actually populated rather than silently left null.
+    /// <c>Type</c> with private setters. The hand-written mapper populates them through
+    /// the entity's own methods; this asserts they are not silently left null.
     /// </summary>
     [Fact]
     public void Map_ExperienceEntity_To_Experience_PopulatesDescriptionResponsibilityAndType()

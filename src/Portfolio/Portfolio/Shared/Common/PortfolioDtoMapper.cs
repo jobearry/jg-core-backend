@@ -1,5 +1,6 @@
 using Portfolio.Application.Models;
 using Portfolio.Domain.Entities;
+using Portfolio.Features.Experience;
 using Portfolio.Domain.ValueObjects;
 
 namespace Portfolio.Application.DTO;

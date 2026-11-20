@@ -15,6 +15,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Compile Include="..\Features\Experience\FakeExperienceRepository.cs" Link="Features\Experience\FakeExperienceRepository.cs" />
+    <Compile Include="..\Features\Experience\GetExperienceHandlerTests.cs" Link="Features\Experience\GetExperienceHandlerTests.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\..\..\src\Portfolio\Portfolio.Application\Portfolio.Application.csproj" />
   </ItemGroup>
 

@@ -1,5 +1,6 @@
 using Portfolio;
 using Portfolio.Endpoints;
+using Portfolio.Features.Experience;
 using Portfolio.Persistence.Contexts;
 using Microsoft.EntityFrameworkCore;
 
@@ -58,7 +59,7 @@ api.MapNotionEndpoints();
 api.MapGithubEndpoints();
 
 //portfolio endpoints
-api.MapPortfolioExperienceEndpoints();
+api.MapExperienceEndpoints();
 api.MapPortfolioProjectEndpoints();
 api.MapPortfolioRecommendationEndpoints();
 api.MapPortfolioSkillEndpoints();

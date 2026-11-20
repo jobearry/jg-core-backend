@@ -12,6 +12,7 @@
     <Compile Include="..\Portfolio\Shared\Common\Role.cs" Link="ValueObjects\Role.cs" />
     <Compile Include="..\Portfolio\Shared\Common\TechStackRef.cs" Link="ValueObjects\TechStackRef.cs" />
     <Compile Include="..\Portfolio\Shared\Common\TechStack.cs" Link="Entities\TechStack.cs" />
+    <Compile Include="..\Portfolio\Features\Experience\IExperienceRepository.cs" Link="Features\Experience\IExperienceRepository.cs" />
   </ItemGroup>
 
 </Project>

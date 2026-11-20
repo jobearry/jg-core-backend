@@ -16,6 +16,7 @@ using Portfolio.ExternalService.Notion.Settings;
 using Portfolio.ExternalService.Github.Services;
 using Portfolio.ExternalService.Github.Settings;
 using Portfolio.Application.Services;
+using Portfolio.Features.Experience;
 using Portfolio.Authentication;
 using Portfolio.ErrorHandling;
 using Portfolio.Persistence.Repositories;
@@ -32,7 +33,7 @@ namespace Portfolio
         public static void AddApplication(this IServiceCollection services)
         {
             services.AddScoped<PortfolioService>();
-            services.AddScoped<PortfolioExperienceService>();
+            services.AddScoped<GetExperienceHandler>();
             services.AddScoped<PortfolioProjectService>();
             services.AddScoped<PortfolioRecommendationService>();
             services.AddScoped<PortfolioSkillService>();
@@ -53,7 +54,7 @@ namespace Portfolio
                 options.UseNpgsql(jdbConnectionString)
             );
 
-            services.AddScoped<IPortfolioExperienceRepository, EfPortfolioExperienceRepository>();
+            services.AddScoped<IExperienceRepository, EfExperienceRepository>();
             services.AddScoped<IPortfolioProjectRepository, EfPortfolioProjectRepository>();
             services.AddScoped<IPortfolioTechStackRepository, EfPortfolioTechStackRepository>();
             services.AddScoped<IPortfolioRecommendationRepository, EfPortfolioRecommendationRepository>();

@@ -20,6 +20,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Compile Include="..\Features\Experience\ExperienceMapperTests.cs" Link="Features\Experience\ExperienceMapperTests.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\..\..\src\Portfolio\Portfolio.Persistence\Portfolio.Persistence.csproj" />
   </ItemGroup>
 

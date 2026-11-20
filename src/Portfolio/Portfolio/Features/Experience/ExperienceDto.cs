@@ -1,4 +1,6 @@
-namespace Portfolio.Application.DTO;
+using Portfolio.Application.DTO;
+
+namespace Portfolio.Features.Experience;
 
 /// <summary>
 /// The published shape of a role held at a company.
@@ -15,9 +17,7 @@ namespace Portfolio.Application.DTO;
 /// <see cref="TimeSpan"/> as <c>"1231.05:06:07"</c>. It is whole calendar months
 /// between the start and the end — or between the start and now, while the role is
 /// ongoing — and <c>null</c> when the start date is unknown. Formatting it for
-/// display (<c>"3 years 4 months"</c>, <c>"3y 4m"</c>) is the client's job: the same
-/// number needs different wording per screen, and English plurals do not belong in a
-/// transport contract. Deliberately no <c>durationLabel</c> field.
+/// display is the client's job; English plurals do not belong in a transport contract.
 /// </para>
 /// </summary>
 public sealed record ExperienceDto(

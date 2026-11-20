@@ -3,6 +3,7 @@ using Portfolio.Application.Models;
 using Portfolio.Domain.Entities;
 using Portfolio.Domain.Interfaces;
 using Portfolio.Domain.ValueObjects;
+using Portfolio.Features.Experience;
 using System.Threading;
 
 namespace Portfolio.Api.Tests.Fakes;
@@ -12,7 +13,7 @@ namespace Portfolio.Api.Tests.Fakes;
 /// code, JSON shape, error mapping — not about SQL. Faking the ports keeps the tests
 /// off the database entirely, so they run anywhere and cannot touch real rows.
 /// </summary>
-public sealed class FakeExperienceRepository : IPortfolioExperienceRepository
+public sealed class FakeExperienceRepository : IExperienceRepository
 {
     public List<Experience> Experiences { get; } = new();
 
@@ -25,7 +26,7 @@ public sealed class FakeExperienceRepository : IPortfolioExperienceRepository
     public Task<List<Experience>> GetAllAsync(CancellationToken cancellationToken) =>
         Respond(cancellationToken);
 
-    public Task<List<Experience>> GetAllExperienceWithProjectsAsync(CancellationToken cancellationToken) =>
+    public Task<List<Experience>> GetAllWithProjectsAsync(CancellationToken cancellationToken) =>
         Respond(cancellationToken);
 
     private Task<List<Experience>> Respond(CancellationToken cancellationToken)

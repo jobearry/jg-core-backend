@@ -1,8 +1,7 @@
 using Portfolio.Application.Common;
-using Portfolio.Application.Services;
 using Portfolio.Application.Tests.Fakes;
-using Portfolio.Domain.Entities;
 using Portfolio.Domain.ValueObjects;
+using Portfolio.Features.Experience;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using System;
@@ -11,10 +10,11 @@ using System.Data.Common;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using DomainExperience = Portfolio.Domain.Entities.Experience;
 
-namespace Portfolio.Application.Tests;
+namespace Portfolio.Features.Experience.Tests;
 
-public class PortfolioExperienceServiceTests
+public class GetExperienceHandlerTests
 {
     private const string Operation = "get portfolio experience content";
 
@@ -23,15 +23,15 @@ public class PortfolioExperienceServiceTests
     /// message: Npgsql puts the host, the database and sometimes the SQL in there.
     /// </summary>
     [Fact]
-    public async Task GetAllExperienceAsync_WhenTheDatabaseFails_ReturnsInfrastructureError()
+    public async Task HandleAsync_WhenTheDatabaseFails_ReturnsInfrastructureError()
     {
-        var repository = new FakePortfolioExperienceRepository
+        var repository = new FakeExperienceRepository
         {
             Failure = new FakeDbException("could not connect to host 10.0.0.5 as user jg")
         };
-        var service = Service(repository);
+        var handler = Service(repository);
 
-        var result = await service.GetAllExperienceAsync(includeProjects: false, CancellationToken.None);
+        var result = await handler.HandleAsync(includeProjects: false, CancellationToken.None);
 
         Assert.False(result.IsSuccess);
         Assert.Null(result.Value);
@@ -48,14 +48,14 @@ public class PortfolioExperienceServiceTests
     /// failure is undiagnosable. It goes to the log, together with the exception.
     /// </summary>
     [Fact]
-    public async Task GetAllExperienceAsync_WhenTheDatabaseFails_LogsAWarningWithTheOriginalException()
+    public async Task HandleAsync_WhenTheDatabaseFails_LogsAWarningWithTheOriginalException()
     {
         var exception = new FakeDbException("could not connect to host 10.0.0.5");
-        var repository = new FakePortfolioExperienceRepository { Failure = exception };
-        var logger = new RecordingLogger<PortfolioExperienceService>();
-        var service = new PortfolioExperienceService(repository, logger);
+        var repository = new FakeExperienceRepository { Failure = exception };
+        var logger = new RecordingLogger<GetExperienceHandler>();
+        var handler = new GetExperienceHandler(repository, logger);
 
-        await service.GetAllExperienceAsync(includeProjects: false, CancellationToken.None);
+        await handler.HandleAsync(includeProjects: false, CancellationToken.None);
 
         var entry = Assert.Single(logger.Entries);
         Assert.Equal(LogLevel.Warning, entry.Level);
@@ -72,15 +72,15 @@ public class PortfolioExperienceServiceTests
     /// would answer 503, teaching clients to retry something that will never succeed.
     /// </summary>
     [Fact]
-    public async Task GetAllExperienceAsync_WhenSomethingUnexpectedThrows_ReturnsUnexpectedError()
+    public async Task HandleAsync_WhenSomethingUnexpectedThrows_ReturnsUnexpectedError()
     {
-        var repository = new FakePortfolioExperienceRepository
+        var repository = new FakeExperienceRepository
         {
             Failure = new NullReferenceException("Object reference not set")
         };
-        var service = Service(repository);
+        var handler = Service(repository);
 
-        var result = await service.GetAllExperienceAsync(includeProjects: false, CancellationToken.None);
+        var result = await handler.HandleAsync(includeProjects: false, CancellationToken.None);
 
         Assert.False(result.IsSuccess);
         Assert.Equal(ErrorKind.Unexpected, result.Error!.Kind);
@@ -89,51 +89,50 @@ public class PortfolioExperienceServiceTests
 
     /// <summary>
     /// Only an unexpected exception is logged at Error. A dependency outage is a
-    /// warning: it is expected, it is already visible to the caller as a 503, and it
-    /// must not drown out the failures that need someone to fix them.
+    /// warning: it is expected to happen and is already visible to the caller as a 503.
     /// </summary>
     [Fact]
-    public async Task GetAllExperienceAsync_WhenSomethingUnexpectedThrows_LogsAnError()
+    public async Task HandleAsync_WhenSomethingUnexpectedThrows_LogsAnError()
     {
-        var repository = new FakePortfolioExperienceRepository
+        var repository = new FakeExperienceRepository
         {
             Failure = new NullReferenceException("Object reference not set")
         };
-        var logger = new RecordingLogger<PortfolioExperienceService>();
-        var service = new PortfolioExperienceService(repository, logger);
+        var logger = new RecordingLogger<GetExperienceHandler>();
+        var handler = new GetExperienceHandler(repository, logger);
 
-        await service.GetAllExperienceAsync(includeProjects: false, CancellationToken.None);
+        await handler.HandleAsync(includeProjects: false, CancellationToken.None);
 
         var entry = Assert.Single(logger.Entries);
         Assert.Equal(LogLevel.Error, entry.Level);
     }
 
     [Fact]
-    public async Task GetAllExperienceAsync_WhenAnHttpCallFails_ReturnsUpstreamError()
+    public async Task HandleAsync_WhenAnHttpCallFails_ReturnsUpstreamError()
     {
-        var repository = new FakePortfolioExperienceRepository
+        var repository = new FakeExperienceRepository
         {
             Failure = new HttpRequestException("no route to host")
         };
-        var service = Service(repository);
+        var handler = Service(repository);
 
-        var result = await service.GetAllExperienceAsync(includeProjects: false, CancellationToken.None);
+        var result = await handler.HandleAsync(includeProjects: false, CancellationToken.None);
 
         Assert.False(result.IsSuccess);
         Assert.Equal(ErrorKind.Upstream, result.Error!.Kind);
     }
 
     [Fact]
-    public async Task GetAllExperienceAsync_WhenOperationIsCancelled_PropagatesCancellation()
+    public async Task HandleAsync_WhenOperationIsCancelled_PropagatesCancellation()
     {
-        var repository = new FakePortfolioExperienceRepository
+        var repository = new FakeExperienceRepository
         {
             Failure = new OperationCanceledException()
         };
-        var service = Service(repository);
+        var handler = Service(repository);
 
         await Assert.ThrowsAsync<OperationCanceledException>(
-            () => service.GetAllExperienceAsync(includeProjects: false, CancellationToken.None));
+            () => handler.HandleAsync(includeProjects: false, CancellationToken.None));
     }
 
     /// <summary>
@@ -142,67 +141,67 @@ public class PortfolioExperienceServiceTests
     /// to prove it was threaded rather than replaced with a fresh <c>None</c>.
     /// </summary>
     [Fact]
-    public async Task GetAllExperienceAsync_PassesTheCallersCancellationTokenToTheRepository()
+    public async Task HandleAsync_PassesTheCallersCancellationTokenToTheRepository()
     {
-        var repository = new FakePortfolioExperienceRepository();
-        var service = Service(repository);
+        var repository = new FakeExperienceRepository();
+        var handler = Service(repository);
         using var cancellation = new CancellationTokenSource();
 
-        await service.GetAllExperienceAsync(includeProjects: true, cancellation.Token);
+        await handler.HandleAsync(includeProjects: true, cancellation.Token);
 
         Assert.Equal(cancellation.Token, repository.LastCancellationToken);
     }
 
     [Fact]
-    public async Task GetAllExperienceAsync_WhenIncludeProjectsIsFalse_ReturnsPlainQueryResult()
+    public async Task HandleAsync_WhenIncludeProjectsIsFalse_ReturnsPlainQueryResult()
     {
-        var repository = new FakePortfolioExperienceRepository
+        var repository = new FakeExperienceRepository
         {
-            All = new List<Experience> { AnExperience(1) },
-            WithProjects = new List<Experience> { AnExperience(9) }
+            All = new List<DomainExperience> { AnExperience(1) },
+            WithProjects = new List<DomainExperience> { AnExperience(9) }
         };
-        var service = Service(repository);
+        var handler = Service(repository);
 
-        var result = await service.GetAllExperienceAsync(includeProjects: false, CancellationToken.None);
+        var result = await handler.HandleAsync(includeProjects: false, CancellationToken.None);
 
         Assert.True(result.IsSuccess);
         Assert.Equal(new[] { 1 }, result.Value!.Select(x => x.Id));
     }
 
     [Fact]
-    public async Task GetAllExperienceAsync_WhenIncludeProjectsIsTrue_ReturnsProjectsQueryResult()
+    public async Task HandleAsync_WhenIncludeProjectsIsTrue_ReturnsProjectsQueryResult()
     {
-        var repository = new FakePortfolioExperienceRepository
+        var repository = new FakeExperienceRepository
         {
-            All = new List<Experience> { AnExperience(1) },
-            WithProjects = new List<Experience> { AnExperience(9) }
+            All = new List<DomainExperience> { AnExperience(1) },
+            WithProjects = new List<DomainExperience> { AnExperience(9) }
         };
-        var service = Service(repository);
+        var handler = Service(repository);
 
-        var result = await service.GetAllExperienceAsync(includeProjects: true, CancellationToken.None);
+        var result = await handler.HandleAsync(includeProjects: true, CancellationToken.None);
 
         Assert.True(result.IsSuccess);
         Assert.Equal(new[] { 9 }, result.Value!.Select(x => x.Id));
     }
 
     [Fact]
-    public async Task GetAllExperienceAsync_ReturnsExperiencesOrderedByIdDescending()
+    public async Task HandleAsync_ReturnsExperiencesOrderedByIdDescending()
     {
-        var repository = new FakePortfolioExperienceRepository
+        var repository = new FakeExperienceRepository
         {
-            All = new List<Experience> { AnExperience(1), AnExperience(3), AnExperience(2) }
+            All = new List<DomainExperience> { AnExperience(1), AnExperience(3), AnExperience(2) }
         };
-        var service = Service(repository);
+        var handler = Service(repository);
 
-        var result = await service.GetAllExperienceAsync(includeProjects: false, CancellationToken.None);
+        var result = await handler.HandleAsync(includeProjects: false, CancellationToken.None);
 
         Assert.Equal(new[] { 3, 2, 1 }, result.Value!.Select(x => x.Id));
     }
 
-    private static PortfolioExperienceService Service(FakePortfolioExperienceRepository repository) =>
-        new(repository, NullLogger<PortfolioExperienceService>.Instance);
+    private static GetExperienceHandler Service(FakeExperienceRepository repository) =>
+        new(repository, NullLogger<GetExperienceHandler>.Instance);
 
-    private static Experience AnExperience(int id) => new(
+    private static DomainExperience AnExperience(int id) => new(
         id,
         new Company("Acme"),
         new Period(DateTime.UtcNow.AddYears(-1), null),
