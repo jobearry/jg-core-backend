@@ -20,6 +20,7 @@
 
   <ItemGroup>
     <Compile Include="..\Features\Experience\ExperienceEndpointsTests.cs" Link="Features\Experience\ExperienceEndpointsTests.cs" />
+    <Compile Include="..\Features\Project\ProjectEndpointsTests.cs" Link="Features\Project\ProjectEndpointsTests.cs" />
   </ItemGroup>
 
   <ItemGroup>

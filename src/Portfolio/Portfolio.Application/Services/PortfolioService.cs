@@ -4,6 +4,7 @@ using Portfolio.Application.DTO;
 using Portfolio.Application.Models;
 using Portfolio.Domain.Entities;
 using Portfolio.Domain.Interfaces;
+using Portfolio.Features.Project;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
@@ -16,14 +17,14 @@ namespace Portfolio.Application.Services;
 public class PortfolioService
 {
     private readonly IPageContentReader _pageContentReader;
-    private readonly IPortfolioProjectRepository _projectRepository;
+    private readonly IProjectRepository _projectRepository;
     private readonly IPortfolioTechStackRepository _techStackRepository;
     private readonly IPortfolioRecommendationRepository _recommendationRepository;
     private readonly ILogger<PortfolioService> _logger;
 
     public PortfolioService(
         IPageContentReader pageContentReader,
-        IPortfolioProjectRepository projectRepository,
+        IProjectRepository projectRepository,
         IPortfolioTechStackRepository techStackRepository,
         IPortfolioRecommendationRepository recommendationRepository,
         ILogger<PortfolioService> logger)
@@ -74,7 +75,7 @@ public class PortfolioService
             // context — Task.WhenAll here throws "A second operation was started on
             // this context instance". Parallelism needs a context per query, which
             // costs more than it saves for three counts.
-            var projects = await _projectRepository.GetAllProjectsWithTechStacksAsync(cancellationToken);
+            var projects = await _projectRepository.GetAllWithTechStacksAsync(cancellationToken);
             var skills = await _techStackRepository.GetAllTechStacksAsync(cancellationToken);
             var recommendations = await _recommendationRepository.GetAllRecommendationsAsync(cancellationToken);
 

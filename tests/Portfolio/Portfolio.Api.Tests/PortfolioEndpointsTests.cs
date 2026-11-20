@@ -39,16 +39,6 @@ public class PortfolioEndpointsTests : IClassFixture<PortfolioApiFactory>
     // -------------------------------------------------------------- other endpoints
 
     [Fact]
-    public async Task GetProject_DoesNotExposeExperienceIdOrPeriod()
-    {
-        var json = await GetJsonAsync("/api/v1/project");
-        var project = Assert.Single(json.EnumerateArray());
-
-        Assert.False(project.TryGetProperty("experienceId", out _));
-        Assert.False(project.TryGetProperty("period", out _));
-    }
-
-    [Fact]
     public async Task GetSkill_DoesNotExposeCreatedAt()
     {
         var json = await GetJsonAsync("/api/v1/skill");

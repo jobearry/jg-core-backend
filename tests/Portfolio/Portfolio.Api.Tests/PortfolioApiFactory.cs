@@ -2,6 +2,7 @@ using Portfolio.Api.Tests.Fakes;
 using Portfolio.Application.Abstractions;
 using Portfolio.Domain.Interfaces;
 using Portfolio.Features.Experience;
+using Portfolio.Features.Project;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Configuration;
@@ -66,14 +67,14 @@ public sealed class PortfolioApiFactory : WebApplicationFactory<Program>
         builder.ConfigureServices(services =>
         {
             services.RemoveAll<IExperienceRepository>();
-            services.RemoveAll<IPortfolioProjectRepository>();
+            services.RemoveAll<IProjectRepository>();
             services.RemoveAll<IPortfolioTechStackRepository>();
             services.RemoveAll<IPortfolioRecommendationRepository>();
             services.RemoveAll<IPageContentReader>();
             services.RemoveAll<IGithubRepositoryReader>();
 
             services.AddSingleton<IExperienceRepository>(Experience);
-            services.AddSingleton<IPortfolioProjectRepository>(Projects);
+            services.AddSingleton<IProjectRepository>(Projects);
             services.AddSingleton<IPortfolioTechStackRepository>(TechStacks);
             services.AddSingleton<IPortfolioRecommendationRepository>(Recommendations);
             services.AddSingleton<IPageContentReader>(Notion);

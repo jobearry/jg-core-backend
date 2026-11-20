@@ -3,6 +3,7 @@ using Portfolio.Application.Models;
 using Portfolio.Domain.Entities;
 using Portfolio.Domain.ValueObjects;
 using Portfolio.Features.Experience;
+using Portfolio.Features.Project;
 using System.Text.Json;
 
 namespace Portfolio.Application.Tests;

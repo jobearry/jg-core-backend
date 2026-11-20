@@ -4,6 +4,7 @@ using Portfolio.Domain.Entities;
 using Portfolio.Domain.Interfaces;
 using Portfolio.Domain.ValueObjects;
 using Portfolio.Features.Experience;
+using Portfolio.Features.Project;
 using System.Threading;
 
 namespace Portfolio.Api.Tests.Fakes;
@@ -49,14 +50,14 @@ public sealed class FakeDbException : System.Data.Common.DbException
     public FakeDbException(string message) : base(message) { }
 }
 
-public sealed class FakeProjectRepository : IPortfolioProjectRepository
+public sealed class FakeProjectRepository : IProjectRepository
 {
     public List<Project> Projects { get; } = new();
 
     public Task<List<Project>> GetAllAsync(CancellationToken cancellationToken) =>
         Task.FromResult(Projects);
 
-    public Task<List<Project>> GetAllProjectsWithTechStacksAsync(CancellationToken cancellationToken) =>
+    public Task<List<Project>> GetAllWithTechStacksAsync(CancellationToken cancellationToken) =>
         Task.FromResult(Projects);
 }
 

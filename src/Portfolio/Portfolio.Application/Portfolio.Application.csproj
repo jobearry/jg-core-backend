@@ -13,6 +13,8 @@
     <Compile Include="..\Portfolio\Shared\Common\PortfolioDtoMapper.cs" Link="DTO\PortfolioDtoMapper.cs" />
     <Compile Include="..\Portfolio\Features\Experience\ExperienceDto.cs" Link="Features\Experience\ExperienceDto.cs" />
     <Compile Include="..\Portfolio\Features\Experience\GetExperienceHandler.cs" Link="Features\Experience\GetExperienceHandler.cs" />
+    <Compile Include="..\Portfolio\Features\Project\ProjectDto.cs" Link="Features\Project\ProjectDto.cs" />
+    <Compile Include="..\Portfolio\Features\Project\GetProjectHandler.cs" Link="Features\Project\GetProjectHandler.cs" />
   </ItemGroup>
 
   <ItemGroup>

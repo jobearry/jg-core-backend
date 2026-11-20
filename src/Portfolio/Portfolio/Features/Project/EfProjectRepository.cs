@@ -1,18 +1,23 @@
-﻿using Portfolio.Domain.Entities;
-using Portfolio.Domain.Interfaces;
+﻿using Microsoft.EntityFrameworkCore;
 using Portfolio.Persistence.Contexts;
 using Portfolio.Persistence.Entities;
 using Portfolio.Persistence.Mappers;
-using Microsoft.EntityFrameworkCore;
+using Portfolio.Persistence.Repositories;
+using DomainProject = Portfolio.Domain.Entities.Project;
 
-namespace Portfolio.Persistence.Repositories;
+namespace Portfolio.Features.Project;
 
-public class EfPortfolioProjectRepository : BasePortfolioRepository<Project, ProjectEntity>, IPortfolioProjectRepository
+/// <summary>
+/// EF adapter for the Project port. The tech-stack graph is loaded only when the
+/// caller asks for tools; otherwise the base repository reads the plain rows.
+/// </summary>
+public sealed class EfProjectRepository
+    : BasePortfolioRepository<DomainProject, ProjectEntity>, IProjectRepository
 {
-    public EfPortfolioProjectRepository(PortfolioContext context)
+    public EfProjectRepository(PortfolioContext context)
         : base(context, ProjectMapper.ToDomain) { }
 
-    public async Task<List<Project>> GetAllProjectsWithTechStacksAsync(CancellationToken cancellationToken)
+    public async Task<List<DomainProject>> GetAllWithTechStacksAsync(CancellationToken cancellationToken)
     {
         var projectEntities = await _dbSet.AsNoTracking()
                                           .AsSplitQuery()
@@ -20,6 +25,7 @@ public class EfPortfolioProjectRepository : BasePortfolioRepository<Project, Pro
                                           .ThenInclude(pt => pt.TechStack)
                                           .ThenInclude(ts => ts.TechStackCategory)
                                           .ToListAsync(cancellationToken);
+
         return projectEntities.Select(ProjectMapper.ToDomain).ToList();
     }
 }

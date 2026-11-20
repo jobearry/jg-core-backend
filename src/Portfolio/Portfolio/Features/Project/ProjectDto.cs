@@ -1,4 +1,6 @@
-namespace Portfolio.Application.DTO;
+using Portfolio.Application.DTO;
+
+namespace Portfolio.Features.Project;
 
 /// <summary>
 /// The published shape of a project. <c>ExperienceId</c> is deliberately absent:
