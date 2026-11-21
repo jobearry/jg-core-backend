@@ -43,8 +43,9 @@ dotnet run --project src/JGBackend/JGBackend.csproj
 | Swagger | http://localhost:5031/swagger |
 
 Migrations are applied with `dotnet ef database update` using the host as the
-startup project. The `Database:AutoMigrate` setting still belongs to the
-temporary Portfolio host and moves into `JGBackend` when that host is retired.
+startup project. `JGBackend` also applies them at startup when
+`Database:AutoMigrate` is enabled (default `true`); production sets it to `false`
+because the deploy workflow owns migrations there (see §5).
 
 ## 3. Configuration matrix
 
@@ -81,16 +82,12 @@ the app reads.
 
 ## 4. Docker
 
-Two images exist until phase 4 collapses them into one:
-`docker/JGBackend.Dockerfile` + `docker/compose.yaml` for the host, and
-`docker/Portfolio.Dockerfile` + `docker/compose.portfolio.yaml` for the
-Portfolio API. The rest of this section covers the Portfolio stack.
-
-The compose file runs the **API only**. PostgreSQL is external.
+One image (`docker/JGBackend.Dockerfile`) serves both modules from the single
+host. `docker/compose.yaml` runs the **API only**; PostgreSQL is external.
 
 ```bash
 cp .env.example .env   # then set ConnectionStrings__JDBConnection
-docker compose -f docker/compose.portfolio.yaml up --build
+docker compose -f docker/compose.yaml up --build
 ```
 
 The connection string is supplied whole, with no `Host=db` shortcut, because
@@ -110,13 +107,13 @@ to skip that step.
 Image build (works independently of compose):
 
 ```bash
-docker build -f docker/Portfolio.Dockerfile -t jdb-portfolio-api .
+docker build -f docker/JGBackend.Dockerfile -t jg-backend .
 docker run --rm -p 8080:8080 \
   -e ASPNETCORE_ENVIRONMENT=Development \
   -e "ConnectionStrings__JDBConnection=Host=<host>;Port=5432;Database=jdb_portfolio;Username=…;Password=…" \
   -e "Jwt__Key=<32+ bytes>" -e "Jwt__Issuer=jdb_api" -e "Jwt__Audience=PortfolioApiUsers" \
   -e "Notion__Token=secret_…" \
-  jdb-portfolio-api
+  jg-backend
 ```
 
 The container listens on `8080` (`ASPNETCORE_URLS=http://+:8080`), runs as
@@ -124,21 +121,21 @@ The container listens on `8080` (`ASPNETCORE_URLS=http://+:8080`), runs as
 
 ## 5. Deployment
 
-Two deployables exist until phase 4 collapses the two hosts into one:
+One deployable, one workflow:
 
 | Workflow | App | Trigger |
 |---|---|---|
-| `.github/workflows/deploy.yaml` | `jdbweb` (`JGBackend`) | push to `master` touching `src/JGBackend/**` or `src/Core/**` |
-| `.github/workflows/deploy-portfolio.yaml` | `jdb-portfolio-api` (`Portfolio`) | push to `master` touching `src/Portfolio/**` |
+| `.github/workflows/deploy.yaml` | `jdbweb` | push to `master` touching `src/**`, `tests/Portfolio/**`, the solution, or the tool manifest |
 
-Both are path-filtered so an app ships only when its own code changes;
+It is path-filtered so the app ships only when its code changes;
 `.github/workflows/ci.yaml` builds and tests the whole solution on every push
-and pull request.
+and pull request. Runs are serialized by a `jdbweb-production-deploy`
+concurrency group so two deploys cannot race the database.
 
-`deploy-portfolio.yaml`:
+`deploy.yaml`:
 
-1. Trigger: push to `master` under `src/Portfolio/`, or manual dispatch. Runs are
-   serialized by a `portfolio-production-deploy` concurrency group.
+1. Trigger: push to `master` under `src/**` or `tests/Portfolio/**`, or manual
+   dispatch.
 2. `dotnet restore` → `dotnet tool restore` → `has-pending-model-changes` gate (fails
    if the model changed without a migration) → `dotnet build -c Release` →
    `dotnet publish -o ./publish`.
@@ -146,7 +143,7 @@ and pull request.
    app is replaced. A failure stops the deploy; the running app stays up (KI-038).
 4. `azure/login@v2` with OIDC (`AZURE_CLIENT_ID`, `AZURE_TENANT_ID`,
    `AZURE_SUBSCRIPTION_ID`).
-5. `azure/webapps-deploy@v2` to app `jdb-portfolio-api`, `clean: true`.
+5. `azure/webapps-deploy@v2` to app `jdbweb`.
 
 The migration step needs the repository secret `PRODUCTION_CONNECTION_STRING`. Use
 the **direct** Neon endpoint (no `-pooler`), in Npgsql key-value form — not the
@@ -158,7 +155,7 @@ verified by the owner (2026-10-23). If recreating the App Service or its
 settings, restore this configuration only after the **Apply database
 migrations** workflow step has succeeded against production:
 
-1. Open the Azure Portal and select the `jdb-portfolio-api` App Service.
+1. Open the Azure Portal and select the `jdbweb` App Service.
 2. Go to **Settings → Environment variables** (called **Configuration** in some
    portal views).
 3. Add or update the application setting `Database__AutoMigrate` to `false`.
@@ -174,9 +171,10 @@ deployment; this setting only prevents the app from also applying migrations
 during startup. It is separate from the GitHub `PRODUCTION_CONNECTION_STRING`
 secret used by that workflow.
 
-Tests live in `tests/` (four xUnit projects under `tests/Portfolio/`). CI runs
-them with `dotnet test JGBackend.sln`; the deploy workflows do not, because CI
-already gates the branch.
+Tests live in `tests/` (four xUnit projects under `tests/Portfolio/`, covering
+both modules and the composed host). CI runs them with `dotnet test
+JGBackend.sln`; the deploy workflow does not, because CI already gates the
+branch.
 
 Swagger is enabled when `ASPNETCORE_ENVIRONMENT=Development` or when the
 `Swagger:Enabled` setting is `true`. Production leaves it unset (off); turn it on
@@ -212,19 +210,19 @@ for a smoke test and off again.
 
 ## 8. Post-restructure handoff
 
-The repository restructure (phase 1) moved code, docs, and workflows but did not
-touch anything outside the git repository. These items are owned by the human
-and are **still open**; they must be done before the phases that follow can
-deploy, and the reminder is due when all phases finish (end of phase 4).
+The repository restructure moved code, docs, and workflows but did not touch
+anything outside the git repository. These items are owned by the human and are
+**still open**; the single-host merge is complete in git, so what remains is an
+Azure/handoff cleanup.
 
 | Item | Why it matters |
 |---|---|
 | Rename the GitHub repository to `jg-core-backend` | the layout is named for the monorepo target, and the rename invalidates anything that keys off the repository name — most importantly the OIDC federated credential |
-| Review the Azure federated credential subject | it is currently `repo:jobearry/jg-generic-api:ref:refs/heads/master`. After the rename it must be `repo:jobearry/jg-core-backend:ref:refs/heads/master` or `azure/login@v2` fails in both deploy workflows |
-| Confirm repository secrets | `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID`, and `PRODUCTION_CONNECTION_STRING` (Portfolio only) |
+| Review the Azure federated credential subject | it is currently `repo:jobearry/jg-generic-api:ref:refs/heads/master`. After the rename it must be `repo:jobearry/jg-core-backend:ref:refs/heads/master` or `azure/login@v2` fails in `deploy.yaml` |
+| Confirm repository secrets | `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID`, and `PRODUCTION_CONNECTION_STRING` (used by the single deploy workflow to apply migrations) |
 | Review the `jdbweb` App Service | app settings, the CORS allow-list (`Cors:AllowedOrigins`), and the custom domain/SSL binding, all of which must still match the frontend |
-| Retire `jdb-portfolio-api` | it survives only until phase 4 collapses the two hosts into one |
+| Retire the `jdb-portfolio-api` Web App | it is orphaned now that one host serves both modules; decommission it in Azure so it cannot be deployed or billed by mistake |
 | Update the local clone | the folder name and the `origin` remote still reference the old repository name |
 
-`docker/Dockerfile.dockerignore` is also dead (KI-047) and is removed in phase 4
-along with the second Dockerfile.
+The dead `docker/Dockerfile.dockerignore` was deleted with the second Dockerfile
+(KI-047); no external handoff is needed for it.

@@ -12,14 +12,15 @@ namespace Portfolio.Api.Tests;
 /// HTTP contract tests for the Overview slice. The keys are the contract; labels,
 /// icons and ordering belong to the client.
 /// </summary>
-public class OverviewEndpointsTests : IClassFixture<PortfolioApiFactory>
+[Collection(JGBackendHostCollection.Name)]
+public class OverviewEndpointsTests : IClassFixture<JGBackendApiFactory>
 {
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
-    private readonly PortfolioApiFactory _factory;
+    private readonly JGBackendApiFactory _factory;
     private readonly HttpClient _client;
 
-    public OverviewEndpointsTests(PortfolioApiFactory factory)
+    public OverviewEndpointsTests(JGBackendApiFactory factory)
     {
         _factory = factory;
         _client = factory.CreateClient();
@@ -55,7 +56,7 @@ public class OverviewEndpointsTests : IClassFixture<PortfolioApiFactory>
         Assert.Equal(HttpStatusCode.ServiceUnavailable, response.StatusCode);
     }
 
-    private static void Seed(PortfolioApiFactory factory)
+    private static void Seed(JGBackendApiFactory factory)
     {
         factory.TechStacks.Failure = null;
         factory.Projects.Projects.Clear();

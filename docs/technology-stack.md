@@ -15,7 +15,7 @@ table in sync when a package changes.
 
 ## 2. Packages
 
-### `Portfolio` (single Web SDK project)
+### `Portfolio` (class library)
 
 | Package | Version | Purpose | Notes |
 |---|---|---|---|
@@ -27,11 +27,11 @@ table in sync when a package changes.
 | `Npgsql.EntityFrameworkCore.PostgreSQL` | 10.0.3 | PostgreSQL provider | |
 | `Swashbuckle.AspNetCore` | 10.2.3 | OpenAPI + Swagger UI | UI at `/swagger`, Development only unless `Swagger:Enabled` |
 
-`src/Core` and `src/JGBackend` remain separate until phase 3. Portfolio has no
-`ProjectReference` to another module today. Entity ↔ domain mapping is
-hand-written in `Shared/Persistence/Mappers/`; AutoMapper was removed in phase 2.
-HTTP clients come from `IHttpClientFactory`, registered in
-`Features/DependencyInjection.cs`.
+`src/JGBackend` is the sole host and composes `src/Core` and `src/Portfolio` by
+`ProjectReference`; the modules never reference the host. `src/Portfolio` is a
+class library. Entity ↔ domain mapping is hand-written in
+`Shared/Persistence/Mappers/`; AutoMapper was removed in phase 2. HTTP clients
+come from `IHttpClientFactory`, registered in `Features/DependencyInjection.cs`.
 
 ## 3. Runtime services
 

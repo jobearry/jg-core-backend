@@ -9,13 +9,8 @@
 [![Azure App Service](https://img.shields.io/badge/Azure-App%20Service-0078D4?logo=microsoftazure&logoColor=white)](https://azure.microsoft.com/products/app-service)
 [![Docker](https://img.shields.io/badge/Docker-alpine-2496ED?logo=docker&logoColor=white)](https://www.docker.com/)
 
-Monorepo for personal backends. One solution (`JGBackend.sln`), organised as a
-modular monolith: a shared `Core` module and a `Portfolio` module composed by the
-`JGBackend` host.
-
-> **Phase 2 is done.** Portfolio is one project organised by vertical slice, but
-> it is still its own host with its own auth. The single-host merge and one
-> deployable are phase 3–4. See [`docs/plan.md`](docs/plan.md) for the target.
+Monorepo for personal backends. One solution (`JGBackend.sln`), one deployable:
+the `JGBackend` host composes a shared `Core` module and a `Portfolio` module.
 
 ## Tech stack
 
@@ -31,18 +26,18 @@ modular monolith: a shared `Core` module and a `Portfolio` module composed by th
 ```
 src/JGBackend/     host: Program.cs, middleware pipeline, configuration wiring
 src/Core/          auth, health, rate limiting, forwarded headers, shared infra
-src/Portfolio/     portfolio read API (vertical slices in one project)
+src/Portfolio/     portfolio read API (class library, vertical slices)
 tests/Core/        tests for Core
-tests/Portfolio/   tests for Portfolio
+tests/Portfolio/   tests for Portfolio and the composed host
 docs/              human-facing docs and ADRs
 .opencode/         agent harness: rules, skills, agents, commands
 .github/workflows/ CI and deployment only
-docker/            one Dockerfile + compose file per app (until the merge)
+docker/            one Dockerfile + compose file for the single host
 ```
 
 ## Features
 
-`JGBackend` — auth and infrastructure:
+`Core` — auth and infrastructure:
 - `Auth` — JWT login (`POST /api/v1/auth/login`, rate limited) and current-user claims (`GET /api/v1/auth/me`).
 - `Health` — anonymous diagnostic status (`GET /api/v1/health`) and framework probe (`GET /healthz`).
 
@@ -58,11 +53,12 @@ dotnet build JGBackend.sln --configuration Release
 dotnet test  JGBackend.sln --configuration Release
 
 dotnet run --project src/JGBackend
-dotnet run --project src/Portfolio/Portfolio.csproj
 ```
 
 Configuration comes from user secrets locally and environment variables in
 deployments; `.env.example` is the template for Docker. Never commit a secret.
+Migrations stay in `src/Portfolio` and are applied with `src/JGBackend` as the
+EF startup project (see [`docs/operations.md`](docs/operations.md)).
 
 ## Docs
 

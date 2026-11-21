@@ -1,5 +1,5 @@
 using Portfolio.Api.Tests.Fakes;
-using Portfolio.ErrorHandling;
+using Core.Infrastructure;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;

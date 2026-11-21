@@ -12,15 +12,16 @@ namespace Portfolio.Api.Tests;
 /// and go over the wire, so they cover routing, model binding, status codes and
 /// serialization — not just the handler's return value.
 /// </summary>
-public class ExperienceEndpointsTests : IClassFixture<PortfolioApiFactory>
+[Collection(JGBackendHostCollection.Name)]
+public class ExperienceEndpointsTests : IClassFixture<JGBackendApiFactory>
 {
     private static readonly DateTime StartedAt = new(2023, 5, 2);
     private static readonly DateTime FinishedAt = new(2026, 6, 24);
 
-    private readonly PortfolioApiFactory _factory;
+    private readonly JGBackendApiFactory _factory;
     private readonly HttpClient _client;
 
-    public ExperienceEndpointsTests(PortfolioApiFactory factory)
+    public ExperienceEndpointsTests(JGBackendApiFactory factory)
     {
         _factory = factory;
         _client = factory.CreateClient();

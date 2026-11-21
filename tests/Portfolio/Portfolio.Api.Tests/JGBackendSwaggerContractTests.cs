@@ -6,11 +6,11 @@ namespace Portfolio.Api.Tests;
 /// The host swap must not change the published operation names or schema names.
 /// </summary>
 [Collection(JGBackendHostCollection.Name)]
-public sealed class JGBackendSwaggerContractTests : IClassFixture<JGBackendApiFactory>
+public sealed class JGBackendSwaggerContractTests : IClassFixture<SwaggerEnabledApiFactory>
 {
     private readonly HttpClient _client;
 
-    public JGBackendSwaggerContractTests(JGBackendApiFactory factory)
+    public JGBackendSwaggerContractTests(SwaggerEnabledApiFactory factory)
     {
         _client = factory.CreateClient();
     }

@@ -4,11 +4,12 @@ using Portfolio.Features.Github;
 
 namespace Portfolio.Api.Tests;
 
-public sealed class GithubEndpointsTests : IClassFixture<PortfolioApiFactory>
+[Collection(JGBackendHostCollection.Name)]
+public sealed class GithubEndpointsTests : IClassFixture<JGBackendApiFactory>
 {
     private readonly HttpClient _client;
 
-    public GithubEndpointsTests(PortfolioApiFactory factory)
+    public GithubEndpointsTests(JGBackendApiFactory factory)
     {
         _client = factory.CreateClient();
     }

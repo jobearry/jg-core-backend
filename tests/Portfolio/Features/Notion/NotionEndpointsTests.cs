@@ -9,12 +9,13 @@ namespace Portfolio.Api.Tests;
 /// HTTP contract tests for the Notion slice. An upstream outage and an upstream
 /// format change share a status code but carry different error codes.
 /// </summary>
-public class NotionEndpointsTests : IClassFixture<PortfolioApiFactory>
+[Collection(JGBackendHostCollection.Name)]
+public class NotionEndpointsTests : IClassFixture<JGBackendApiFactory>
 {
-    private readonly PortfolioApiFactory _factory;
+    private readonly JGBackendApiFactory _factory;
     private readonly HttpClient _client;
 
-    public NotionEndpointsTests(PortfolioApiFactory factory)
+    public NotionEndpointsTests(JGBackendApiFactory factory)
     {
         _factory = factory;
         _client = factory.CreateClient();
@@ -87,7 +88,7 @@ public class NotionEndpointsTests : IClassFixture<PortfolioApiFactory>
     private static async Task<JsonElement> GetProblemAsync(HttpResponseMessage response) =>
         (await response.Content.ReadFromJsonAsync<JsonElement>())!;
 
-    private static void Seed(PortfolioApiFactory factory)
+    private static void Seed(JGBackendApiFactory factory)
     {
         factory.Notion.Failure = null;
         factory.Notion.Pages.Clear();

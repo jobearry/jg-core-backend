@@ -2,22 +2,21 @@
 
 Normative. These are not suggestions.
 
-## 1. Phase-2 shape
+## 1. Single-host shape
 
-Portfolio is now **one project** (`src/Portfolio/Portfolio.csproj`) organised by
-vertical slice. It is still its own host; phase 3 composes it into
-`src/JGBackend` and adopts `Core` auth.
+Portfolio is a **class library** (`src/Portfolio/Portfolio.csproj`) organised by
+vertical slice. `src/JGBackend` is the only host and composes it with `Core`.
 
 ```
+src/JGBackend/
+└── Program.cs                  the only composition root and middleware pipeline
 src/Portfolio/
-├── Program.cs                  composition root and middleware
-├── ConfigurationSettings.cs    host-only Swagger, JWT, CORS, exception handling
+├── Portfolio.csproj            class library (ASP.NET Core framework reference)
 ├── Features/<Slice>/           endpoint, handler, repository, DTO, slice tests
 ├── Features/DependencyInjection.cs
 └── Shared/
     ├── Common/                 Result<T>, errors, value objects, shared DTOs
-    ├── Endpoints/              auth endpoints and ApiResult
-    ├── ErrorHandling/          GlobalExceptionHandler
+    ├── Endpoints/              the single ApiResult mapper
     └── Persistence/            EF context, entities, mappers, repositories, migrations
 ```
 
@@ -31,7 +30,9 @@ Keep them until a deliberate rename; do not recreate the old projects.
   repository port, a DTO in the owning slice, or `Shared/Common`.
 - `Shared/Persistence` must not depend on a feature or on HTTP types.
 - `Shared/Common` must not depend on EF Core, ASP.NET, or vendor clients.
-- Only `Program.cs` and `Features/DependencyInjection.cs` compose object graphs.
+- Only `src/JGBackend/Program.cs` and `Features/DependencyInjection.cs` compose object graphs.
+- Modules never reference the host. `Portfolio` takes rate-limit policy names as
+  optional arguments instead of depending on `Core`.
 
 ### Enforcement
 
@@ -53,7 +54,7 @@ Keep them until a deliberate rename; do not recreate the old projects.
 | A table shape | `Shared/Persistence/Entities` | domain types |
 | SQL / EF query | `Features/<Slice>/Ef*Repository.cs` | handler |
 | HTTP routing, status codes | `Features/<Slice>/*Endpoints.cs` | handler |
-| Object graph construction | `Program.cs` / `Features/DependencyInjection.cs` | slice files |
+| Object graph construction | `src/JGBackend/Program.cs` / `Features/DependencyInjection.cs` | slice files |
 
 **Test:** "would this type still exist if we replaced PostgreSQL with a file and
 Notion with a CSV?" If yes, keep it out of EF and vendor folders.
@@ -79,7 +80,7 @@ values. See [ADR-0003](../docs/adr/0003-aggregate-boundary.md) and
 
 ## 4. Presentation rules
 
-- `Program.cs` is the **only** composition root.
+- `src/JGBackend/Program.cs` is the **only** composition root.
 - Endpoints do three things: bind input, call one handler, translate the result
   to an HTTP response. No business logic, no EF, no mapping beyond DTO → response.
 - Endpoints must not return `Domain.*` or `Persistence.*` types. See `rules/api.md`.

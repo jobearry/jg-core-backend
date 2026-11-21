@@ -106,11 +106,11 @@ test(domain): cover Period invariants
 | Workflow | Trigger | Does |
 |---|---|---|
 | `ci.yaml` | every push and pull request | restore, build `Release`, `dotnet test` the whole solution |
-| `deploy.yaml` | push to `master` under `src/JGBackend/**` or `src/Core/**` | publish and deploy `jdbweb` |
-| `deploy-portfolio.yaml` | push to `master` under `src/Portfolio/**` | migration gate, build, `dotnet ef database update`, deploy `jdb-portfolio-api` |
+| `deploy.yaml` | push to `master` under `src/**` or `tests/Portfolio/**` | migration gate, build, publish, `dotnet ef database update`, deploy `jdbweb` |
 
-Deploy runs log into Azure via OIDC and use `azure/webapps-deploy`. CI is the
-only place the tests run, which is why every project must stay in
+One deployable remains; `deploy.yaml` owns both the migration gate and the apply
+step. Deploy runs log into Azure via OIDC and use `azure/webapps-deploy`. CI is
+the only place the tests run, which is why every project must stay in
 `JGBackend.sln`.
 
 Never commit secrets to the workflow. Use `secrets.*` and OIDC federated

@@ -10,11 +10,12 @@ namespace Portfolio.Api.Tests;
 /// HTTP contract tests for the Project slice. The wire shape deliberately omits
 /// the aggregate's internal link back to an experience.
 /// </summary>
-public class ProjectEndpointsTests : IClassFixture<PortfolioApiFactory>
+[Collection(JGBackendHostCollection.Name)]
+public class ProjectEndpointsTests : IClassFixture<JGBackendApiFactory>
 {
     private readonly HttpClient _client;
 
-    public ProjectEndpointsTests(PortfolioApiFactory factory)
+    public ProjectEndpointsTests(JGBackendApiFactory factory)
     {
         _client = factory.CreateClient();
         Seed(factory);
@@ -34,7 +35,7 @@ public class ProjectEndpointsTests : IClassFixture<PortfolioApiFactory>
         Assert.False(project.TryGetProperty("period", out _));
     }
 
-    private static void Seed(PortfolioApiFactory factory)
+    private static void Seed(JGBackendApiFactory factory)
     {
         factory.Projects.Projects.Clear();
         factory.Projects.Projects.Add(new Project(

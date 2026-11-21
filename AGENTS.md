@@ -1,20 +1,20 @@
 # Repository guidance for agents
 
-Monorepo for personal backends. One solution (`JGBackend.sln`), one product.
-Today it produces two deployables; the target is a single modular-monolith host.
+Monorepo for personal backends. One solution (`JGBackend.sln`), one product, one
+deployable: the `JGBackend` host composes the `Core` and `Portfolio` modules.
 
 ## Layout
 
 ```
 src/JGBackend/     host: Program.cs, middleware pipeline, configuration wiring
 src/Core/          auth, health, rate limiting, forwarded headers, shared infra
-src/Portfolio/     portfolio read API (vertical slices in one project)
+src/Portfolio/     portfolio read API (class library, vertical slices)
 tests/Core/        tests for Core
-tests/Portfolio/   tests for Portfolio
+tests/Portfolio/   tests for Portfolio and the composed host
 docs/              human-facing docs and ADRs
 .opencode/         OpenCode harness: rules, skills, agents, commands
 .github/workflows/ CI and deployment only
-docker/            one Dockerfile + compose file per app (until the merge)
+docker/            one Dockerfile + compose file for the single host
 ```
 
 Read order: this file → the nearest `AGENTS.md` for the area → `.opencode/rules/`
@@ -29,10 +29,10 @@ dotnet build JGBackend.sln --configuration Release
 dotnet test  JGBackend.sln --configuration Release
 
 dotnet run --project src/JGBackend
-dotnet run --project src/Portfolio/Portfolio.csproj
 ```
 
-EF Core commands (tool manifest is at the repo root):
+EF Core commands (tool manifest is at the repo root; Portfolio owns the context
+and migrations, the host is the startup project):
 
 ```sh
 dotnet ef migrations add <Name> \
@@ -44,9 +44,7 @@ Docker (build context is always the repo root):
 
 ```sh
 docker build -f docker/JGBackend.Dockerfile .
-docker build -f docker/Portfolio.Dockerfile .
 docker compose -f docker/compose.yaml up --build
-docker compose -f docker/compose.portfolio.yaml up --build
 ```
 
 ## Conventions
@@ -62,20 +60,14 @@ docker compose -f docker/compose.portfolio.yaml up --build
 - Tests ship with the change; new behavior starts with a failing test.
 - Keep responses short and cite file paths and line numbers.
 
-## Current phase
+## Current state
 
-Phases 1–2 are complete: the repo is restructured and Portfolio is now one
-project organised by vertical slice. It is still its own host and still uses its
-own auth. The single-host merge (phase 3) will:
-
-- make `src/JGBackend` compose both modules,
-- delete Portfolio's duplicate auth and use `Core`,
-- unify token lifetime on `Jwt:ExpirationInMinutes`,
-- add rate-limit policies for the Notion and GitHub passthroughs,
-- retire the second Web App.
-
-Do not assume the merge has happened. When a task touches auth or host wiring,
-read `docs/plan.md` only if the user explicitly asks for it.
+Phases 1–3 are complete. `src/JGBackend` is the sole composition root and
+deployable. It composes `Core` (auth, health, cross-cutting infrastructure) and
+`Portfolio` (read-only vertical slices in a class library). Configuration, the
+JWT lifetime, and rate-limit policies are unified on the host; there is one
+deploy workflow and one Docker image. Portfolio hosts no HTTP pipeline of its
+own.
 
 ## Non-negotiables
 

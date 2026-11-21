@@ -1,5 +1,4 @@
-extern alias JGBackend;
-
+using JGBackend.Configuration;
 using Microsoft.AspNetCore.Cors.Infrastructure;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
@@ -10,8 +9,8 @@ using Microsoft.Extensions.FileProviders;
 namespace Portfolio.Api.Tests;
 
 /// <summary>
-/// The host owns the CORS allow-list now, so its policy is tested here rather than
-/// through the Portfolio host.
+/// CORS belongs to the composed host, so its policy is tested here rather than
+/// through a feature slice.
 /// </summary>
 public sealed class JGBackendCorsPolicyTests
 {
@@ -45,6 +44,16 @@ public sealed class JGBackendCorsPolicyTests
         Assert.Equal(new[] { "Content-Type", "Authorization" }, policy.Headers);
     }
 
+    [Fact]
+    public async Task AConfiguredOrigin_IsTrimmedOfTrailingWhitespaceAndSlash()
+    {
+        // The browser's Origin header never ends in a slash, so a value pasted from an
+        // address bar would otherwise never match.
+        var policy = await PolicyFor("Production", " https://example.com/ ");
+
+        Assert.Contains("https://example.com", policy.Origins);
+    }
+
     private static async Task<CorsPolicy> PolicyFor(
         string environmentName,
         string allowedOrigin = "https://jgolimlim-portfolio.vercel.app")
@@ -59,7 +68,7 @@ public sealed class JGBackendCorsPolicyTests
 
         var services = new ServiceCollection();
         services.AddLogging();
-        JGBackend::JGBackend.Configuration.CorsConfiguration.AddCorsOrigins(
+        CorsConfiguration.AddCorsOrigins(
             services, configuration, new FakeEnvironment(environmentName));
 
         var policyProvider = services.BuildServiceProvider()

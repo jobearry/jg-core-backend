@@ -6,10 +6,19 @@ on:
     paths:
       - 'src/JGBackend/**'
       - 'src/Core/**'
+      - 'src/Portfolio/**'
+      - 'tests/Portfolio/**'
       - 'Directory.Build.props'
       - 'JGBackend.sln'
+      - 'dotnet-tools.json'
       - '.github/workflows/deploy.yaml'
   workflow_dispatch:
+
+# One deployable owns the migrations. Two overlapping runs would race each other
+# and the database.
+concurrency:
+  group: jdbweb-production-deploy
+  cancel-in-progress: false
 
 jobs:
   build-and-deploy:
@@ -28,11 +37,38 @@ jobs:
       - name: Restore dependencies
         run: dotnet restore JGBackend.sln
 
+      - name: Restore .NET tools
+        run: dotnet tool restore
+
+      # Fails when the model changed but no migration was written. Needs no database:
+      # the placeholder is only read by the design-time factory, never dialled.
+      - name: Check for pending model changes
+        env:
+          ConnectionStrings__JDBConnection: "Host=unused;Database=unused;Username=unused;Password=unused"
+        run: >
+          dotnet ef migrations has-pending-model-changes
+          --project src/Portfolio/Portfolio.csproj
+          --startup-project src/JGBackend/JGBackend.csproj
+
       - name: Build
         run: dotnet build JGBackend.sln --configuration Release --no-restore
 
       - name: Publish
         run: dotnet publish src/JGBackend/JGBackend.csproj -c Release --no-build -o ./publish
+
+      # Schema changes run here, once, before the app is replaced. A failure stops
+      # the deploy and leaves the running app untouched.
+      - name: Apply database migrations
+        env:
+          ConnectionStrings__JDBConnection: ${{ secrets.PRODUCTION_CONNECTION_STRING }}
+        run: |
+          if [ -z "$ConnectionStrings__JDBConnection" ]; then
+            echo "::error::PRODUCTION_CONNECTION_STRING is not set; refusing to deploy without migrations."
+            exit 1
+          fi
+          dotnet ef database update \
+            --project src/Portfolio/Portfolio.csproj \
+            --startup-project src/JGBackend/JGBackend.csproj
 
       # Authenticate with Azure using Service Principal
       - name: Azure Login

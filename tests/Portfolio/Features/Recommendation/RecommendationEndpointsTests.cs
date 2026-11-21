@@ -10,11 +10,12 @@ namespace Portfolio.Api.Tests;
 /// HTTP contract tests for the Recommendation slice. An undeclared career
 /// position is null on the wire, never an empty string.
 /// </summary>
-public class RecommendationEndpointsTests : IClassFixture<PortfolioApiFactory>
+[Collection(JGBackendHostCollection.Name)]
+public class RecommendationEndpointsTests : IClassFixture<JGBackendApiFactory>
 {
     private readonly HttpClient _client;
 
-    public RecommendationEndpointsTests(PortfolioApiFactory factory)
+    public RecommendationEndpointsTests(JGBackendApiFactory factory)
     {
         _client = factory.CreateClient();
         Seed(factory);
@@ -38,7 +39,7 @@ public class RecommendationEndpointsTests : IClassFixture<PortfolioApiFactory>
     private static JsonElement FindById(JsonElement array, int id) =>
         array.EnumerateArray().Single(item => item.GetProperty("id").GetInt32() == id);
 
-    private static void Seed(PortfolioApiFactory factory)
+    private static void Seed(JGBackendApiFactory factory)
     {
         factory.Recommendations.Recommendations.Clear();
         factory.Recommendations.Recommendations.Add(new Recommendation(

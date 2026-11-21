@@ -8,23 +8,23 @@ The agent harness lives in `AGENTS.md` and `.opencode/`.
 | Workflow | Trigger | Purpose |
 |---|---|---|
 | `ci.yaml` | every push and PR | restore, build, and test `JGBackend.sln` |
-| `deploy.yaml` | push to `master` under `src/JGBackend/**` or `src/Core/**` | deploy JGBackend to `jdbweb` |
-| `deploy-portfolio.yaml` | push to `master` under `src/Portfolio/**` | check migrations, build, apply migrations, deploy to `jdb-portfolio-api` |
+| `deploy.yaml` | push to `master` under `src/**` or `tests/Portfolio/**` | check migrations, build, publish, apply EF migrations, deploy `jdbweb` |
 
-Phase 4 collapses the two deploy workflows into one target.
+One deployable remains. `deploy.yaml` owns the migration gate and apply step that
+used to live in the retired `deploy-portfolio.yaml`.
 
 ## Rules
 
 - CI must stay path-agnostic: it builds the whole solution on every change.
-- Deploy workflows must stay path-filtered so an app only ships when its own code
-  changes.
-- Portfolio deploys apply EF migrations before swapping the app. Never remove the
-  guard that fails when `PRODUCTION_CONNECTION_STRING` is missing.
+- The deploy workflow is path-filtered so it ships when host or module code changes.
+- The migration gate fails when the model changed without a migration, and the
+  apply step fails when `PRODUCTION_CONNECTION_STRING` is missing. Never remove
+  either guard.
 - Use the `master` branch. Do not deploy from pull requests.
 - Authentication is OIDC via `azure/login`; no publish profiles or client
   secrets in the repo.
 - Required repository secrets: `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`,
-  `AZURE_SUBSCRIPTION_ID`, and `PRODUCTION_CONNECTION_STRING` (Portfolio only).
+  `AZURE_SUBSCRIPTION_ID`, and `PRODUCTION_CONNECTION_STRING`.
 - Keep `dotnet-version` aligned with `Directory.Build.props` and the projects
   (`net10.0`).
 - Do not add `--no-build` to a publish step unless the exact same configuration

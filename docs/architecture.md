@@ -26,18 +26,16 @@ background jobs, no identity provider.
 
 ## 2. Projects and layout
 
-Phase 2 collapsed the five layered Portfolio projects into one Web SDK project.
-Phase 3 is in progress: `src/JGBackend` now composes Portfolio features and owns
-the single appsettings/User Secrets store and EF startup project. Portfolio keeps
-its own host until the final merge step.
+Phase 2 collapsed the five layered Portfolio projects into one project.
+Phase 3 made `src/JGBackend` the sole host: it composes both modules and owns the
+appsettings/User Secrets store, the middleware pipeline, and the EF startup
+project. `src/Portfolio` is now a class library.
 
 ```
 src/
 ├── JGBackend/               host: Program.cs, middleware, configuration
 ├── Core/                    shared auth, rate limiting, forwarded headers
-└── Portfolio/               one project; still its own host in phase 2
-    ├── Program.cs           composition root and middleware pipeline
-    ├── ConfigurationSettings.cs  host-only Swagger, JWT, CORS, exception handling
+└── Portfolio/               class library: vertical slices
     ├── Portfolio.csproj
     ├── Features/
     │   ├── DependencyInjection.cs  AddPortfolioFeatures / MapPortfolioFeatures
@@ -51,7 +49,6 @@ src/
     └── Shared/
         ├── Common/           Result<T>, typed errors, value objects
         ├── Endpoints/        the single Result → IResult mapper
-        ├── ErrorHandling/    GlobalExceptionHandler
         └── Persistence/      EF context, entities, mappers, repositories, migrations
 ```
 
@@ -133,33 +130,31 @@ abstraction only when writes are introduced; `Project` is the aggregate root
 
 ## 5. Composition root
 
-`Program.cs` is the only place the graph is assembled:
+`src/JGBackend/Program.cs` is the only place the graph is assembled:
 
 ```
 builder.Services
-  .AddPresentation(configuration, environment)  → Swagger, JWT, CORS, ProblemDetails
-  .AddPortfolioFeatures(configuration)           → DbContext, repositories, handlers,
-                                                   Notion, GitHub
-  .AddEndpointsApiExplorer()                     → let Swagger see the minimal-API endpoints
+  .AddSwaggerConfig() / .AddCorsOrigins() / .AddInfrastructure() / .AddFeatures()
+  .AddPortfolioFeatures(configuration)   → DbContext, repositories, handlers,
+                                           Notion, GitHub
+  .AddAuthentication() / .AddRateLimitingConfig() / .AddForwardedHeadersConfig()
 
 app
-  .UseExceptionHandler()     → ProblemDetails for anything that escapes
-  .UseCors("AllowSPA")
-  .UseHttpsRedirection()
-  .UseAuthentication()
-  .UseAuthorization()
-  app.MapGroup("/api/v1") → .MapAuthEndpoints() / .MapPortfolioFeatures()
+  .UseForwardedHeaders() / .UseExceptionHandler() / .UseCors("AllowSPA")
+  .UseHttpsRedirection() / .UseRateLimiter() / .UseAuthentication() / .UseAuthorization()
+  .MapHealthChecks("/healthz") / .MapFeatures()
+  .MapGroup("/api/v1") → .MapPortfolioFeatures(notionPolicy, githubPolicy)
 ```
 
-`JGBackend` now assembles this feature graph with `AddPortfolioFeatures()` and
-maps the portfolio routes under its own `/api/v1` group. Its appsettings and
-User Secrets are the canonical source for the DB, GitHub, Notion, CORS, and
-Swagger settings; EF commands use it as `--startup-project`.
+The host assembles the Portfolio feature graph with `AddPortfolioFeatures()` and
+maps its routes under `/api/v1`, passing the passthrough rate-limit policy names.
+Its appsettings and User Secrets are the canonical source for DB, GitHub, Notion,
+CORS, and Swagger settings; EF commands use it as `--startup-project`.
 
-Current behavior of the temporary Portfolio host:
+Current behavior of the host:
 
 - `Database.Migrate()` runs at startup inside a scope when
-  `Database:AutoMigrate` is enabled (default `true`).
+  `Database:AutoMigrate` is enabled (default `true`; disabled in production).
 - Swagger is Development-only, or on when `Swagger:Enabled` is true.
 - There are no controllers and no `AddControllers()` / `MapControllers()` calls.
 
@@ -179,12 +174,11 @@ Current behavior of the temporary Portfolio host:
 ## 7. Deployment topology
 
 - **CI:** GitHub Actions on every push and pull request — restore, build
-  Release, `dotnet test`. Two path-filtered deploy workflows ship the apps.
-- **Hosts:** Azure Web Apps (`jdbweb` for the host, `jdb-portfolio-api` for
-  Portfolio) until the single-host merge; single instance each.
+  Release, `dotnet test`. One path-filtered deploy workflow ships the app.
+- **Host:** one Azure Web App (`jdbweb`) running the composed host.
 - **Database:** PostgreSQL, connection via `ConnectionStrings__JDBConnection`.
-- **Docker:** multi-stage images; `docker/compose.portfolio.yaml` runs the API
-  only and expects an external PostgreSQL supplied through `.env`.
+- **Docker:** one multi-stage image; `docker/compose.yaml` runs the API only and
+  expects an external PostgreSQL supplied through `.env`.
 
 ## 8. Where this is going
 
@@ -193,11 +187,11 @@ AutoMapper is gone, and feature DI/route mapping is centralized in
 `Features/DependencyInjection.cs`. Wire contracts, tags, operation names, and
 status codes are unchanged.
 
-Phase 3 has composed `src/Portfolio` into `src/JGBackend`, consolidated
-configuration into the host, replaced Portfolio's duplicate auth with `Core`,
-and unified JWT lifetime on `Jwt:ExpirationInMinutes`. The composed host now
-rate limits the Notion and GitHub passthroughs. Remaining: retire the second
-host/deployable.
+Phase 3 completed the single-host merge: configuration, auth, JWT lifetime and
+rate-limit policies live in the host/`Core`, Portfolio is a class library, and
+the second Web App, Dockerfile, compose stack, and deploy workflow are retired.
+The remaining work is the owner's external handoff in
+[`operations.md`](operations.md) §8.
 Current design details are in this document and [`domain-model.md`](domain-model.md);
 schema details are in [`database.md`](database.md), and published contracts are
 in [`api-reference.md`](api-reference.md). Open decisions are tracked as ADRs in

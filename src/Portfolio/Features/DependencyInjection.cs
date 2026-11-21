@@ -72,9 +72,9 @@ public static class DependencyInjection
     }
 
     /// <summary>
-    /// Maps the portfolio slices. A host that runs a rate-limiter middleware can pass
-    /// policy names for the external-service passthroughs; the temporary Portfolio host
-    /// has no such middleware and leaves them unset.
+    /// Maps the portfolio slices. The policy names are optional so a host without a
+    /// rate-limiter middleware can leave them unset; the composed JGBackend host
+    /// supplies them for the Notion and GitHub passthroughs.
     /// </summary>
     public static IEndpointRouteBuilder MapPortfolioFeatures(
         this IEndpointRouteBuilder endpoints,

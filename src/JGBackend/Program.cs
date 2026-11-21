@@ -3,7 +3,9 @@ using JGBackend.Configuration;
 using Core.Features;
 using Core.Infrastructure;
 using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.EntityFrameworkCore;
 using Portfolio.Features;
+using Portfolio.Persistence.Contexts;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Configuration.AddUserSecrets(Assembly.GetExecutingAssembly());
@@ -21,6 +23,16 @@ builder.Services.AddForwardedHeadersConfig();
 builder.Services.AddRateLimitingConfig();
 
 var app = builder.Build();
+
+// Apply pending migrations. Gated so a deployment that applies them out of band (or a
+// multi-replica setup) does not have every instance race to migrate. Production sets
+// Database:AutoMigrate=false; the deploy workflow owns migrations there (see operations.md).
+if (app.Configuration.GetValue("Database:AutoMigrate", true))
+{
+    using var scope = app.Services.CreateScope();
+    var dbContext = scope.ServiceProvider.GetRequiredService<PortfolioContext>();
+    dbContext.Database.Migrate();
+}
 
 // Configure the HTTP request pipeline.
 // Must run before anything that reads the scheme or client IP (HTTPS redirect, rate limiting).

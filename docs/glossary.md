@@ -18,7 +18,7 @@
 | **Anemic domain model** | Entities that are data bags with no behaviour; logic lives in services. | Not the intended model here: domain entities validate state and expose controlled behavior. |
 | **Anti-corruption layer** | Translation layer that keeps a foreign model out of the domain. | `NotionPageContentReader` translates the Notion adapter into the Application page-content port. |
 | **Domain event** | A fact that happened in the domain, published after commit. | None yet (no writes). |
-| **Composition root** | The single place where the object graph is built. | `Program.cs` + `ConfigurationSettings.cs`. |
+| **Composition root** | The single place where the object graph is built. | `src/JGBackend/Program.cs`, with feature wiring in `Features/DependencyInjection.cs`. |
 
 ## Project-specific terms
 

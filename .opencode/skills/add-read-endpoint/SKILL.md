@@ -97,7 +97,7 @@ Update `docs/api-reference.md` (path, params, sample response, error codes).
 ```bash
 dotnet build JGBackend.sln
 dotnet test JGBackend.sln
-curl -s "http://localhost:5254/api/v1/<route>" | jq
+curl -s "http://localhost:5031/api/v1/<route>" | jq
 ```
 
 ## Anti-patterns to avoid

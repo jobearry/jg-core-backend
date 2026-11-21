@@ -34,7 +34,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Compile Include="..\Shared\Testing\PortfolioApiFactory.cs" Link="Shared\Testing\PortfolioApiFactory.cs" />
     <Compile Include="..\Shared\Testing\Fakes\FakeGithubRepositoryReader.cs" Link="Shared\Testing\Fakes\FakeGithubRepositoryReader.cs" />
     <Compile Include="..\Shared\Testing\Fakes\FakePortfolioRepositories.cs" Link="Shared\Testing\Fakes\FakePortfolioRepositories.cs" />
     <Compile Include="..\Shared\Testing\Fakes\RecordingLogger.cs" Link="Shared\Testing\Fakes\RecordingLogger.cs" />
@@ -42,7 +41,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\..\src\Core\Core.csproj" />
-    <ProjectReference Include="..\..\..\src\JGBackend\JGBackend.csproj" Aliases="JGBackend" />
+    <ProjectReference Include="..\..\..\src\JGBackend\JGBackend.csproj" />
     <ProjectReference Include="..\..\..\src\Portfolio\Portfolio.csproj" />
   </ItemGroup>
 

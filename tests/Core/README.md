@@ -1,8 +1,7 @@
 # Core tests
 
-Tests for `src/Core`.
-
-The auth, CORS, Swagger, and exception-handler tests still live in
-`tests/Portfolio/Portfolio.Api.Tests` because Portfolio owns the current host.
-Move them here when the single-host merge (phase 3) makes `src/JGBackend` the
-only host and `src/Core` the only auth implementation.
+Tests for `src/Core` live alongside the host-contract tests in
+`tests/Portfolio/Portfolio.Api.Tests` (JWT service, auth endpoints, CORS,
+Swagger, and the exception handler), because that project owns the
+`WebApplicationFactory` harness that boots the one host. Pure unit tests can
+move here when a dedicated host/Core test project is added.

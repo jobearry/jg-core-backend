@@ -10,12 +10,13 @@ namespace Portfolio.Api.Tests;
 /// HTTP contract tests for the Skill slice. The published stack shape must not
 /// include the database's audit column.
 /// </summary>
-public class SkillEndpointsTests : IClassFixture<PortfolioApiFactory>
+[Collection(JGBackendHostCollection.Name)]
+public class SkillEndpointsTests : IClassFixture<JGBackendApiFactory>
 {
-    private readonly PortfolioApiFactory _factory;
+    private readonly JGBackendApiFactory _factory;
     private readonly HttpClient _client;
 
-    public SkillEndpointsTests(PortfolioApiFactory factory)
+    public SkillEndpointsTests(JGBackendApiFactory factory)
     {
         _factory = factory;
         _client = factory.CreateClient();
@@ -52,7 +53,7 @@ public class SkillEndpointsTests : IClassFixture<PortfolioApiFactory>
         Assert.Equal("database_unavailable", problem.GetProperty("code").GetString());
     }
 
-    private static void Seed(PortfolioApiFactory factory)
+    private static void Seed(JGBackendApiFactory factory)
     {
         factory.TechStacks.Failure = null;
         factory.TechStacks.TechStacks.Clear();

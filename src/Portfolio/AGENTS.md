@@ -2,18 +2,14 @@
 
 `src/Portfolio` is the read-only portfolio API: experiences, projects, tech
 stacks, recommendations, an overview, Notion page content, and public GitHub
-repository data.
+repository data. It is a **class library** composed by `src/JGBackend`; it owns no
+host pipeline or auth.
 
-It is still its own host today. Phase 2 collapsed the layered projects into one
-project organised by vertical slice; phase 3 composes it into `src/JGBackend`.
-
-## Current layout
+## Layout
 
 ```
 src/Portfolio/
-├── Program.cs                  host pipeline and composition root
-├── ConfigurationSettings.cs    host-only Swagger, JWT, CORS, ProblemDetails
-├── Portfolio.csproj            single Web SDK project
+├── Portfolio.csproj            class library (ASP.NET Core framework reference)
 ├── Features/
 │   ├── DependencyInjection.cs  AddPortfolioFeatures / MapPortfolioFeatures
 │   ├── Experience/             endpoint, handler, repository, DTO, mapper tests
@@ -24,10 +20,8 @@ src/Portfolio/
 │   ├── Notion/
 │   └── Github/
 └── Shared/
-    ├── Authentication/         temporary JWT service (target: src/Core)
     ├── Common/                 Result<T>, errors, value objects, shared DTOs
-    ├── Endpoints/              auth endpoints and ApiResult mapper
-    ├── ErrorHandling/          GlobalExceptionHandler
+    ├── Endpoints/              the single Result → IResult mapper
     └── Persistence/            EF context, entities, mappers, repositories, migrations
 ```
 
@@ -37,24 +31,26 @@ are shared; do not rename them as part of a file move.
 
 ## Rules
 
-1. `Program.cs` is the only composition root and calls
-   `AddPortfolioFeatures()` / `MapPortfolioFeatures()` for feature wiring.
+1. `src/JGBackend/Program.cs` is the only composition root and calls
+   `AddPortfolioFeatures()` / `MapPortfolioFeatures()` for feature wiring. The
+   host supplies the passthrough rate-limit policy names.
 2. Endpoints return DTOs, never domain or persistence types.
 3. Typed errors (`Result<T>`) map to status codes in one place.
 4. Every I/O method takes and forwards a `CancellationToken`.
 5. New schema changes are a new migration; never edit an applied one.
-6. Auth here is temporary. Do not add a third token service; the target is
-   `src/Core`.
+6. Auth, CORS, Swagger, rate limiting and exception handling belong to the host
+   and `Core`. Do not add a second copy here.
 
 ## Commands
 
 ```sh
-dotnet run --project src/Portfolio/Portfolio.csproj
 dotnet test JGBackend.sln
 dotnet ef migrations add <Name> \
   --project src/Portfolio/Portfolio.csproj \
   --startup-project src/JGBackend/JGBackend.csproj
 ```
+
+There is no `dotnet run --project src/Portfolio` — run `src/JGBackend` instead.
 
 ## Where to look
 
