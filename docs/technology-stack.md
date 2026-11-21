@@ -15,17 +15,29 @@ table in sync when a package changes.
 
 ## 2. Packages
 
-### `Portfolio` (class library)
+### `src/JGBackend` (host)
 
 | Package | Version | Purpose | Notes |
 |---|---|---|---|
-| `Microsoft.AspNetCore.Authentication.JwtBearer` | 10.0.10 | Validate JWTs issued by `/auth/login` | `MapInboundClaims = false` |
+| `Microsoft.AspNetCore.Authentication.JwtBearer` | 10.0.15 | Validate JWTs issued by `/auth/login` | `MapInboundClaims = false` |
+| `Microsoft.EntityFrameworkCore.Design` | 10.0.10 | Design-time migrations | `PrivateAssets=all` |
+| `Swashbuckle.AspNetCore` | 10.3.1 | OpenAPI + Swagger UI | UI at `/swagger`, Development only unless `Swagger:Enabled` |
+
+### `src/Portfolio` (class library)
+
+| Package | Version | Purpose | Notes |
+|---|---|---|---|
 | `Microsoft.EntityFrameworkCore` | 10.0.10 | ORM | |
 | `Microsoft.EntityFrameworkCore.Relational` | 10.0.10 | Version pin | avoids MSB3277 with Npgsql |
 | `Microsoft.EntityFrameworkCore.Design` | 10.0.10 | Design-time migrations | `PrivateAssets=all` |
 | `Microsoft.EntityFrameworkCore.Tools` | 10.0.10 | `dotnet ef` integration | `PrivateAssets=all` |
 | `Npgsql.EntityFrameworkCore.PostgreSQL` | 10.0.3 | PostgreSQL provider | |
-| `Swashbuckle.AspNetCore` | 10.2.3 | OpenAPI + Swagger UI | UI at `/swagger`, Development only unless `Swagger:Enabled` |
+
+### `src/Core` (class library)
+
+| Package | Version | Purpose | Notes |
+|---|---|---|---|
+| `System.IdentityModel.Tokens.Jwt` | 8.23.0 | JWT token issuance | used by the auth token service |
 
 `src/JGBackend` is the sole host and composes `src/Core` and `src/Portfolio` by
 `ProjectReference`; the modules never reference the host. `src/Portfolio` is a
@@ -45,7 +57,7 @@ come from `IHttpClientFactory`, registered in `Features/DependencyInjection.cs`.
 | Tool | Status | Notes |
 |---|---|---|
 | `dotnet-ef` | **available via the root tool manifest** | `dotnet-tools.json` at the repo root pins `dotnet-ef` 10.0.10. Run `dotnet tool restore` once, then `dotnet ef ...` works. |
-| Docker / Compose v2 | available | Compose file currently invalid |
+| Docker / Compose v2 | available | one API service; required values come from `.env` (see `operations.md` §4) |
 | GitHub Actions | active | build + deploy only |
 | Azure CLI | via `azure/login@v2` | OIDC federated credentials |
 
@@ -60,11 +72,11 @@ approval (AGENTS.md §10).
 | Assertions | `Shouldly` or `FluentAssertions` | optional; xUnit asserts are enough to start |
 | Validation | `FluentValidation.AspNetCore` or a hand-written endpoint filter | minimal APIs do not validate automatically |
 | Resilience | `Microsoft.Extensions.Http.Resilience` (Polly v8) | the Notion client now has a 15s timeout and one manual retry on 429/5xx; Polly would add circuit breaking |
-| Health checks | `Microsoft.Extensions.Diagnostics.HealthChecks` + Npgsql check | nothing to probe today |
+| Health checks (database probe) | an Npgsql health-check package | framework checks exist (`/healthz`, `/api/v1/health`), but neither probes PostgreSQL |
 | Structured logging | Serilog / OpenTelemetry | `ILogger` reaches the application services, but there is no structured sink and no correlation id beyond `traceId` |
 | Analyzers (third-party) | `Microsoft.CodeAnalysis.NetAnalyzers` | SDK analyzers run by default, and a root `Directory.Build.props` turns warnings into errors (2026-10-23); the extra package is not needed yet |
 | API versioning | `Asp.Versioning.Http` | path version is hardcoded |
-| Migrations at deploy | EF bundle or a job step | `Migrate()` at startup is a race |
+| Migrations with multiple replicas | EF bundle or init container | the deploy workflow owns migrations for one instance and production sets `Database:AutoMigrate=false` (KI-018/KI-038) |
 
 ## 6. Why these choices
 

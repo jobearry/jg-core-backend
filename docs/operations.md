@@ -6,7 +6,7 @@ How to run, configure, and deploy the API.
 
 | Tool | Version | Notes |
 |---|---|---|
-| .NET SDK | 10.0.x | 10.0.402 in use |
+| .NET SDK | 10.0.x | 10.0.114 in use |
 | PostgreSQL | any recent | local install or container |
 | `dotnet-ef` | matching EF 10 | available via the root tool manifest — run `dotnet tool restore` |
 | Docker + Compose v2 | 20.10+ | optional; the API container uses an external PostgreSQL instance (see §4) |
@@ -222,7 +222,7 @@ completed the items marked **Done** on 2026-11-22; the rest remain open.
 | Confirm repository secrets | Done 2026-11-22 | `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID`, and `PRODUCTION_CONNECTION_STRING` are present; no values are stored in the repo |
 | Review the `jdbweb` App Service | Done 2026-11-22 | app settings and deployment secrets updated for the single host; confirm the CORS allow-list (`Cors:AllowedOrigins`) and custom domain/SSL binding still match the frontend after the first deploy |
 | Retire the `jdb-portfolio-api` Web App | Open | orphaned now that one host serves both modules; decommission it in Azure so it cannot be deployed or billed by mistake |
-| Update the local clone | Check locally | the folder name and the `origin` remote may still reference the old repository name |
+| Update the local clone | Done 2026-11-22 (remote) | `origin` points at `jg-core-backend`; the local working folder keeps the old name, which has no effect on git |
 
 ### Which `jdbweb` settings to keep
 

@@ -1,6 +1,6 @@
 # JG Backend
 
-[![CI](https://img.shields.io/github/actions/workflow/status/jobearry/jg-generic-api/ci.yaml?branch=master)](https://github.com/jobearry/jg-generic-api/actions/workflows/ci.yaml)
+[![CI](https://img.shields.io/github/actions/workflow/status/jobearry/jg-core-backend/ci.yaml?branch=master)](https://github.com/jobearry/jg-core-backend/actions/workflows/ci.yaml)
 [![.NET](https://img.shields.io/badge/.NET-10.0-512BD4?logo=dotnet&logoColor=white)](https://dotnet.microsoft.com/en-us/download/dotnet/10.0)
 [![C#](https://img.shields.io/badge/C%23-14-9B4F96?logo=csharp&logoColor=white)](https://learn.microsoft.com/dotnet/csharp/)
 [![ASP.NET Core](https://img.shields.io/badge/ASP.NET%20Core-Minimal%20APIs-512BD4?logo=dotnet&logoColor=white)](https://learn.microsoft.com/aspnet/core/fundamentals/minimal-apis)

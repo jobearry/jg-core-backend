@@ -136,8 +136,9 @@ erDiagram
 
 The migration exists in the repository and the model snapshot matches it. It has run
 against the local dev database (2026-10-23); no other environment has it yet. It applies
-on the next `dotnet ef database update`, or automatically at the next deploy because
-`Database:AutoMigrate` defaults to `true` (KI-038).
+on the next `dotnet ef database update`, or at the next deploy when the workflow applies
+migrations to production. Production sets `Database:AutoMigrate=false` so the app does
+not also migrate at startup (KI-018/KI-038).
 
 Two things to know before it runs:
 

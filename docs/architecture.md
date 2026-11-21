@@ -34,7 +34,7 @@ project. `src/Portfolio` is now a class library.
 ```
 src/
 ├── JGBackend/               host: Program.cs, middleware, configuration
-├── Core/                    shared auth, rate limiting, forwarded headers
+├── Core/                    shared auth, health, rate limiting, forwarded headers
 └── Portfolio/               class library: vertical slices
     ├── Portfolio.csproj
     ├── Features/
