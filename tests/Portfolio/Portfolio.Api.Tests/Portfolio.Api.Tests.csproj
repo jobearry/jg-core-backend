@@ -41,6 +41,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\..\src\Core\Core.csproj" />
     <ProjectReference Include="..\..\..\src\JGBackend\JGBackend.csproj" Aliases="JGBackend" />
     <ProjectReference Include="..\..\..\src\Portfolio\Portfolio.csproj" />
   </ItemGroup>

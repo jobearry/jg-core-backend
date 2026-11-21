@@ -14,32 +14,48 @@ public static class AuthEndpoints
             .MapGroup("/api/v1/auth")
             .WithTags("Auth");
 
-        group.MapPost("login", IResult (DTOAuth? auth, IJwtTokenService tokenService) =>
+        group.MapPost("login", IResult (AuthDto? auth, IJwtTokenService tokenService) =>
             {
-                var validationError = Validate(auth);
-                if (validationError is not null)
+                if (auth is null || string.IsNullOrWhiteSpace(auth.Key))
                 {
-                    return Results.Problem(
-                        statusCode: StatusCodes.Status400BadRequest,
-                        title: "Validation failed",
-                        detail: validationError);
+                    return Problem(
+                        StatusCodes.Status400BadRequest,
+                        "Invalid request",
+                        "A key is required.",
+                        "validation_failed");
                 }
 
-                var result = tokenService.CreateToken(auth!.Key);
+                if (auth.Key.Length > 256)
+                {
+                    return Problem(
+                        StatusCodes.Status400BadRequest,
+                        "Invalid request",
+                        "Key exceeds the maximum allowed length of 256 characters.",
+                        "validation_failed");
+                }
+
+                var result = tokenService.CreateToken(auth.Key);
                 return result.Status switch
                 {
-                    AuthTokenStatus.Success => Results.Ok(new { token = result.Token }),
-                    AuthTokenStatus.KeyTooShort => Results.Problem(
-                        statusCode: StatusCodes.Status500InternalServerError,
-                        title: "Server configuration error",
-                        detail: "JWT key too short."),
-                    _ => Results.Unauthorized()
+                    AuthTokenStatus.Success => Results.Ok(new AuthTokenDto(result.Token!)),
+                    AuthTokenStatus.KeyTooShort => Problem(
+                        StatusCodes.Status500InternalServerError,
+                        "Unexpected error",
+                        "Authentication is not configured correctly.",
+                        "server_misconfigured"),
+                    _ => Problem(
+                        StatusCodes.Status401Unauthorized,
+                        "Unauthorized",
+                        "The provided key is not valid.",
+                        "invalid_credentials")
                 };
             })
             .RequireRateLimiting(RateLimitPolicies.AuthLogin)
             .WithName("Login")
             .WithSummary("Exchange the shared key for a JWT")
+            .Produces<AuthTokenDto>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
             .ProducesProblem(StatusCodes.Status429TooManyRequests)
             .ProducesProblem(StatusCodes.Status500InternalServerError);
 
@@ -52,24 +68,18 @@ public static class AuthEndpoints
                 return Results.Ok(allClaims);
             })
             .RequireAuthorization()
-            .WithName("GetCurrentUser")
-            .WithSummary("Get current user info from token claims");
+            .WithName("GetCurrentClaims")
+            .WithSummary("View authorized claims")
+            .Produces<Dictionary<string, string[]>>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status401Unauthorized);
 
         return endpoints;
     }
 
-    private static string? Validate(DTOAuth? auth)
-    {
-        if (auth is null || string.IsNullOrWhiteSpace(auth.Key))
-        {
-            return "Key is required.";
-        }
-
-        if (auth.Key.Length > 256)
-        {
-            return "Key exceeds the maximum allowed length of 256 characters.";
-        }
-
-        return null;
-    }
+    private static IResult Problem(int statusCode, string title, string detail, string code) =>
+        Results.Problem(
+            title: title,
+            detail: detail,
+            statusCode: statusCode,
+            extensions: new Dictionary<string, object?> { ["code"] = code });
 }

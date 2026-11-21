@@ -1,5 +1,4 @@
 using Portfolio;
-using Portfolio.Endpoints;
 using Portfolio.Features;
 using Portfolio.Persistence.Contexts;
 using Microsoft.EntityFrameworkCore;
@@ -41,8 +40,6 @@ if (app.Environment.IsDevelopment() || app.Configuration.GetValue("Swagger:Enabl
 }
 
 app.UseHttpsRedirection();
-app.UseAuthentication();
-app.UseAuthorization();
 
 // One prefix, declared once. Endpoint files declare only the segment below it, so a
 // future /api/v2 is one edit here instead of a hunt through endpoint files.
@@ -52,7 +49,6 @@ app.UseAuthorization();
 var api = app.MapGroup("api/v1");
 
 //endpoints
-api.MapAuthEndpoints();
 api.MapPortfolioFeatures();
 
 app.Run();

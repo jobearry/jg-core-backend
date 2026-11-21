@@ -1,76 +1,56 @@
-using Portfolio.Application.Common;
-using Portfolio.Application.Settings;
-using Portfolio.Authentication;
-using Microsoft.Extensions.Options;
 using System.IdentityModel.Tokens.Jwt;
+using Core.Features.Auth;
+using Core.Infrastructure.Options;
+using Microsoft.Extensions.Options;
 
 namespace Portfolio.Api.Tests;
 
 /// <summary>
-/// Plan 2.5 — token construction moved out of the endpoint, so it can be tested without
-/// booting HTTP.
+/// Core owns token construction now. The service-token claims are part of the
+/// published contract, so they are pinned here.
 /// </summary>
-public class JwtTokenServiceTests
+public sealed class JwtTokenServiceTests
 {
     private const string Key = "a-signing-key-that-is-definitely-long-enough";
 
     [Fact]
-    public void IssueToken_WithTheConfiguredKey_ReturnsATokenForTheServiceSubject()
+    public void CreateToken_WithTheConfiguredKey_ReturnsTheServiceToken()
     {
-        var service = AService(Key);
+        var result = AService(Key).CreateToken(Key);
 
-        var result = service.IssueToken(Key);
+        Assert.Equal(AuthTokenStatus.Success, result.Status);
+        Assert.NotNull(result.Token);
 
-        Assert.True(result.IsSuccess);
-
-        var token = new JwtSecurityTokenHandler().ReadJwtToken(result.Value);
+        var token = new JwtSecurityTokenHandler().ReadJwtToken(result.Token!);
         Assert.Equal("portfolio-api", token.Subject);
         Assert.Equal("test-issuer", token.Issuer);
         Assert.Contains("test-audience", token.Audiences);
         Assert.Contains(token.Claims, claim => claim.Value == "User");
     }
 
-    /// <summary>
-    /// A wrong key is a 401, not a 400 and not a 500. The message says nothing about
-    /// which part was wrong, and the code is stable so a client can act on it.
-    /// </summary>
     [Fact]
-    public void IssueToken_WithAWrongKey_IsUnauthorized()
+    public void CreateToken_WithAWrongKey_IsInvalidKey()
     {
-        var service = AService(Key);
+        var result = AService(Key).CreateToken("not-the-key");
 
-        var result = service.IssueToken("not-the-key");
-
-        Assert.False(result.IsSuccess);
-        Assert.Equal(ErrorKind.Unauthorized, result.Error!.Kind);
-        Assert.Equal("invalid_credentials", result.Error.Code);
+        Assert.Equal(AuthTokenStatus.InvalidKey, result.Status);
+        Assert.Null(result.Token);
     }
 
     [Fact]
-    public void IssueToken_WithABlankKey_IsValidationNotUnauthorized()
+    public void CreateToken_WithABlankKey_IsInvalidKey()
     {
-        var service = AService(Key);
+        var result = AService(Key).CreateToken("   ");
 
-        var result = service.IssueToken("   ");
-
-        Assert.Equal(ErrorKind.Validation, result.Error!.Kind);
+        Assert.Equal(AuthTokenStatus.InvalidKey, result.Status);
     }
 
-    /// <summary>
-    /// A secret too short for HS256 is a server misconfiguration — a 500. It is checked
-    /// only after the key matches, so an anonymous caller cannot use the response to
-    /// learn the length of the real secret.
-    /// </summary>
     [Fact]
-    public void IssueToken_WhenTheConfiguredKeyIsTooShort_IsUnexpectedWithItsOwnCode()
+    public void CreateToken_WhenTheConfiguredKeyIsTooShort_IsKeyTooShort()
     {
-        var service = AService("short");
+        var result = AService("short").CreateToken("short");
 
-        var result = service.IssueToken("short");
-
-        Assert.False(result.IsSuccess);
-        Assert.Equal(ErrorKind.Unexpected, result.Error!.Kind);
-        Assert.Equal("server_misconfigured", result.Error.Code);
+        Assert.Equal(AuthTokenStatus.KeyTooShort, result.Status);
     }
 
     private static JwtTokenService AService(string key) => new(Options.Create(new JwtOptions
@@ -78,6 +58,6 @@ public class JwtTokenServiceTests
         Key = key,
         Issuer = "test-issuer",
         Audience = "test-audience",
-        ExpirationInMinutes = 60
+        Expires = 60
     }));
 }

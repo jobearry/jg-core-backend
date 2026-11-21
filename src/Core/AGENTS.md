@@ -29,9 +29,10 @@ Infrastructure/DependencyInjection.cs   AddInfrastructure()
 
 ## Tests
 
-Put tests in `tests/Core/`. Today the auth-related tests still live in
-`tests/Portfolio/Portfolio.Api.Tests` because Portfolio owns the current host;
-move them when the merge lands.
+Put tests in `tests/Core/`. Today the auth-related tests live in
+`tests/Portfolio/Portfolio.Api.Tests` because that project already has the
+WebApplicationFactory harness; move them when a dedicated host/Core test project
+exists.
 
 ## Verification
 

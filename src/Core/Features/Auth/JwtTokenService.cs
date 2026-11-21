@@ -2,14 +2,17 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
+using Core.Infrastructure.Options;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
-using Core.Infrastructure.Options;
 
 namespace Core.Features.Auth;
 
 public class JwtTokenService : IJwtTokenService
 {
+    private const int MinimumKeyBytes = 32;
+    private const string Subject = "portfolio-api";
+
     private readonly JwtOptions _jwtOptions;
 
     public JwtTokenService(IOptions<JwtOptions> jwtOptions)
@@ -29,25 +32,23 @@ public class JwtTokenService : IJwtTokenService
             return new AuthTokenResult(AuthTokenStatus.InvalidKey, null);
         }
 
-        if (configuredKeyBytes.Length < 32)
+        if (configuredKeyBytes.Length < MinimumKeyBytes)
         {
             return new AuthTokenResult(AuthTokenStatus.KeyTooShort, null);
         }
-
-        var jwtKey = Encoding.ASCII.GetBytes(configuredKey);
 
         var tokenDescriptor = new SecurityTokenDescriptor
         {
             Subject = new ClaimsIdentity(new[]
             {
-                new Claim("Name", "Jonathan Rodel"),
+                new Claim(JwtRegisteredClaimNames.Sub, Subject),
                 new Claim(ClaimTypes.Role, "User")
             }),
             Expires = DateTime.UtcNow.AddMinutes(_jwtOptions.Expires),
             Issuer = _jwtOptions.Issuer,
             Audience = _jwtOptions.Audience,
             SigningCredentials = new SigningCredentials(
-                new SymmetricSecurityKey(jwtKey),
+                new SymmetricSecurityKey(configuredKeyBytes),
                 SecurityAlgorithms.HmacSha256Signature)
         };
 

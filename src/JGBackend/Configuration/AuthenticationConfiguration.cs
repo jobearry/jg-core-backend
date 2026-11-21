@@ -1,3 +1,4 @@
+using System.IdentityModel.Tokens.Jwt;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Core.Infrastructure.Options;
@@ -40,6 +41,7 @@ public static class AuthenticationConfiguration
         {
             options.RequireHttpsMetadata = false;
             options.SaveToken = true;
+            options.MapInboundClaims = false;
             options.TokenValidationParameters = new TokenValidationParameters
             {
                 ValidateIssuer = true,
@@ -49,6 +51,10 @@ public static class AuthenticationConfiguration
                 ValidIssuer = jwtOptions.Issuer,
                 ValidAudience = jwtOptions.Audience,
                 IssuerSigningKey = new SymmetricSecurityKey(jwtKey),
+                ClockSkew = TimeSpan.Zero,
+                // The service token carries "sub" directly; do not rewrite it to
+                // ClaimTypes.NameIdentifier or User.Identity.Name becomes null.
+                NameClaimType = JwtRegisteredClaimNames.Sub
             };
         });
 
