@@ -27,6 +27,6 @@ public sealed class SwaggerAvailabilityTests
         var response = await factory.CreateClient().GetAsync("/swagger/v1/swagger.json");
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        Assert.Contains("Generic API", await response.Content.ReadAsStringAsync());
+        Assert.Contains("Core Backend", await response.Content.ReadAsStringAsync());
     }
 }

@@ -44,7 +44,7 @@ if (app.Environment.IsDevelopment() || app.Configuration.GetValue("Swagger:Enabl
     app.UseSwagger();
     app.UseSwaggerUI(ui =>
     {
-        ui.SwaggerEndpoint("v1/swagger.json", "Generic API v1");
+        ui.SwaggerEndpoint("v1/swagger.json", "Core Backend v1");
     });
 }
 

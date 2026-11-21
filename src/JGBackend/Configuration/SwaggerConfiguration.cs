@@ -15,9 +15,9 @@ public static class SwaggerConfiguration
         {
             options.SwaggerDoc("v1", new OpenApiInfo
             {
-                Title = "Generic API",
+                Title = "Core Backend",
                 Version = "v1",
-                Description = "Generic API",
+                Description = "Core Backend",
                 Contact = contactInfo
             });
 
