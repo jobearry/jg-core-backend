@@ -1,29 +1,43 @@
 using System.Threading.RateLimiting;
 using Core.Infrastructure;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace JGBackend.Configuration;
 
 public static class RateLimitConfiguration
 {
+    /// <summary>Shared limit for the two external-service passthroughs.</summary>
+    private const int PassthroughPermitLimit = 30;
+
+    private static readonly TimeSpan Window = TimeSpan.FromMinutes(1);
+
     public static IServiceCollection AddRateLimitingConfig(this IServiceCollection services)
     {
         services.AddRateLimiter(options =>
         {
             options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
 
-            options.AddPolicy(RateLimitPolicies.AuthLogin, httpContext =>
-                RateLimitPartition.GetFixedWindowLimiter(
-                    ResolvePartitionKey(httpContext),
-                    _ => new FixedWindowRateLimiterOptions
-                    {
-                        PermitLimit = 5,
-                        Window = TimeSpan.FromMinutes(1),
-                        QueueLimit = 0
-                    }));
+            AddFixedWindow(options, RateLimitPolicies.AuthLogin, 5);
+            AddFixedWindow(options, RateLimitPolicies.NotionPassthrough, PassthroughPermitLimit);
+            AddFixedWindow(options, RateLimitPolicies.GithubPassthrough, PassthroughPermitLimit);
         });
 
         return services;
     }
+
+    private static void AddFixedWindow(
+        RateLimiterOptions options,
+        string policyName,
+        int permitLimit) =>
+        options.AddPolicy(policyName, httpContext =>
+            RateLimitPartition.GetFixedWindowLimiter(
+                ResolvePartitionKey(httpContext),
+                _ => new FixedWindowRateLimiterOptions
+                {
+                    PermitLimit = permitLimit,
+                    Window = Window,
+                    QueueLimit = 0
+                }));
 
     private static string ResolvePartitionKey(HttpContext httpContext)
     {

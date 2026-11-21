@@ -174,7 +174,7 @@ Current behavior of the temporary Portfolio host:
 | Mapping | hand-written mappers for entity ↔ domain; `PortfolioDtoMapper` for domain → DTO (ADR-0004) | reverse mappings are unused until a write path exists |
 | Auth | JWT **service token** (`sub=portfolio-api`) owned by `Core` and mapped by `JGBackend`; lifetime from `Jwt:ExpirationInMinutes`; only `/auth/me` requires it; portfolio, Notion, and GitHub reads are anonymous on purpose | — |
 | Observability | none | no health check, no metrics, no tracing |
-| Resilience | Notion client: 15s timeout, one retry on 429/5xx | no circuit breaker; passthrough rate limits are phase 3 |
+| Resilience | Notion client: 15s timeout, one retry on 429/5xx; per-IP passthrough rate limits (30/min) applied by the composed host | no circuit breaker |
 
 ## 7. Deployment topology
 
@@ -195,8 +195,9 @@ status codes are unchanged.
 
 Phase 3 has composed `src/Portfolio` into `src/JGBackend`, consolidated
 configuration into the host, replaced Portfolio's duplicate auth with `Core`,
-and unified JWT lifetime on `Jwt:ExpirationInMinutes`. Remaining: add
-passthrough rate limits and retire the second host/deployable.
+and unified JWT lifetime on `Jwt:ExpirationInMinutes`. The composed host now
+rate limits the Notion and GitHub passthroughs. Remaining: retire the second
+host/deployable.
 Current design details are in this document and [`domain-model.md`](domain-model.md);
 schema details are in [`database.md`](database.md), and published contracts are
 in [`api-reference.md`](api-reference.md). Open decisions are tracked as ADRs in

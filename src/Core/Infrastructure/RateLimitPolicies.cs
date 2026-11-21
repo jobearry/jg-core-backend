@@ -6,4 +6,10 @@ namespace Core.Infrastructure;
 public static class RateLimitPolicies
 {
     public const string AuthLogin = "auth-login";
+
+    /// <summary>Notion-backed routes; each upstream page call costs a Notion request.</summary>
+    public const string NotionPassthrough = "notion-passthrough";
+
+    /// <summary>GitHub-backed routes; each call costs a GitHub request.</summary>
+    public const string GithubPassthrough = "github-passthrough";
 }

@@ -71,11 +71,18 @@ public static class DependencyInjection
         return services;
     }
 
+    /// <summary>
+    /// Maps the portfolio slices. A host that runs a rate-limiter middleware can pass
+    /// policy names for the external-service passthroughs; the temporary Portfolio host
+    /// has no such middleware and leaves them unset.
+    /// </summary>
     public static IEndpointRouteBuilder MapPortfolioFeatures(
-        this IEndpointRouteBuilder endpoints)
+        this IEndpointRouteBuilder endpoints,
+        string? notionRateLimitPolicy = null,
+        string? githubRateLimitPolicy = null)
     {
-        endpoints.MapNotionEndpoints();
-        endpoints.MapGithubEndpoints();
+        endpoints.MapNotionEndpoints(notionRateLimitPolicy);
+        endpoints.MapGithubEndpoints(githubRateLimitPolicy);
         endpoints.MapExperienceEndpoints();
         endpoints.MapProjectEndpoints();
         endpoints.MapRecommendationEndpoints();

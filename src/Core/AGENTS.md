@@ -21,8 +21,9 @@ Infrastructure/DependencyInjection.cs   AddInfrastructure()
 - The signing key is also the login secret. Compare it in fixed time, require at
   least 32 bytes, and never log it.
 - Token validation checks issuer, audience, lifetime, and signing key.
-- Rate limiting is per-IP, fixed window, 5 requests/minute on login. Extend
-  policies here, not in the host.
+- Rate limiting is per-IP, fixed window: 5 requests/minute on login, 30/minute
+  on each external-service passthrough (Notion, GitHub). Define policy names
+  here; the host supplies the limiter options.
 - Forwarded-header handling lives in the host; Core may read `RemoteIpAddress`
   but must not re-implement proxy trust.
 - No EF Core and no database dependencies.

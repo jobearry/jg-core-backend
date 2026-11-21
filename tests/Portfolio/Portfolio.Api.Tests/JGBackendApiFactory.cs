@@ -17,7 +17,7 @@ public sealed class JGBackendHostCollection
 /// top-level <c>Program</c> reads JWT configuration while the service collection
 /// is being built, before a test host can add later configuration sources.
 /// </summary>
-public sealed class JGBackendApiFactory : WebApplicationFactory<JGBackend::Program>
+public class JGBackendApiFactory : WebApplicationFactory<JGBackend::Program>
 {
     public const string SigningKey = "host-tests-signing-key-that-is-long-enough";
 

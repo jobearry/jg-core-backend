@@ -47,7 +47,10 @@ app.MapFeatures();
 
 // Portfolio endpoints declare only the segment below the version prefix. Core
 // endpoints still carry their own /api/v1 group until the auth merge removes it.
-app.MapGroup("api/v1").MapPortfolioFeatures();
+// Only the composed host runs a rate limiter, so it supplies the passthrough policies.
+app.MapGroup("api/v1").MapPortfolioFeatures(
+    RateLimitPolicies.NotionPassthrough,
+    RateLimitPolicies.GithubPassthrough);
 
 app.Run();
 

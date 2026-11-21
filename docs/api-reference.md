@@ -276,6 +276,9 @@ Same call, returns the array length using the overview's counter shape:
 Both endpoints fail with `502` if Notion errors or the parse throws — with
 `code` set to `notion_unavailable` or `notion_invalid_response` (see §6).
 
+The composed host rate limits both routes to 30 requests/minute per client IP;
+excess requests return `429` with no problem body (see §6).
+
 ## 5. GitHub endpoints
 
 These read endpoints are anonymous and call GitHub using the server-configured
@@ -324,6 +327,9 @@ An unknown, private, or wrong-owner repository returns `404` with code
 Other GitHub request failures return `502` with `code` `github_unavailable`;
 unreadable responses return `502` with `code` `github_invalid_response`.
 
+Like the Notion routes, these are rate limited to 30 requests/minute per client IP
+in the composed host; excess requests return `429`.
+
 ## 6. Error behaviour
 
 Application failures are translated to `ProblemDetails` by
@@ -357,6 +363,12 @@ same status apart.
 | `Infrastructure` | `503` | `database_unavailable` | our own PostgreSQL is unreachable |
 | `Upstream` | `502` | `notion_unavailable`, `notion_invalid_response`, `github_unavailable`, `github_invalid_response` | Notion or GitHub failed, or returned something unreadable |
 | `Unexpected` | `500` | `unexpected_error` | a bug |
+
+`429 Too Many Requests` is not in this table because it comes from the
+rate-limiter middleware, not an application `Result`. The login route allows 5
+requests/minute per IP; the Notion and GitHub passthroughs allow 30 each. All
+three reject with an empty body, and CORS headers are still applied to the
+rejection.
 
 Why the two dependency kinds are different statuses: a database outage is
 **ours**, and `503` tells a client to retry later. Notion failing is an
