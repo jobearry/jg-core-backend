@@ -33,7 +33,12 @@ convention for consistency; a rename is a breaking change.
 
 Health endpoints are anonymous: `/healthz` is the liveness probe to point at
 from Azure, and `/api/v1/health` returns version, environment, and uptime for
-manual checks. Neither probes PostgreSQL; see `operations.md` §7.
+manual checks. Neither probes PostgreSQL, and both are exempt from rate limiting
+so a monitor never receives `429`; see `operations.md` §7.
+
+All other endpoints carry a 120 requests/minute per-IP `default` policy. The
+login and external-service passthroughs override it with their stricter 5/minute
+and 30/minute limits described below.
 
 ## 2. Authentication
 

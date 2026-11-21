@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Reflection;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.AspNetCore.Routing;
 
 namespace Core.Features.Health;
@@ -35,7 +36,8 @@ public static class HealthEndpoints
             })
             .AllowAnonymous()
             .WithName("GetHealthStatus")
-            .WithSummary("Detailed diagnostic status (uptime, version, environment)");
+            .WithSummary("Detailed diagnostic status (uptime, version, environment)")
+            .DisableRateLimiting();
 
         return endpoints;
     }

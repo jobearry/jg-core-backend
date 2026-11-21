@@ -169,7 +169,7 @@ Current behavior of the host:
 | Mapping | hand-written mappers for entity ↔ domain; `PortfolioDtoMapper` for domain → DTO (ADR-0004) | reverse mappings are unused until a write path exists |
 | Auth | JWT **service token** (`sub=portfolio-api`) owned by `Core` and mapped by `JGBackend`; lifetime from `Jwt:ExpirationInMinutes`; only `/auth/me` requires it; portfolio, Notion, and GitHub reads are anonymous on purpose | — |
 | Observability | `/healthz` liveness and `/api/v1/health` diagnostics (version, environment, uptime) | no PostgreSQL readiness probe, no metrics, no tracing |
-| Resilience | Notion client: 15s timeout, one retry on 429/5xx; per-IP passthrough rate limits (30/min) applied by the composed host | no circuit breaker |
+| Resilience | Notion client: 15s timeout, one retry on 429/5xx; per-IP fixed-window policies applied as endpoint metadata by the host — 120/min `default`, 5/min login, 30/min per passthrough; health probes are exempt | no circuit breaker; limits are per instance |
 
 ## 7. Deployment topology
 

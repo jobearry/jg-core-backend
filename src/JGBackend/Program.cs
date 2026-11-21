@@ -3,6 +3,7 @@ using JGBackend.Configuration;
 using Core.Features;
 using Core.Infrastructure;
 using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Portfolio.Features;
 using Portfolio.Persistence.Contexts;
@@ -54,15 +55,16 @@ app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
 
-app.MapHealthChecks("/healthz");
-app.MapFeatures();
+app.MapHealthChecks("/healthz").DisableRateLimiting();
+app.MapFeatures(RateLimitPolicies.Default);
 
 // Portfolio endpoints declare only the segment below the version prefix. Core
 // endpoints still carry their own /api/v1 group until the auth merge removes it.
-// Only the composed host runs a rate limiter, so it supplies the passthrough policies.
+// Only the composed host runs a rate limiter, so it supplies the policy names.
 app.MapGroup("api/v1").MapPortfolioFeatures(
     RateLimitPolicies.NotionPassthrough,
-    RateLimitPolicies.GithubPassthrough);
+    RateLimitPolicies.GithubPassthrough,
+    RateLimitPolicies.Default);
 
 app.Run();
 

@@ -201,9 +201,9 @@ for a smoke test and off again.
 
 | Feature | Status | Notes / remaining gap |
 |---|---|---|
-| Liveness | present | `/healthz` via `MapHealthChecks` (`src/JGBackend/Program.cs:57`); no checks are registered, so it does not probe PostgreSQL |
-| Diagnostics | present | `/api/v1/health` returns `status`, `version`, `environment`, `timestamp`, `uptimeSeconds` (`src/Core/Features/Health/HealthEndpoints.cs:17-35`) |
-| Rate limiting | present | fixed window per client IP: 5/min on `/api/v1/auth/login`, 30/min on each Notion and GitHub passthrough (`src/JGBackend/Configuration/RateLimitConfiguration.cs:16-22`). No global limit and no distributed store — limits are per instance |
+| Liveness | present | `/healthz` via `MapHealthChecks` (`src/JGBackend/Program.cs:58`); no checks are registered, so it does not probe PostgreSQL. Exempt from rate limiting |
+| Diagnostics | present | `/api/v1/health` returns `status`, `version`, `environment`, `timestamp`, `uptimeSeconds` (`src/Core/Features/Health/HealthEndpoints.cs:18-40`). Exempt from rate limiting |
+| Rate limiting | present | fixed window per client IP: a 120/min `default` policy is applied to every mapped endpoint except the two health probes; stricter endpoint policies override it — 5/min on `/api/v1/auth/login`, 30/min on each Notion and GitHub passthrough (`src/JGBackend/Configuration/RateLimitConfiguration.cs:23-26`, `src/Core/Infrastructure/RateLimitPolicies.cs:8-9`). No distributed store — limits are per instance |
 | Structured logs | default only | add Serilog or OpenTelemetry |
 | Metrics / tracing | none | OpenTelemetry + Azure Monitor |
 | Backup / restore | not documented | define an RPO/RTO for the Neon PostgreSQL instance |

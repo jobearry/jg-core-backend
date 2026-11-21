@@ -6,6 +6,9 @@ namespace JGBackend.Configuration;
 
 public static class RateLimitConfiguration
 {
+    /// <summary>Coarse per-IP backstop for endpoints without a stricter policy.</summary>
+    private const int DefaultPermitLimit = 120;
+
     /// <summary>Shared limit for the two external-service passthroughs.</summary>
     private const int PassthroughPermitLimit = 30;
 
@@ -17,6 +20,7 @@ public static class RateLimitConfiguration
         {
             options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
 
+            AddFixedWindow(options, RateLimitPolicies.Default, DefaultPermitLimit);
             AddFixedWindow(options, RateLimitPolicies.AuthLogin, 5);
             AddFixedWindow(options, RateLimitPolicies.NotionPassthrough, PassthroughPermitLimit);
             AddFixedWindow(options, RateLimitPolicies.GithubPassthrough, PassthroughPermitLimit);
@@ -29,15 +33,17 @@ public static class RateLimitConfiguration
         RateLimiterOptions options,
         string policyName,
         int permitLimit) =>
-        options.AddPolicy(policyName, httpContext =>
-            RateLimitPartition.GetFixedWindowLimiter(
-                ResolvePartitionKey(httpContext),
-                _ => new FixedWindowRateLimiterOptions
-                {
-                    PermitLimit = permitLimit,
-                    Window = Window,
-                    QueueLimit = 0
-                }));
+        options.AddPolicy<string>(policyName, httpContext => CreateFixedWindow(httpContext, permitLimit));
+
+    private static RateLimitPartition<string> CreateFixedWindow(HttpContext httpContext, int permitLimit) =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            ResolvePartitionKey(httpContext),
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = permitLimit,
+                Window = Window,
+                QueueLimit = 0
+            });
 
     private static string ResolvePartitionKey(HttpContext httpContext)
     {

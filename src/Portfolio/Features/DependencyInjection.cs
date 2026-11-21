@@ -1,4 +1,5 @@
 using System.Net.Http.Headers;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Portfolio.Features.Experience;
@@ -74,20 +75,27 @@ public static class DependencyInjection
     /// <summary>
     /// Maps the portfolio slices. The policy names are optional so a host without a
     /// rate-limiter middleware can leave them unset; the composed JGBackend host
-    /// supplies them for the Notion and GitHub passthroughs.
+    /// supplies the passthrough policies and the default backstop.
     /// </summary>
     public static IEndpointRouteBuilder MapPortfolioFeatures(
         this IEndpointRouteBuilder endpoints,
         string? notionRateLimitPolicy = null,
-        string? githubRateLimitPolicy = null)
+        string? githubRateLimitPolicy = null,
+        string? defaultRateLimitPolicy = null)
     {
-        endpoints.MapNotionEndpoints(notionRateLimitPolicy);
-        endpoints.MapGithubEndpoints(githubRateLimitPolicy);
-        endpoints.MapExperienceEndpoints();
-        endpoints.MapProjectEndpoints();
-        endpoints.MapRecommendationEndpoints();
-        endpoints.MapSkillEndpoints();
-        endpoints.MapOverviewEndpoints();
+        var group = endpoints.MapGroup("");
+        if (defaultRateLimitPolicy is not null)
+        {
+            group.RequireRateLimiting(defaultRateLimitPolicy);
+        }
+
+        group.MapNotionEndpoints(notionRateLimitPolicy);
+        group.MapGithubEndpoints(githubRateLimitPolicy);
+        group.MapExperienceEndpoints();
+        group.MapProjectEndpoints();
+        group.MapRecommendationEndpoints();
+        group.MapSkillEndpoints();
+        group.MapOverviewEndpoints();
 
         return endpoints;
     }

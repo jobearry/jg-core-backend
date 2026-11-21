@@ -5,6 +5,9 @@ namespace Core.Infrastructure;
 /// </summary>
 public static class RateLimitPolicies
 {
+    /// <summary>Coarse per-IP backstop applied to all endpoints except health probes.</summary>
+    public const string Default = "default";
+
     public const string AuthLogin = "auth-login";
 
     /// <summary>Notion-backed routes; each upstream page call costs a Notion request.</summary>
