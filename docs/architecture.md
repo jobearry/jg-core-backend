@@ -172,7 +172,7 @@ Current behavior of the temporary Portfolio host:
 | Validation | explicit `AuthDto` guard in `AuthEndpoints` → `400 + validation_failed` | no other endpoint takes input |
 | Cancellation | `CancellationToken` from endpoint → handler → repository → `ToListAsync(ct)` / `GetAsync(ct)` | — |
 | Mapping | hand-written mappers for entity ↔ domain; `PortfolioDtoMapper` for domain → DTO (ADR-0004) | reverse mappings are unused until a write path exists |
-| Auth | JWT **service token** (`sub=portfolio-api`) owned by `Core` and mapped by `JGBackend`; only `/auth/me` requires it; portfolio, Notion, and GitHub reads are anonymous on purpose | unified JWT lifetime is still a phase-3 step |
+| Auth | JWT **service token** (`sub=portfolio-api`) owned by `Core` and mapped by `JGBackend`; lifetime from `Jwt:ExpirationInMinutes`; only `/auth/me` requires it; portfolio, Notion, and GitHub reads are anonymous on purpose | — |
 | Observability | none | no health check, no metrics, no tracing |
 | Resilience | Notion client: 15s timeout, one retry on 429/5xx | no circuit breaker; passthrough rate limits are phase 3 |
 
@@ -194,9 +194,9 @@ AutoMapper is gone, and feature DI/route mapping is centralized in
 status codes are unchanged.
 
 Phase 3 has composed `src/Portfolio` into `src/JGBackend`, consolidated
-configuration into the host, and replaced Portfolio's duplicate auth with
-`Core`. Remaining: unify JWT lifetime on `Jwt:ExpirationInMinutes`, add
-passthrough rate limits, and retire the second host/deployable.
+configuration into the host, replaced Portfolio's duplicate auth with `Core`,
+and unified JWT lifetime on `Jwt:ExpirationInMinutes`. Remaining: add
+passthrough rate limits and retire the second host/deployable.
 Current design details are in this document and [`domain-model.md`](domain-model.md);
 schema details are in [`database.md`](database.md), and published contracts are
 in [`api-reference.md`](api-reference.md). Open decisions are tracked as ADRs in

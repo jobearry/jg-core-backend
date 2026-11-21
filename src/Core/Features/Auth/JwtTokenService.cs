@@ -44,7 +44,7 @@ public class JwtTokenService : IJwtTokenService
                 new Claim(JwtRegisteredClaimNames.Sub, Subject),
                 new Claim(ClaimTypes.Role, "User")
             }),
-            Expires = DateTime.UtcNow.AddMinutes(_jwtOptions.Expires),
+            Expires = DateTime.UtcNow.AddMinutes(_jwtOptions.ExpirationInMinutes),
             Issuer = _jwtOptions.Issuer,
             Audience = _jwtOptions.Audience,
             SigningCredentials = new SigningCredentials(

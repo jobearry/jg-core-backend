@@ -29,6 +29,17 @@ public sealed class JwtTokenServiceTests
     }
 
     [Fact]
+    public void CreateToken_UsesConfiguredExpirationInMinutes()
+    {
+        var result = AService(Key, expirationInMinutes: 7).CreateToken(Key);
+
+        var token = new JwtSecurityTokenHandler().ReadJwtToken(result.Token!);
+
+        // JWT timestamps are whole seconds, so allow a second of truncation.
+        Assert.InRange((token.ValidTo - token.ValidFrom).TotalMinutes, 7 - 1.0 / 60, 7 + 1.0 / 60);
+    }
+
+    [Fact]
     public void CreateToken_WithAWrongKey_IsInvalidKey()
     {
         var result = AService(Key).CreateToken("not-the-key");
@@ -53,11 +64,12 @@ public sealed class JwtTokenServiceTests
         Assert.Equal(AuthTokenStatus.KeyTooShort, result.Status);
     }
 
-    private static JwtTokenService AService(string key) => new(Options.Create(new JwtOptions
-    {
-        Key = key,
-        Issuer = "test-issuer",
-        Audience = "test-audience",
-        Expires = 60
-    }));
+    private static JwtTokenService AService(string key, int expirationInMinutes = 60) =>
+        new(Options.Create(new JwtOptions
+        {
+            Key = key,
+            Issuer = "test-issuer",
+            Audience = "test-audience",
+            ExpirationInMinutes = expirationInMinutes
+        }));
 }

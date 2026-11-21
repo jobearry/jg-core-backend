@@ -18,7 +18,7 @@ public static class AuthenticationConfiguration
         {
             throw new InvalidOperationException(
                 "JWT configuration is missing. Provide it via environment variables or user secrets " +
-                "(Jwt__Key, Jwt__Issuer, Jwt__Audience, Jwt__Expires) or set Jwt in " +
+                "(Jwt__Key, Jwt__Issuer, Jwt__Audience, Jwt__ExpirationInMinutes) or set Jwt in " +
                 "appsettings.Development.json. See .env.example for the expected variable names.");
         }
 

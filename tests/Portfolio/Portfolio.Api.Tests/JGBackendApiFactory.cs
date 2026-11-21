@@ -29,7 +29,7 @@ public sealed class JGBackendApiFactory : WebApplicationFactory<JGBackend::Progr
         ["Jwt__Key"] = SigningKey,
         ["Jwt__Issuer"] = "host-composition-tests",
         ["Jwt__Audience"] = "host-composition-tests",
-        ["Jwt__Expires"] = "60",
+        ["Jwt__ExpirationInMinutes"] = "60",
         ["Swagger__Enabled"] = "true",
         ["Github__BaseUrl"] = "https://api.github.com",
         ["Notion__Version"] = "2026-03-11"
