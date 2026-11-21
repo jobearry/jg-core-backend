@@ -184,12 +184,12 @@ and ends in exactly the same state as one that applied the squash.
 # add
 dotnet ef migrations add AddFinishedAtToExperience \
   --project src/Portfolio/Portfolio.csproj \
-  --startup-project src/Portfolio/Portfolio.csproj
+  --startup-project src/JGBackend/JGBackend.csproj
 
 # review the generated Up/Down, then apply
 dotnet ef database update \
   --project src/Portfolio/Portfolio.csproj \
-  --startup-project src/Portfolio/Portfolio.csproj
+  --startup-project src/JGBackend/JGBackend.csproj
 
 # list / rollback / remove (unapplied only)
 dotnet ef migrations list   --project … --startup-project …
@@ -205,20 +205,20 @@ Full guide: `src/Portfolio/Shared/Persistence/Migrations/MIGRATION_GUIDE.md`.
 ## 6. Design-time context
 
 `PortfolioContextFactory` builds a context for `dotnet ef`. It reads
-`appsettings.Development.json` (optional), the Portfolio project's User Secrets store,
-then the `ConnectionStrings__JDBConnection` environment variable. The environment
-variable takes precedence over both configuration files.
+`appsettings.Development.json` (optional), the JGBackend project's User Secrets
+store, then the `ConnectionStrings__JDBConnection` environment variable. The
+environment variable takes precedence over both configuration files.
 
 ```bash
 export ConnectionStrings__JDBConnection="Host=…;Database=…;Username=…;Password=…"
 ```
 
 The factory uses the same User Secrets ID declared in
-`src/Portfolio/Portfolio.csproj`; the ID is an identifier, not a secret. Keep the
+`src/JGBackend/JGBackend.csproj`; the ID is an identifier, not a secret. Keep the
 matching value in `PortfolioContextFactory` synchronized if the project's User
 Secrets ID changes.
 
-Run EF commands with `--startup-project src/Portfolio/Portfolio.csproj` as shown
+Run EF commands with `--startup-project src/JGBackend/JGBackend.csproj` as shown
 in the migration commands above. No extra user-secrets environment variable is
 needed.
 

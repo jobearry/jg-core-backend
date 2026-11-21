@@ -6,8 +6,8 @@ namespace Portfolio.Persistence.Contexts;
 
 public class PortfolioContextFactory : IDesignTimeDbContextFactory<PortfolioContext>
 {
-    // Must match the UserSecretsId in Portfolio.csproj.
-    private const string UserSecretsId = "57d40eab-5101-40e4-9e11-4895f9a689f0";
+    // Must match the UserSecretsId in JGBackend.csproj, the EF startup project.
+    private const string UserSecretsId = "fdb65bad-802e-400f-9ae5-791c0484bea5";
 
     /// <summary>
     /// Environment variable holding the connection string, in the same shape the

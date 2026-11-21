@@ -60,11 +60,11 @@ the solution.
 ```bash
 dotnet ef migrations add <DescriptiveName> \
   --project src/Portfolio/Portfolio.csproj \
-  --startup-project src/Portfolio/Portfolio.csproj
+  --startup-project src/JGBackend/JGBackend.csproj
 
 dotnet ef database update \
   --project src/Portfolio/Portfolio.csproj \
-  --startup-project src/Portfolio/Portfolio.csproj
+  --startup-project src/JGBackend/JGBackend.csproj
 ```
 
 Rules:
@@ -80,14 +80,14 @@ Rules:
 - `Program.cs` calls `Database.Migrate()` at startup when
   `Database:AutoMigrate` is enabled. That is fine for one instance and wrong for
   many; disable it when migrations are applied out of band.
-- The design-time factory uses the Portfolio project's `UserSecretsId` to load
-  the same User Secrets store; keep the ID in `PortfolioContextFactory`
-  synchronized with `src/Portfolio/Portfolio.csproj`.
+- The design-time factory uses the host project's `UserSecretsId` to load the
+  same User Secrets store; keep the ID in `PortfolioContextFactory`
+  synchronized with `src/JGBackend/JGBackend.csproj`.
 
 ## 6. Configuration
 
 - Connection string key: `ConnectionStrings:JDBConnection`.
-- Development: User Secrets on `src/Portfolio/Portfolio.csproj`; the shared
+- Development: User Secrets on `src/JGBackend/JGBackend.csproj`; the shared
   project ID is used by the design-time factory.
 - Production: environment variable
   `ConnectionStrings__JDBConnection` (double underscore).

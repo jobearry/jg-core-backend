@@ -2,23 +2,45 @@ namespace JGBackend.Configuration;
 
 public static class CorsConfiguration
 {
-    public static IServiceCollection AddCorsOrigins(this IServiceCollection services)
+    /// <summary>
+    /// Policy name shared by registration and the middleware pipeline.
+    /// </summary>
+    public const string SpaCorsPolicy = "AllowSPA";
+
+    public static IServiceCollection AddCorsOrigins(
+        this IServiceCollection services,
+        IConfiguration configuration,
+        IWebHostEnvironment environment)
     {
-        string[] allowedOrigins =
+        var allowedOrigins = ReadOrigins(configuration, "Cors:AllowedOrigins");
+
+        if (environment.IsDevelopment())
         {
-            "http://localhost:4200",
-            "https://jgolimlim-portfolio.vercel.app",
-            "https://jgolimlim-web.vercel.app"
-        };
-        services.AddCors(c =>
+            allowedOrigins.AddRange(ReadOrigins(configuration, "Cors:DevelopmentOrigins"));
+        }
+
+        var origins = allowedOrigins
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
+        services.AddCors(options =>
         {
-            c.AddPolicy("AllowSPA",
-                opts => opts.WithOrigins(allowedOrigins)
-                            .AllowAnyMethod()
-                            .AllowAnyHeader()
-                            .AllowCredentials());
+            options.AddPolicy(SpaCorsPolicy, policy =>
+            {
+                policy.WithOrigins(origins)
+                      .WithMethods("GET", "POST")
+                      .WithHeaders("Content-Type", "Authorization");
+            });
         });
 
         return services;
     }
+
+    private static List<string> ReadOrigins(IConfiguration configuration, string section) =>
+        configuration.GetSection(section)
+            .Get<string[]>()?
+            .Where(origin => !string.IsNullOrWhiteSpace(origin))
+            .Select(origin => origin.Trim().TrimEnd('/'))
+            .ToList()
+        ?? new List<string>();
 }

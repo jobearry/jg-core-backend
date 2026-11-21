@@ -1,3 +1,4 @@
+using System.Reflection;
 using JGBackend.Configuration;
 using Core.Features;
 using Core.Infrastructure;
@@ -5,6 +6,7 @@ using Microsoft.AspNetCore.HttpOverrides;
 using Portfolio.Features;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.Configuration.AddUserSecrets(Assembly.GetExecutingAssembly());
 
 // Add services to the container.
 builder.Services.AddEndpointsApiExplorer();
@@ -13,7 +15,7 @@ builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddFeatures();
 builder.Services.AddPortfolioFeatures(builder.Configuration);
 builder.Services.AddAuthentication(builder.Configuration);
-builder.Services.AddCorsOrigins();
+builder.Services.AddCorsOrigins(builder.Configuration, builder.Environment);
 builder.Services.AddHealthChecks();
 builder.Services.AddForwardedHeadersConfig();
 builder.Services.AddRateLimitingConfig();
@@ -25,7 +27,7 @@ var app = builder.Build();
 app.UseForwardedHeaders();
 app.UseExceptionHandler();
 
-if (app.Environment.IsDevelopment())
+if (app.Environment.IsDevelopment() || app.Configuration.GetValue("Swagger:Enabled", false))
 {
     app.UseSwagger();
     app.UseSwaggerUI(ui =>
@@ -34,7 +36,7 @@ if (app.Environment.IsDevelopment())
     });
 }
 
-app.UseCors("AllowSPA");
+app.UseCors(CorsConfiguration.SpaCorsPolicy);
 app.UseHttpsRedirection();
 app.UseRateLimiter();
 app.UseAuthentication();

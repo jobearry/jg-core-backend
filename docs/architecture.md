@@ -27,8 +27,9 @@ background jobs, no identity provider.
 ## 2. Projects and layout
 
 Phase 2 collapsed the five layered Portfolio projects into one Web SDK project.
-Phase 3 is in progress: `src/JGBackend` now composes Portfolio features, while
-Portfolio keeps its own host until the final merge step.
+Phase 3 is in progress: `src/JGBackend` now composes Portfolio features and owns
+the single appsettings/User Secrets store and EF startup project. Portfolio keeps
+its own host until the final merge step.
 
 ```
 src/
@@ -151,7 +152,12 @@ app
   app.MapGroup("/api/v1") → .MapAuthEndpoints() / .MapPortfolioFeatures()
 ```
 
-Current behavior:
+`JGBackend` now assembles this feature graph with `AddPortfolioFeatures()` and
+maps the portfolio routes under its own `/api/v1` group. Its appsettings and
+User Secrets are the canonical source for the DB, GitHub, Notion, CORS, and
+Swagger settings; EF commands use it as `--startup-project`.
+
+Current behavior of the temporary Portfolio host:
 
 - `Database.Migrate()` runs at startup inside a scope when
   `Database:AutoMigrate` is enabled (default `true`).

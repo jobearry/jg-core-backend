@@ -53,7 +53,7 @@ dotnet run --project src/Portfolio/Portfolio.csproj
 dotnet test JGBackend.sln
 dotnet ef migrations add <Name> \
   --project src/Portfolio/Portfolio.csproj \
-  --startup-project src/Portfolio/Portfolio.csproj
+  --startup-project src/JGBackend/JGBackend.csproj
 ```
 
 ## Where to look

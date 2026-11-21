@@ -7,7 +7,8 @@ service registrations; it owns no business logic.
 
 - `Program.cs` — service registration and the middleware pipeline.
 - `Configuration/` — Swagger, CORS, authentication, rate limiting, forwarded headers.
-- `appsettings*.json` — host-level configuration only.
+- `appsettings*.json` — configuration for the composed host, including the
+  Portfolio settings it serves.
 - `Properties/`, `JGBackend.http` — local run and manual requests.
 
 Put features in `src/Core` or `src/Portfolio`, not here.
@@ -32,7 +33,9 @@ Keep this order; it is load-bearing:
   and applied on endpoints, not globally.
 - CORS origins are an explicit allow-list. Do not add wildcards or credentials
   unless the task asks for it.
-- No database, no EF Core, no persistence here.
+- No EF model or persistence code here. The host owns the EF design-time startup
+  project and the User Secrets store; migrations and the context stay in
+  `src/Portfolio`.
 
 ## Verification
 

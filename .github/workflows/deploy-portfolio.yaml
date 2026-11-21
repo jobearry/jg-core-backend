@@ -45,7 +45,7 @@ jobs:
         run: >
           dotnet ef migrations has-pending-model-changes
           --project src/Portfolio/Portfolio.csproj
-          --startup-project src/Portfolio/Portfolio.csproj
+          --startup-project src/JGBackend/JGBackend.csproj
 
       - name: Build with dotnet
         run: dotnet build JGBackend.sln --configuration Release --no-restore
@@ -65,7 +65,7 @@ jobs:
           fi
           dotnet ef database update \
             --project src/Portfolio/Portfolio.csproj \
-            --startup-project src/Portfolio/Portfolio.csproj
+            --startup-project src/JGBackend/JGBackend.csproj
 
       - name: Azure Login
         uses: azure/login@v2

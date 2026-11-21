@@ -18,33 +18,33 @@ How to run, configure, and deploy the API.
 dotnet restore JGBackend.sln
 dotnet build   JGBackend.sln
 
-# 2. configure secrets (user-secrets, Portfolio project)
-dotnet user-secrets init --project src/Portfolio/Portfolio.csproj
-dotnet user-secrets set "ConnectionStrings:JDBConnection" "Host=localhost;Port=5432;Database=jdb_portfolio;Username=postgres;Password=…" --project src/Portfolio/Portfolio.csproj
-dotnet user-secrets set "Jwt:Key"       "<at least 32 bytes>" --project src/Portfolio/Portfolio.csproj
-dotnet user-secrets set "Jwt:Issuer"    "jdb_api"            --project src/Portfolio/Portfolio.csproj
-dotnet user-secrets set "Jwt:Audience"  "PortfolioApiUsers"  --project src/Portfolio/Portfolio.csproj
-dotnet user-secrets set "Notion:Token"  "secret_…"           --project src/Portfolio/Portfolio.csproj
-dotnet user-secrets set "Github:Token"  "<GitHub personal access token>" --project src/Portfolio/Portfolio.csproj
+# 2. configure secrets (user-secrets, host project)
+dotnet user-secrets init --project src/JGBackend/JGBackend.csproj
+dotnet user-secrets set "ConnectionStrings:JDBConnection" "Host=localhost;Port=5432;Database=jdb_portfolio;Username=postgres;Password=…" --project src/JGBackend/JGBackend.csproj
+dotnet user-secrets set "Jwt:Key"       "<at least 32 bytes>" --project src/JGBackend/JGBackend.csproj
+dotnet user-secrets set "Jwt:Issuer"    "jdb_api"            --project src/JGBackend/JGBackend.csproj
+dotnet user-secrets set "Jwt:Audience"  "PortfolioApiUsers"  --project src/JGBackend/JGBackend.csproj
+dotnet user-secrets set "Notion:Token"  "secret_…"           --project src/JGBackend/JGBackend.csproj
+dotnet user-secrets set "Github:Token"  "<GitHub personal access token>" --project src/JGBackend/JGBackend.csproj
 
 # 3. apply migrations
 dotnet ef database update \
   --project src/Portfolio/Portfolio.csproj \
-  --startup-project src/Portfolio/Portfolio.csproj
+  --startup-project src/JGBackend/JGBackend.csproj
 
 # 4. run
-dotnet run --project src/Portfolio/Portfolio.csproj
+dotnet run --project src/JGBackend/JGBackend.csproj
 ```
 
 | Profile | URL |
 |---|---|
-| `http` | http://localhost:5254 |
-| `https` | https://localhost:7248 / http://localhost:5254 |
-| Swagger | http://localhost:5254/swagger |
+| `http` | http://localhost:5031 |
+| `https` | https://localhost:7054 / http://localhost:5031 |
+| Swagger | http://localhost:5031/swagger |
 
-`Program.cs` calls `Database.Migrate()` at startup when
-`Database:AutoMigrate` is enabled (default `true`), so a valid connection string
-is required to boot unless `Database__AutoMigrate=false`.
+Migrations are applied with `dotnet ef database update` using the host as the
+startup project. The `Database:AutoMigrate` setting still belongs to the
+temporary Portfolio host and moves into `JGBackend` when that host is retired.
 
 ## 3. Configuration matrix
 
@@ -190,7 +190,7 @@ for a smoke test and off again.
 | Deploy fails at "Apply database migrations" | migration could not run: dirty data, unreachable DB, or a missing/wrong `PRODUCTION_CONNECTION_STRING` | read the step log; the old app is still live. Fix the data or secret and re-run |
 | `docker compose up` fails with "required variable ConnectionStrings__JDBConnection is missing" | `.env` not created | `cp .env.example .env` and fill it in |
 | `dotnet ef` says "command not found" | the tool manifest was not restored | `dotnet tool restore` (from the repo root) |
-| `dotnet ef` sees a null connection string | no `JDBConnection` value was found in the API project's User Secrets, `appsettings.Development.json`, or environment | confirm the secret key is `ConnectionStrings:JDBConnection`, or set `ConnectionStrings__JDBConnection` |
+| `dotnet ef` sees a null connection string | no `JDBConnection` value was found in the host project's User Secrets, `appsettings.Development.json`, or environment | confirm the secret key is `ConnectionStrings:JDBConnection`, or set `ConnectionStrings__JDBConnection` |
 | `/auth/login` returns 401 with the right key | whitespace, or the key was rotated | re-read `Jwt:Key` |
 | `/auth/login` returns 500 `server_misconfigured` | `Jwt:Key` is shorter than 32 bytes | HS256 needs a 256-bit key |
 | `/auth/me` returns 401 | missing or expired token, or the signing key changed | re-issue from `/auth/login` |

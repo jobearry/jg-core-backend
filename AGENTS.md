@@ -37,7 +37,7 @@ EF Core commands (tool manifest is at the repo root):
 ```sh
 dotnet ef migrations add <Name> \
   --project src/Portfolio/Portfolio.csproj \
-  --startup-project src/Portfolio/Portfolio.csproj
+  --startup-project src/JGBackend/JGBackend.csproj
 ```
 
 Docker (build context is always the repo root):

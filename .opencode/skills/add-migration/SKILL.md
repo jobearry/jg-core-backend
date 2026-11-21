@@ -27,7 +27,7 @@ that exists only for persistence does not belong in the domain model.
 ```bash
 dotnet ef migrations add <DescriptiveName> \
   --project src/Portfolio/Portfolio.csproj \
-  --startup-project src/Portfolio/Portfolio.csproj
+  --startup-project src/JGBackend/JGBackend.csproj
 ```
 
 Name it for the change: `AddFinishedAtToExperience`, not `UpdateSchema`.
@@ -52,7 +52,7 @@ migration instead.
 ```bash
 dotnet ef database update \
   --project src/Portfolio/Portfolio.csproj \
-  --startup-project src/Portfolio/Portfolio.csproj
+  --startup-project src/JGBackend/JGBackend.csproj
 ```
 
 ### 5. Update documentation
@@ -64,7 +64,7 @@ dotnet ef database update \
 ## Verification
 
 ```bash
-dotnet ef migrations list --project src/Portfolio/Portfolio.csproj --startup-project src/Portfolio/Portfolio.csproj
+dotnet ef migrations list --project src/Portfolio/Portfolio.csproj --startup-project src/JGBackend/JGBackend.csproj
 dotnet build JGBackend.sln
 ```
 
@@ -75,6 +75,6 @@ Then bring the API up and hit an endpoint that reads the changed table.
 | Symptom | Cause |
 |---|---|
 | "The DbContext type was not found" | wrong `--project` / `--startup-project` |
-| null connection string at design time | User Secrets are missing or the ID differs from `Portfolio.csproj`; pass `ConnectionStrings__JDBConnection` or `--connection` |
+| null connection string at design time | User Secrets are missing or the ID differs from `JGBackend.csproj`; pass `ConnectionStrings__JDBConnection` or `--connection` |
 | migration generated but app still fails | the app also calls `Migrate()` at startup; check the connection string it actually uses |
 | `relation does not exist` | the migration was generated but not applied |

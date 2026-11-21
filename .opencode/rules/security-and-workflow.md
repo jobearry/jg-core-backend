@@ -4,7 +4,7 @@
 
 | Environment | Mechanism |
 |---|---|
-| Local | `dotnet user-secrets` on `src/Portfolio/Portfolio.csproj` (Portfolio) and `src/JGBackend` (host) |
+| Local | `dotnet user-secrets` on `src/JGBackend/JGBackend.csproj` (single host) |
 | Docker | `.env` (git-ignored) → env vars in `docker/compose*.yaml` |
 | Azure | App Service configuration / Key Vault |
 
