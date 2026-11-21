@@ -2,6 +2,7 @@ using JGBackend.Configuration;
 using Core.Features;
 using Core.Infrastructure;
 using Microsoft.AspNetCore.HttpOverrides;
+using Portfolio.Features;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -10,6 +11,7 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerConfig();
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddFeatures();
+builder.Services.AddPortfolioFeatures(builder.Configuration);
 builder.Services.AddAuthentication(builder.Configuration);
 builder.Services.AddCorsOrigins();
 builder.Services.AddHealthChecks();
@@ -41,4 +43,15 @@ app.UseAuthorization();
 app.MapHealthChecks("/healthz");
 app.MapFeatures();
 
+// Portfolio endpoints declare only the segment below the version prefix. Core
+// endpoints still carry their own /api/v1 group until the auth merge removes it.
+app.MapGroup("api/v1").MapPortfolioFeatures();
+
 app.Run();
+
+/// <summary>
+/// Exposed so integration tests can boot the real host with
+/// <c>WebApplicationFactory&lt;Program&gt;</c>. Top-level statements generate an
+/// internal <c>Program</c> class; this only changes its accessibility.
+/// </summary>
+public partial class Program { }

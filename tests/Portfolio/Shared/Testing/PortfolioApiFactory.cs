@@ -27,7 +27,7 @@ namespace Portfolio.Api.Tests;
 /// every repository is faked.
 /// </para>
 /// </summary>
-public sealed class PortfolioApiFactory : WebApplicationFactory<Program>
+public sealed class PortfolioApiFactory : WebApplicationFactory<Portfolio.Features.Experience.ExperienceDto>
 {
     public FakeExperienceRepository Experience { get; } = new();
 

@@ -27,7 +27,8 @@ background jobs, no identity provider.
 ## 2. Projects and layout
 
 Phase 2 collapsed the five layered Portfolio projects into one Web SDK project.
-`src/JGBackend` and `src/Core` are untouched until phase 3.
+Phase 3 is in progress: `src/JGBackend` now composes Portfolio features, while
+Portfolio keeps its own host until the final merge step.
 
 ```
 src/
