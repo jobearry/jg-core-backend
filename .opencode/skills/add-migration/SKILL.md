@@ -16,19 +16,18 @@ description: Safely add an EF Core migration to the JDB Portfolio API — update
 
 ### 1. Change the persistence model
 
-Edit `Persistence/Entities/*Entity.cs` and the fluent configuration in
-`Persistence/Contexts/PortfolioContext.cs` (later:
-`IEntityTypeConfiguration<T>` classes).
+Edit `src/Portfolio/Shared/Persistence/Entities/*Entity.cs` and the fluent
+configuration in `src/Portfolio/Shared/Persistence/Configurations/`.
 
-Only touch Domain if a domain concept actually changed. A column that exists
-only for persistence does **not** belong in Domain.
+Only touch domain-oriented code if a domain concept actually changed. A column
+that exists only for persistence does not belong in the domain model.
 
 ### 2. Generate
 
 ```bash
 dotnet ef migrations add <DescriptiveName> \
-  --project src/Portfolio/Portfolio.Persistence \
-  --startup-project src/Portfolio/Portfolio.API
+  --project src/Portfolio/Portfolio.csproj \
+  --startup-project src/Portfolio/Portfolio.csproj
 ```
 
 Name it for the change: `AddFinishedAtToExperience`, not `UpdateSchema`.
@@ -52,8 +51,8 @@ migration instead.
 
 ```bash
 dotnet ef database update \
-  --project src/Portfolio/Portfolio.Persistence \
-  --startup-project src/Portfolio/Portfolio.API
+  --project src/Portfolio/Portfolio.csproj \
+  --startup-project src/Portfolio/Portfolio.csproj
 ```
 
 ### 5. Update documentation
@@ -65,7 +64,7 @@ dotnet ef database update \
 ## Verification
 
 ```bash
-dotnet ef migrations list --project src/Portfolio/Portfolio.Persistence --startup-project src/Portfolio/Portfolio.API
+dotnet ef migrations list --project src/Portfolio/Portfolio.csproj --startup-project src/Portfolio/Portfolio.csproj
 dotnet build JGBackend.sln
 ```
 
@@ -76,6 +75,6 @@ Then bring the API up and hit an endpoint that reads the changed table.
 | Symptom | Cause |
 |---|---|
 | "The DbContext type was not found" | wrong `--project` / `--startup-project` |
-| null connection string at design time | `PortfolioContextFactory` GUID is machine-specific; pass `--connection` |
+| null connection string at design time | User Secrets are missing or the ID differs from `Portfolio.csproj`; pass `ConnectionStrings__JDBConnection` or `--connection` |
 | migration generated but app still fails | the app also calls `Migrate()` at startup; check the connection string it actually uses |
 | `relation does not exist` | the migration was generated but not applied |

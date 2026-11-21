@@ -12,11 +12,13 @@ Read the diff, then work down this list. Report findings by severity, with
 
 ```bash
 git diff -- '*.csproj'
+git diff -- src/Portfolio
 ```
 
-- [ ] No infrastructure project references `Application`.
-- [ ] Nothing references the Presentation project.
-- [ ] Domain references nothing (no EF, ASP.NET, AutoMapper, HTTP).
+- [ ] No new project reference was added.
+- [ ] No feature depends on another feature's internals.
+- [ ] `Shared/Persistence` does not depend on a feature or on HTTP types.
+- [ ] Domain-oriented code has no EF, ASP.NET, AutoMapper, or HTTP dependency.
 
 ## 2. Domain purity (blocker)
 
@@ -77,9 +79,9 @@ git diff -- '*.csproj'
 ## Output format
 
 ```
-BLOCKER  src/.../File.cs:42  Persistence references Application.
-         Fix: remove the outward `ProjectReference` and keep dependencies aligned
-         with the allowed graph in `rules/architecture.md`.
+BLOCKER  src/.../File.cs:42  One slice imports another slice's internals.
+         Fix: move the shared contract to `Shared/Common` or the owning slice and
+         follow `.opencode/rules/architecture.md`.
 
 MAJOR    src/.../Endpoints/X.cs:13  Failure returns 200 with null.
          Fix: check IsSuccess and map the error kind.

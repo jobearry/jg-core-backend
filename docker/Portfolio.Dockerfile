@@ -4,7 +4,7 @@
 # Multi-stage build for the .NET 10 ASP.NET Core Web API.
 #
 # Build context MUST be the repository root (parent of this docker/ folder), so
-# the solution and all src projects can be copied:
+# the shared build props and the Portfolio project can be copied:
 #   docker build -f docker/Portfolio.Dockerfile -t jdb-portfolio-api .
 # =============================================================================
 
@@ -12,25 +12,19 @@
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /repo
 
-# Copy the csproj files of the project to publish and its transitive project
-# references first, so NuGet restore can be cached
+# Copy the build props and the single Portfolio project first, so NuGet restore
+# can be cached.
 COPY ["Directory.Build.props", "./"]
-COPY ["src/Portfolio/Portfolio.Application/*.csproj", "src/Portfolio/Portfolio.Application/"]
-COPY ["src/Portfolio/Portfolio.Domain/*.csproj", "src/Portfolio/Portfolio.Domain/"]
-COPY ["src/Portfolio/Portfolio.ExternalService/*.csproj", "src/Portfolio/Portfolio.ExternalService/"]
-COPY ["src/Portfolio/Portfolio.Persistence/*.csproj", "src/Portfolio/Portfolio.Persistence/"]
-COPY ["src/Portfolio/Portfolio.API/*.csproj", "src/Portfolio/Portfolio.API/"]
+COPY ["src/Portfolio/Portfolio.csproj", "src/Portfolio/"]
 
-# Restore the web project and its transitive project references.
-# Do NOT restore the solution: it also lists the tests/ projects, whose .csproj
-# files are not (and need not be) copied into the build context, and MSB3202
-# would fail the build.
-RUN dotnet restore "./src/Portfolio/Portfolio.API/Portfolio.API.csproj"
+# Restore the web project only. Do NOT restore the solution: it also lists the
+# tests/ projects, whose .csproj files are not copied into the build context.
+RUN dotnet restore "./src/Portfolio/Portfolio.csproj"
 
 # Copy the remaining source and publish the main web project
 COPY ["src/", "./src/"]
 
-RUN dotnet publish "./src/Portfolio/Portfolio.API/Portfolio.API.csproj" \
+RUN dotnet publish "./src/Portfolio/Portfolio.csproj" \
         -c Release \
         --no-restore \
         -o /app/publish
@@ -44,4 +38,4 @@ USER $APP_UID
 
 COPY --from=build /app/publish .
 
-ENTRYPOINT ["dotnet", "Portfolio.API.dll"]
+ENTRYPOINT ["dotnet", "Portfolio.dll"]

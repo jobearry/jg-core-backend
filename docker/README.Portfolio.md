@@ -1,6 +1,6 @@
 # Portfolio — Docker
 
-Containerizes the **Portfolio API** (`src/Portfolio/Portfolio.API`, .NET 10
+Containerizes the **Portfolio API** (`src/Portfolio/Portfolio.csproj`, .NET 10
 ASP.NET Core Web API) with Docker Compose.
 
 The stack runs the **API only**. PostgreSQL is external: point the API at a

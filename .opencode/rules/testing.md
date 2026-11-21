@@ -19,7 +19,7 @@ is *not* required for trivial pass-through code — writing a test that asserts
 | Change | Test-first? |
 |---|---|
 | Value object / entity invariant | **Yes** |
-| AutoMapper profile (either direction) | **Yes** |
+| Hand-written entity ↔ domain mapper (either direction) | **Yes** |
 | Application service with branching | **Yes** |
 | Endpoint status codes / response shape | **Yes** (one integration test) |
 | Repository query behaviour | Yes, once there is a test DB |
@@ -29,10 +29,15 @@ is *not* required for trivial pass-through code — writing a test that asserts
 ## 2. Test projects
 
 ```
-tests/
-  Portfolio.Domain.Tests/          # no dependencies beyond Domain + xUnit
-  Portfolio.Application.Tests/     # fakes for repositories
-  Portfolio.Persistence.Tests/     # AutoMapper profile
+tests/Portfolio/
+  Features/<Slice>/                # slice tests and fakes, linked into the matching project
+  Shared/
+    Common/                        # Result/errors tests
+    Persistence/                   # hand-written mapper tests
+    Testing/                       # PortfolioApiFactory and shared fakes
+  Portfolio.Domain.Tests/          # entity and value-object invariants
+  Portfolio.Application.Tests/     # handler tests with fakes
+  Portfolio.Persistence.Tests/     # hand-written mapper tests
   Portfolio.Api.Tests/             # WebApplicationFactory, one per endpoint
 ```
 
@@ -87,15 +92,15 @@ dependencies.
 
 ## 6. Fakes over mocks
 
-- Write a hand-rolled fake in `Application.Tests/Fakes/` implementing the
-  repository port. It makes intent obvious and survives refactors.
+- Write a hand-rolled fake in `tests/Portfolio/Shared/Testing/Fakes/` or the
+  owning slice folder, implementing the repository port.
 - Assert on **outcomes** (returned value, thrown error), not on call counts,
   unless the call itself is the contract (e.g. "must not hit the DB twice").
 
 ## 7. Mapping tests are mandatory
 
-The mapping profile is a high-risk boundary. Every direction that is used must
-have a test:
+Hand-written mappers are a high-risk boundary. Every direction that is used
+must have a runtime test:
 
 ```csharp
 [Fact]
@@ -105,16 +110,9 @@ public void Map_ExperienceEntity_To_Experience_PreservesRoleAndCompany() { ... }
 public void Map_TechStack_To_TechStackEntity_DoesNotThrow() { ... }
 ```
 
-Also add a `MapperConfiguration` assertion test so unmapped destination members
-fail the build:
-
-```csharp
-var config = new MapperConfiguration(c => c.AddProfile<PortfolioMappingProfile>());
-config.AssertConfigurationIsValid();   // catches unmapped members, not bad conversions
-```
-
-Note: `AssertConfigurationIsValid()` does **not** catch `string → int`. Only a
-runtime map does.
+Assert mapped values, especially value objects and nullable fields. There is no
+`AssertConfigurationIsValid()` equivalent; a test that only constructs the
+mapper proves nothing.
 
 ## 8. Integration tests
 

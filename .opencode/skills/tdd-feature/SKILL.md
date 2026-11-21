@@ -1,14 +1,13 @@
 ---
 name: tdd-feature
-description: Implement a feature or fix test-first in this .NET solution — write the failing test, make it pass, refactor, then verify build and tests. Use when adding behaviour to domain entities or value objects, changing the AutoMapper profile, or adding a branch to an application service.
+description: Implement a feature or fix test-first in this .NET solution — write the failing test, make it pass, refactor, then verify build and tests. Use when adding behaviour to domain entities or value objects, changing a hand-written mapper, or adding a branch to a feature handler.
 ---
 
 # Test-driven change
 
-Test projects already exist: `tests/Portfolio/Portfolio.Domain.Tests` and
-`tests/Portfolio/Portfolio.Application.Tests`. Add to the one that matches the
-layer you are changing. Creating a *new* test project still needs approval
-(AGENTS.md §10).
+Test projects already exist under `tests/Portfolio/`. Add the test to the
+matching `Features/<Slice>/` or `Shared/` folder and link it from the matching
+csproj. Creating a *new* test project still needs approval (AGENTS.md §10).
 
 ## 0. First time only — create the test project
 
@@ -18,7 +17,7 @@ Requires approval (AGENTS.md §10):
 dotnet new xunit -o tests/Portfolio/Portfolio.Domain.Tests -f net10.0
 dotnet sln JGBackend.sln add tests/Portfolio/Portfolio.Domain.Tests
 dotnet add tests/Portfolio/Portfolio.Domain.Tests reference \
-  src/Portfolio/Portfolio.Domain/Portfolio.Domain.csproj
+  src/Portfolio/Portfolio.csproj
 ```
 
 Then add the project to `JGBackend.sln`; `.github/workflows/ci.yaml` runs
@@ -63,7 +62,7 @@ dotnet test                                # all green
 |---|---|---|
 | Invariant, value equality, `Period` rules | Domain | `tests/...Domain.Tests` |
 | Service branching, `Result` kind | Application | `tests/...Application.Tests` with fake repositories |
-| Mapping (both directions) | Persistence | `tests/...Application.Tests` or `Persistence.Tests` |
+| Mapping (both directions) | Persistence | `tests/Portfolio/Features/<Slice>` or `Shared/Persistence` |
 | Status code, response shape | API | `tests/...Api.Tests` with `WebApplicationFactory` |
 
 ## Rules

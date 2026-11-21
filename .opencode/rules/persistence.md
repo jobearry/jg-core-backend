@@ -45,30 +45,26 @@ Observed and to be preserved:
 
 ## 4. Mapping
 
-The profile (`Persistence/Profiles/PortfolioMappingProfile.cs`) is the riskiest
-file in the solution.
+Mappers in `src/Portfolio/Shared/Persistence/Mappers/` are the riskiest code in
+the solution.
 
-- Map value objects **explicitly**: `.MapFrom(src => src.Role.Value)`. Never rely
-  on `ToString()` or an implicit conversion.
-- Do not duplicate an assignment in both `ConstructUsing` and `AfterMap`
-  (`TechStack.Category` is currently set twice).
-- Remove `ForMember` calls that AutoMapper already resolves by convention; they
-  hide the ones that matter.
-- Every used direction needs a mapping test, including a runtime map (not just
-  `AssertConfigurationIsValid()`).
+- Map value objects **explicitly** (`Role.Value`, `Period.Started`, etc.). Never
+  rely on `ToString()` or an implicit conversion.
+- Every used direction needs a runtime mapping test.
 - A domain → entity mapping that is never used should be **deleted**, not left
   broken.
+- AutoMapper is gone. Do not reintroduce it without an ADR.
 
 ## 5. Migrations
 
 ```bash
 dotnet ef migrations add <DescriptiveName> \
-  --project src/Portfolio/Portfolio.Persistence \
-  --startup-project src/Portfolio/Portfolio.API
+  --project src/Portfolio/Portfolio.csproj \
+  --startup-project src/Portfolio/Portfolio.csproj
 
 dotnet ef database update \
-  --project src/Portfolio/Portfolio.Persistence \
-  --startup-project src/Portfolio/Portfolio.API
+  --project src/Portfolio/Portfolio.csproj \
+  --startup-project src/Portfolio/Portfolio.csproj
 ```
 
 Rules:
@@ -84,15 +80,15 @@ Rules:
 - `Program.cs` calls `Database.Migrate()` at startup when
   `Database:AutoMigrate` is enabled. That is fine for one instance and wrong for
   many; disable it when migrations are applied out of band.
-- The design-time factory uses the API project's `UserSecretsId` to load the
-  same User Secrets store; keep the ID in `PortfolioContextFactory` synchronized
-  with `Portfolio.API.csproj`.
+- The design-time factory uses the Portfolio project's `UserSecretsId` to load
+  the same User Secrets store; keep the ID in `PortfolioContextFactory`
+  synchronized with `src/Portfolio/Portfolio.csproj`.
 
 ## 6. Configuration
 
 - Connection string key: `ConnectionStrings:JDBConnection`.
-- Development: User Secrets on the **API** project; the shared project ID is
-  declared in `Portfolio.API.csproj` and used by the design-time factory.
+- Development: User Secrets on `src/Portfolio/Portfolio.csproj`; the shared
+  project ID is used by the design-time factory.
 - Production: environment variable
   `ConnectionStrings__JDBConnection` (double underscore).
 - Never commit a connection string, even a localhost one.

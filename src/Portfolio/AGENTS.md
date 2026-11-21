@@ -4,53 +4,63 @@
 stacks, recommendations, an overview, Notion page content, and public GitHub
 repository data.
 
-It is still its own host today. The single-host merge (phase 3) turns it into a
-module composed by `src/JGBackend`, and the layered projects below become
-vertical slices.
+It is still its own host today. Phase 2 collapsed the layered projects into one
+project organised by vertical slice; phase 3 composes it into `src/JGBackend`.
 
 ## Current layout
 
 ```
-Portfolio.API/              endpoints, DI composition, auth, Swagger
-Portfolio.Application/      use cases, Result<T>, DTOs, settings, abstractions
-Portfolio.Domain/           entities, value objects, repository ports
-Portfolio.Persistence/      EF Core context, persistence entities, repositories, migrations
-Portfolio.ExternalService/  Notion + GitHub clients and parsing
+src/Portfolio/
+├── Program.cs                  host pipeline and composition root
+├── ConfigurationSettings.cs    host-only Swagger, JWT, CORS, ProblemDetails
+├── Portfolio.csproj            single Web SDK project
+├── Features/
+│   ├── DependencyInjection.cs  AddPortfolioFeatures / MapPortfolioFeatures
+│   ├── Experience/             endpoint, handler, repository, DTO, mapper tests
+│   ├── Project/
+│   ├── Skill/
+│   ├── Recommendation/
+│   ├── Overview/
+│   ├── Notion/
+│   └── Github/
+└── Shared/
+    ├── Authentication/         temporary JWT service (target: src/Core)
+    ├── Common/                 Result<T>, errors, value objects, shared DTOs
+    ├── Endpoints/              auth endpoints and ApiResult mapper
+    ├── ErrorHandling/          GlobalExceptionHandler
+    └── Persistence/            EF context, entities, mappers, repositories, migrations
 ```
 
-## Dependency rules
+Feature code lives in `Features/<Slice>/`; only genuinely shared code lives in
+`Shared/`. Existing namespaces still follow the old layered names where types
+are shared; do not rename them as part of a file move.
 
-1. Dependencies point inward. `Portfolio.Domain` references nothing.
-2. Infrastructure projects never reference `Portfolio.Application`.
-3. Nothing references `Portfolio.API`.
-4. Domain has no EF Core, ASP.NET, HTTP, JSON, or AutoMapper types.
-5. `Portfolio.API` is the only composition root.
+## Rules
 
-## Non-negotiables
-
-- Endpoints return DTOs, never domain entities.
-- Typed errors (`Result<T>`), mapped to the right status code in one place.
-- Every I/O method takes and forwards a `CancellationToken`.
-- New schema changes are a new migration; never edit an applied one.
-- Tests ship with the change. See `tests/Portfolio/`.
-- Auth here is temporary. Do not add a third token service; the target is
-  `src/Core`.
+1. `Program.cs` is the only composition root and calls
+   `AddPortfolioFeatures()` / `MapPortfolioFeatures()` for feature wiring.
+2. Endpoints return DTOs, never domain or persistence types.
+3. Typed errors (`Result<T>`) map to status codes in one place.
+4. Every I/O method takes and forwards a `CancellationToken`.
+5. New schema changes are a new migration; never edit an applied one.
+6. Auth here is temporary. Do not add a third token service; the target is
+   `src/Core`.
 
 ## Commands
 
 ```sh
-dotnet run --project src/Portfolio/Portfolio.API
-dotnet test tests/Portfolio
+dotnet run --project src/Portfolio/Portfolio.csproj
+dotnet test JGBackend.sln
 dotnet ef migrations add <Name> \
-  --project src/Portfolio/Portfolio.Persistence \
-  --startup-project src/Portfolio/Portfolio.API
+  --project src/Portfolio/Portfolio.csproj \
+  --startup-project src/Portfolio/Portfolio.csproj
 ```
 
 ## Where to look
 
 | Question | Document |
 |---|---|
-| Layers, request flow, target design | [docs/architecture.md](../../docs/architecture.md) |
+| Slices, request flow, target design | [docs/architecture.md](../../docs/architecture.md) |
 | Entities and invariants | [docs/domain-model.md](../../docs/domain-model.md) |
 | Endpoint catalogue | [docs/api-reference.md](../../docs/api-reference.md) |
 | Schema and migrations | [docs/database.md](../../docs/database.md) |

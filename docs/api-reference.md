@@ -85,7 +85,7 @@ Requires a token. Returns claims from the presented token, grouped by claim type
 
 ## 3. Portfolio endpoints
 
-Responses are **DTOs** (`src/Portfolio/Portfolio.Application/DTO`), not domain
+Responses are **DTOs** (`src/Portfolio/Features/<Slice>`), not domain
 entities (ADR-0004). The domain model can now change without changing
 the wire contract.
 

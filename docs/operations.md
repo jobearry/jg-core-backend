@@ -18,22 +18,22 @@ How to run, configure, and deploy the API.
 dotnet restore JGBackend.sln
 dotnet build   JGBackend.sln
 
-# 2. configure secrets (user-secrets, API project)
-dotnet user-secrets init --project src/Portfolio/Portfolio.API
-dotnet user-secrets set "ConnectionStrings:JDBConnection" "Host=localhost;Port=5432;Database=jdb_portfolio;Username=postgres;Password=…" --project src/Portfolio/Portfolio.API
-dotnet user-secrets set "Jwt:Key"       "<at least 32 bytes>" --project src/Portfolio/Portfolio.API
-dotnet user-secrets set "Jwt:Issuer"    "jdb_api"            --project src/Portfolio/Portfolio.API
-dotnet user-secrets set "Jwt:Audience"  "PortfolioApiUsers"  --project src/Portfolio/Portfolio.API
-dotnet user-secrets set "Notion:Token"  "secret_…"           --project src/Portfolio/Portfolio.API
-dotnet user-secrets set "Github:Token"  "<GitHub personal access token>" --project src/Portfolio/Portfolio.API
+# 2. configure secrets (user-secrets, Portfolio project)
+dotnet user-secrets init --project src/Portfolio/Portfolio.csproj
+dotnet user-secrets set "ConnectionStrings:JDBConnection" "Host=localhost;Port=5432;Database=jdb_portfolio;Username=postgres;Password=…" --project src/Portfolio/Portfolio.csproj
+dotnet user-secrets set "Jwt:Key"       "<at least 32 bytes>" --project src/Portfolio/Portfolio.csproj
+dotnet user-secrets set "Jwt:Issuer"    "jdb_api"            --project src/Portfolio/Portfolio.csproj
+dotnet user-secrets set "Jwt:Audience"  "PortfolioApiUsers"  --project src/Portfolio/Portfolio.csproj
+dotnet user-secrets set "Notion:Token"  "secret_…"           --project src/Portfolio/Portfolio.csproj
+dotnet user-secrets set "Github:Token"  "<GitHub personal access token>" --project src/Portfolio/Portfolio.csproj
 
 # 3. apply migrations
 dotnet ef database update \
-  --project src/Portfolio/Portfolio.Persistence \
-  --startup-project src/Portfolio/Portfolio.API
+  --project src/Portfolio/Portfolio.csproj \
+  --startup-project src/Portfolio/Portfolio.csproj
 
 # 4. run
-dotnet run --project src/Portfolio/Portfolio.API
+dotnet run --project src/Portfolio/Portfolio.csproj
 ```
 
 | Profile | URL |

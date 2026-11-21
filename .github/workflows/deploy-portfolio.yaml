@@ -44,14 +44,14 @@ jobs:
           ConnectionStrings__JDBConnection: "Host=unused;Database=unused;Username=unused;Password=unused"
         run: >
           dotnet ef migrations has-pending-model-changes
-          --project src/Portfolio/Portfolio.Persistence
-          --startup-project src/Portfolio/Portfolio.API
+          --project src/Portfolio/Portfolio.csproj
+          --startup-project src/Portfolio/Portfolio.csproj
 
       - name: Build with dotnet
         run: dotnet build JGBackend.sln --configuration Release --no-restore
 
       - name: dotnet publish
-        run: dotnet publish src/Portfolio/Portfolio.API/Portfolio.API.csproj -c Release --no-restore -o ./publish
+        run: dotnet publish src/Portfolio/Portfolio.csproj -c Release --no-restore -o ./publish
 
       # Schema changes run here, once, before the app is replaced. A failure
       # stops the deploy and leaves the running app untouched.
@@ -64,8 +64,8 @@ jobs:
             exit 1
           fi
           dotnet ef database update \
-            --project src/Portfolio/Portfolio.Persistence \
-            --startup-project src/Portfolio/Portfolio.API
+            --project src/Portfolio/Portfolio.csproj \
+            --startup-project src/Portfolio/Portfolio.csproj
 
       - name: Azure Login
         uses: azure/login@v2

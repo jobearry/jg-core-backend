@@ -8,7 +8,7 @@ Today it produces two deployables; the target is a single modular-monolith host.
 ```
 src/JGBackend/     host: Program.cs, middleware pipeline, configuration wiring
 src/Core/          auth, health, rate limiting, forwarded headers, shared infra
-src/Portfolio/     portfolio read API (clean architecture today, slices next)
+src/Portfolio/     portfolio read API (vertical slices in one project)
 tests/Core/        tests for Core
 tests/Portfolio/   tests for Portfolio
 docs/              human-facing docs and ADRs
@@ -29,15 +29,15 @@ dotnet build JGBackend.sln --configuration Release
 dotnet test  JGBackend.sln --configuration Release
 
 dotnet run --project src/JGBackend
-dotnet run --project src/Portfolio/Portfolio.API
+dotnet run --project src/Portfolio/Portfolio.csproj
 ```
 
 EF Core commands (tool manifest is at the repo root):
 
 ```sh
 dotnet ef migrations add <Name> \
-  --project src/Portfolio/Portfolio.Persistence \
-  --startup-project src/Portfolio/Portfolio.API
+  --project src/Portfolio/Portfolio.csproj \
+  --startup-project src/Portfolio/Portfolio.csproj
 ```
 
 Docker (build context is always the repo root):
@@ -64,8 +64,9 @@ docker compose -f docker/compose.portfolio.yaml up --build
 
 ## Current phase
 
-The repo restructure (phase 1) is complete. Portfolio is still its own host and
-still uses its own auth. The single-host merge (phase 3) will:
+Phases 1–2 are complete: the repo is restructured and Portfolio is now one
+project organised by vertical slice. It is still its own host and still uses its
+own auth. The single-host merge (phase 3) will:
 
 - make `src/JGBackend` compose both modules,
 - delete Portfolio's duplicate auth and use `Core`,

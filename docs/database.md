@@ -1,7 +1,7 @@
 # Database
 
 PostgreSQL via EF Core 10 + Npgsql. Schema is managed by migrations in
-`src/Portfolio/Portfolio.Persistence/Migrations/`.
+`src/Portfolio/Shared/Persistence/Migrations/`.
 
 ## 1. Entity-relationship diagram
 
@@ -89,7 +89,8 @@ erDiagram
   empty value is *valid data*: it means the owner would rather not state the role
   or the career position. There is deliberately **no** `CHECK` constraint against
   it: such a constraint would make a legitimate state impossible to express.
-  The translation happens in `PortfolioMappingProfile`:
+  The translation happens in the hand-written mappers via `MappingHelpers.ToRole`
+  / `ToStoredRole`:
 
   - blank or whitespace in the database → `null` in the domain (`Role?`)
   - `null` in the domain → `''` when written back
@@ -182,13 +183,13 @@ and ends in exactly the same state as one that applied the squash.
 ```bash
 # add
 dotnet ef migrations add AddFinishedAtToExperience \
-  --project src/Portfolio/Portfolio.Persistence \
-  --startup-project src/Portfolio/Portfolio.API
+  --project src/Portfolio/Portfolio.csproj \
+  --startup-project src/Portfolio/Portfolio.csproj
 
 # review the generated Up/Down, then apply
 dotnet ef database update \
-  --project src/Portfolio/Portfolio.Persistence \
-  --startup-project src/Portfolio/Portfolio.API
+  --project src/Portfolio/Portfolio.csproj \
+  --startup-project src/Portfolio/Portfolio.csproj
 
 # list / rollback / remove (unapplied only)
 dotnet ef migrations list   --project … --startup-project …
@@ -196,7 +197,7 @@ dotnet ef database update <PreviousMigration> --project … --startup-project �
 dotnet ef migrations remove --project … --startup-project …
 ```
 
-Full guide: `src/Portfolio/Portfolio.Persistence/Migrations/MIGRATION_GUIDE.md`.
+Full guide: `src/Portfolio/Shared/Persistence/Migrations/MIGRATION_GUIDE.md`.
 
 **Prerequisite:** `dotnet tool restore` from the repo root. The manifest is
 `dotnet-tools.json` at the repo root and pins `dotnet-ef` 10.0.10.
@@ -204,7 +205,7 @@ Full guide: `src/Portfolio/Portfolio.Persistence/Migrations/MIGRATION_GUIDE.md`.
 ## 6. Design-time context
 
 `PortfolioContextFactory` builds a context for `dotnet ef`. It reads
-`appsettings.Development.json` (optional), the API project's User Secrets store,
+`appsettings.Development.json` (optional), the Portfolio project's User Secrets store,
 then the `ConnectionStrings__JDBConnection` environment variable. The environment
 variable takes precedence over both configuration files.
 
@@ -213,12 +214,13 @@ export ConnectionStrings__JDBConnection="Host=…;Database=…;Username=…;Pass
 ```
 
 The factory uses the same User Secrets ID declared in
-`src/Portfolio/Portfolio.API/Portfolio.API.csproj`; the ID is an identifier, not a
-secret. Keep the matching value in `PortfolioContextFactory` synchronized if the
-project's User Secrets ID changes.
+`src/Portfolio/Portfolio.csproj`; the ID is an identifier, not a secret. Keep the
+matching value in `PortfolioContextFactory` synchronized if the project's User
+Secrets ID changes.
 
-Run EF commands with `--startup-project src/Portfolio/Portfolio.API` as shown in the
-migration commands above. No extra user-secrets environment variable is needed.
+Run EF commands with `--startup-project src/Portfolio/Portfolio.csproj` as shown
+in the migration commands above. No extra user-secrets environment variable is
+needed.
 
 ## 7. Runtime migration
 

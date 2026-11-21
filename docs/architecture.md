@@ -1,7 +1,7 @@
 # Architecture
 
 Descriptive: how the system is built **today**, and what it is meant to become.
-Normative rules live in [`../rules/architecture.md`](../rules/architecture.md).
+Normative rules live in [`../.opencode/rules/architecture.md`](../.opencode/rules/architecture.md).
 
 ## 1. System context
 
@@ -11,135 +11,124 @@ flowchart LR
     API["JDB Portfolio API<br/>.NET 10 minimal API"]
     DB[("PostgreSQL")]
     NOTION["Notion API<br/>/v1/pages/{id}/markdown"]
-    GH["GitHub Actions"]
+    GH["GitHub REST API"]
     AZ["Azure Web App"]
 
     SPA -->|"HTTPS + JSON"| API
     API -->|"EF Core / Npgsql"| DB
     API -->|"HTTPS + Bearer"| NOTION
-    GH -->|"build + publish"| AZ
+    API -->|"HTTPS, public data"| GH
     AZ --- API
 ```
 
 Single bounded context: **Portfolio**. Read-only. No message broker, no cache, no
 background jobs, no identity provider.
 
-## 2. Projects and responsibilities
+## 2. Projects and layout
+
+Phase 2 collapsed the five layered Portfolio projects into one Web SDK project.
+`src/JGBackend` and `src/Core` are untouched until phase 3.
 
 ```
 src/
-├── Portfolio.Domain/            ← core, no dependencies
-│   ├── Entities/                        Experience, Project, TechStack,
-│   │                                    TechStackCategory, Recommendation
-│   ├── ValueObjects/                    Role, Company, Period, TechStackRef
-│   └── Interfaces/                      IRepository<T>, IPortfolio*Repository
-│                                        (ports only — no vendor types; 3.2, ADR-0005)
-│
-├── Portfolio.Application/       ← core, references Domain
-│   ├── Common/Result.cs                 Result<T> + typed Error (ErrorKind, code)
-│   ├── Abstractions/                    IPageContentReader (3.2, ADR-0005)
-│   ├── Models/                          DashboardItem, PageContent
-│   ├── Services/                        PortfolioService, PortfolioExperienceService,
-│   │                                    PortfolioProjectService,
-│   │                                    PortfolioRecommendationService,
-│   │                                    PortfolioSkillService,
-│   │                                    PortfolioServiceBase<T,TRepository>
-│   ├── DTO/                             the published contracts (AuthDto, *Dto)
-│   └── Settings/JwtOptions.cs
-│
-├── Portfolio.Persistence/       ← infrastructure
-│   ├── Contexts/PortfolioContext.cs     DbContext + ApplyConfigurationsFromAssembly
-│   ├── Contexts/PortfolioContextFactory.cs  design-time factory (env-var user secrets id)
-│   ├── Configurations/                  one IEntityTypeConfiguration per entity
-│   ├── Entities/                        *Entity + ProjectTechStack join
-│   ├── Repositories/                    BasePortfolioRepository<TDomain,TEntity>
-│   │                                    + 4 concrete repositories
-│   ├── Profiles/PortfolioMappingProfile.cs  entity ↔ domain AutoMapper profile
-│   └── Migrations/                      9 migrations + snapshot
-│
-├── Portfolio.ExternalService/   ← infrastructure
-│   └── Notion/                          NotionClientService, parser, settings, DTO,
-│                                        Models/NotionPage (vendor shape)
-│
-└── Portfolio/                   ← presentation / composition root
-    ├── Program.cs                       builder, middleware, endpoint mapping
-    ├── ConfigurationSettings.cs         DI extensions: AddPresentation,
-    │                                    AddApplication, AddPersistence,
-    │                                    AddExternalServices
-    ├── Adapters/                        NotionPageContentReader — bridges the Application
-    │                                    port to the Notion client (ADR-0005)
-    ├── Authentication/                  JwtTokenService, Swagger security filter
-    ├── ErrorHandling/                   GlobalExceptionHandler
-    └── Endpoints/                       one static class per area + ApiResult
+├── JGBackend/               host: Program.cs, middleware, configuration
+├── Core/                    shared auth, rate limiting, forwarded headers
+└── Portfolio/               one project; still its own host in phase 2
+    ├── Program.cs           composition root and middleware pipeline
+    ├── ConfigurationSettings.cs  host-only Swagger, JWT, CORS, exception handling
+    ├── Portfolio.csproj
+    ├── Features/
+    │   ├── DependencyInjection.cs  AddPortfolioFeatures / MapPortfolioFeatures
+    │   ├── Experience/         endpoint, handler, repository, DTO
+    │   ├── Project/
+    │   ├── Skill/
+    │   ├── Recommendation/
+    │   ├── Overview/
+    │   ├── Notion/
+    │   └── Github/
+    └── Shared/
+        ├── Authentication/   temporary JWT service (target: Core)
+        ├── Common/           Result<T>, typed errors, value objects, shared DTOs
+        ├── Endpoints/        auth endpoints and the single Result → IResult mapper
+        ├── ErrorHandling/    GlobalExceptionHandler
+        └── Persistence/      EF context, entities, mappers, repositories, migrations
 ```
 
-## 3. Dependency graph (actual)
+Feature code lives under `Features/<Slice>/`; only genuinely shared code lives
+under `Shared/`. Existing namespaces still follow the old layered names where
+types are shared (`Portfolio.Application.*`, `Portfolio.Domain.*`,
+`Portfolio.Persistence.*`). They are preserved to keep the diff and published
+contracts stable; do not rename them as part of a file move.
 
-```mermaid
-flowchart TD
-    P["Presentation<br/>Portfolio"]
-    A["Application"]
-    D["Domain"]
-    PE["Persistence"]
-    E["ExternalService"]
+Tests mirror the source: `tests/Portfolio/Features/<Slice>/` for slice tests,
+`tests/Portfolio/Shared/{Common,Persistence,Testing}/` for shared support, and
+`tests/Portfolio/Portfolio.Api.Tests/` for host-level contracts. There are still
+four Portfolio test projects; all reference `src/Portfolio/Portfolio.csproj`.
 
-    P --> A
-    P --> PE
-    P --> E
-    A --> D
-    PE --> D
-    E --> D
-```
+## 3. Dependency rules
 
-All arrows point inward. `Persistence` no longer references `Application`
-(1.1), and no project references Presentation.
+Within the single Portfolio project:
+
+- A feature may depend on `Shared/Common` and `Shared/Persistence`.
+- A feature must not depend on another feature's internals; cross-slice reads go
+  through a repository port or a DTO in the owning slice.
+- `Shared/Persistence` must not depend on a feature or on HTTP types.
+- `Shared/Common` must not depend on EF Core, ASP.NET, or vendor clients.
+- Only `Program.cs` and `Features/DependencyInjection.cs` compose object graphs.
+
+Domain-oriented types stay free of EF, ASP.NET, HTTP, JSON, and vendor types even
+though they no longer live in a separate assembly.
 
 ## 4. Request flow
 
-### Read (all current endpoints)
+### Portfolio reads
 
 ```mermaid
 sequenceDiagram
     participant C as Client
     participant EP as Minimal API endpoint
-    participant S as Application service
-    participant R as Repository (Domain port)
-    participant EF as EF Core
-    participant M as AutoMapper
+    participant H as Feature handler
+    participant R as Repository port
+    participant EF as EF Core repository
+    participant M as Hand-written mapper
     participant DB as PostgreSQL
 
     C->>EP: GET /api/v1/project?includeTools=true
-    EP->>S: GetAllProjectsAsync(includeTools, ct)
-    S->>R: GetAllProjectsWithTechStacksAsync(ct)
-    R->>EF: Include/ThenInclude query
+    EP->>H: Handle(query, ct)
+    H->>R: GetAllWithTechStacksAsync(ct)
+    R->>EF: Include/AsSplitQuery query
     EF->>DB: SQL
     DB-->>EF: rows
-    EF-->>R: ProjectEntity[]
-    R->>M: Map<List<Project>>
-    M-->>R: Project[] (domain)
-    R-->>S: List<Project>
-    S->>S: project.ToDto()  (PortfolioDtoMapper)
-    S-->>EP: Result<List<ProjectDto>>.Success
+    EF->>M: ProjectEntity[] → Project[]
+    M-->>EF: domain entities
+    EF-->>H: domain entities
+    H->>H: PortfolioDtoMapper → DTO
+    H-->>EP: Result<List<ProjectDto>>
     EP->>EP: ApiResult.ToHttpResult()
     EP-->>C: 200 + DTO JSON
 ```
 
 Two things to notice:
 
-1. **Domain types stop at the service boundary.** The service maps domain → DTO by
-   hand (`PortfolioDtoMapper`, ADR-0004); the endpoint signature and the response
-   contain DTOs only.
-2. `Result<T>` is produced by `PortfolioServiceBase.ExecuteAsync`, which classifies
-   failures into a typed `Error`. `Endpoints/ApiResult.cs` is the only place that maps
-   the error kind to a status code (`503` for the database, `502` for Notion, `500` for
-   a bug), and `GlobalExceptionHandler` covers exceptions that escape a service.
+1. **Domain types stop at the handler boundary.** The handler maps domain → DTO
+   by hand (`PortfolioDtoMapper`, ADR-0004); the endpoint signature and the
+   response contain DTOs only.
+2. `Result<T>` carries a typed `Error`. `Shared/Endpoints/ApiResult.cs` is the
+   only place that maps the error kind to a status code (`503` for this API's
+   database, `502` for Notion or GitHub, `500` for a bug). `GlobalExceptionHandler`
+   covers exceptions that escape a handler.
+
+### Notion and GitHub
+
+Notion and GitHub slices call their clients from a handler, parse or project the
+vendor response, and return the same DTO + `Result<T>` shape. Their read endpoints
+are anonymous by design.
 
 ### Write (not built)
 
-There is no write path. `IRepository<T>` exposes only `GetAllAsync`, and `AddNewAsync`
-is gone. Revisit whether an `IUnitOfWork` is needed when a write path is designed;
-`Project` is the aggregate root and `IPortfolioProjectRepository` its future write
-entry point (ADR-0003).
+There is no write path. `IRepository<T>` exposes only reads. Revisit a unit-of-work
+abstraction only when writes are introduced; `Project` is the aggregate root
+(ADR-0003).
 
 ## 5. Composition root
 
@@ -147,12 +136,10 @@ entry point (ADR-0003).
 
 ```
 builder.Services
-  .AddPresentation(configuration, environment)  → IPageContentReader adapter, Swagger,
-                                                   JWT, CORS, ProblemDetails
-  .AddApplication()                             → the five use-case services
-  .AddPersistence(configuration)                → DbContext + four repositories + AutoMapper
-  .AddExternalServices(configuration)           → Notion settings + HttpClient
-  .AddEndpointsApiExplorer()                    → let Swagger see the minimal-API endpoints
+  .AddPresentation(configuration, environment)  → Swagger, JWT, CORS, ProblemDetails
+  .AddPortfolioFeatures(configuration)           → DbContext, repositories, handlers,
+                                                   Notion, GitHub
+  .AddEndpointsApiExplorer()                     → let Swagger see the minimal-API endpoints
 
 app
   .UseExceptionHandler()     → ProblemDetails for anything that escapes
@@ -160,8 +147,7 @@ app
   .UseHttpsRedirection()
   .UseAuthentication()
   .UseAuthorization()
-  app.MapGroup("api/v1") → .MapAuthEndpoints() / .MapNotionEndpoints() /
-                           .MapPortfolio*Endpoints() / .MapOverview()
+  app.MapGroup("/api/v1") → .MapAuthEndpoints() / .MapPortfolioFeatures()
 ```
 
 Current behavior:
@@ -175,14 +161,14 @@ Current behavior:
 
 | Concern | Today | Gap |
 |---|---|---|
-| Error handling | `try/catch` per service → `Result<T>` with a typed `Error` → one mapper in `ApiResult.cs` → `503`/`502`/`500`; `GlobalExceptionHandler` for anything outside a service | — |
-| Logging | `ILogger` in the Application services — warning for a dependency failure, error for a bug — plus the default ASP.NET request log | no structured sink, no correlation id; the provider's exception detail lives only in the log |
+| Error handling | typed `Result<T>` → one `ApiResult` mapper → `503`/`502`/`500`; `GlobalExceptionHandler` for escapes | — |
+| Logging | `ILogger` in handlers and repositories; warning for a dependency failure, error for a bug | no structured sink or correlation id beyond `traceId` |
 | Validation | explicit `AuthDto` guard in `AuthEndpoints` → `400 + validation_failed` | no other endpoint takes input |
-| Cancellation | `CancellationToken` is a required parameter from endpoint → service → repository → `ToListAsync(ct)` / `HttpClient.GetAsync(ct)` | — |
-| Mapping | AutoMapper for entity ↔ domain; hand-written `PortfolioDtoMapper` for domain → DTO (ADR-0004) | reverse maps are explicit but unused until a write path exists |
-| Auth | JWT **service token** (`sub=portfolio-api`); only `/auth/me` requires it; portfolio, Notion, and GitHub reads are anonymous on purpose | no user authentication; optional private GitHub access is deferred in [`docs/plan.md`](../plan.md) |
+| Cancellation | `CancellationToken` from endpoint → handler → repository → `ToListAsync(ct)` / `GetAsync(ct)` | — |
+| Mapping | hand-written mappers for entity ↔ domain; `PortfolioDtoMapper` for domain → DTO (ADR-0004) | reverse mappings are unused until a write path exists |
+| Auth | JWT **service token** (`sub=portfolio-api`); only `/auth/me` requires it; portfolio, Notion, and GitHub reads are anonymous on purpose | duplicate auth with `Core`; unified lifetime and host merge are phase 3 |
 | Observability | none | no health check, no metrics, no tracing |
-| Resilience | Notion client: 15s timeout, one retry on 429/5xx | no circuit breaker; network failures are not retried |
+| Resilience | Notion client: 15s timeout, one retry on 429/5xx | no circuit breaker; passthrough rate limits are phase 3 |
 
 ## 7. Deployment topology
 
@@ -196,14 +182,15 @@ Current behavior:
 
 ## 8. Where this is going
 
-The clean-architecture and DDD refactor is complete: dependency direction is
-clean, the domain has invariants and value equality, DTOs sit at the edge, errors
-are typed, and the test suite covers invariants, mappings, and endpoint contracts. The
-composition root and EF configuration are split by responsibility; the Notion
-client/parser and overview contract reflect their implemented behavior. Current
-design details are in this document and [`domain-model.md`](domain-model.md);
-schema details are in [`database.md`](database.md), and published contracts are
-in [`api-reference.md`](api-reference.md). Revisit a unit-of-work abstraction only
-if a write endpoint is introduced.
+Phase 2 is complete: Portfolio is one project organised by vertical slice,
+AutoMapper is gone, and feature DI/route mapping is centralized in
+`Features/DependencyInjection.cs`. Wire contracts, tags, operation names, and
+status codes are unchanged.
 
-Open architectural decisions are tracked as ADRs in [`adr/`](adr/).
+Phase 3 composes `src/Portfolio` into `src/JGBackend`, deletes Portfolio's
+duplicate auth, adopts `Core`, unifies JWT lifetime on `Jwt:ExpirationInMinutes`,
+adds passthrough rate limits, and consolidates configuration into the host.
+Current design details are in this document and [`domain-model.md`](domain-model.md);
+schema details are in [`database.md`](database.md), and published contracts are
+in [`api-reference.md`](api-reference.md). Open decisions are tracked as ADRs in
+[`adr/`](adr/).

@@ -13,9 +13,9 @@ Monorepo for personal backends. One solution (`JGBackend.sln`), organised as a
 modular monolith: a shared `Core` module and a `Portfolio` module composed by the
 `JGBackend` host.
 
-> **Phase 1 is done.** The tree is restructured, but Portfolio is still its own
-> host with its own auth. The single-host merge and one deployable are phase 3–4.
-> See [`docs/plan.md`](docs/plan.md) for the target.
+> **Phase 2 is done.** Portfolio is one project organised by vertical slice, but
+> it is still its own host with its own auth. The single-host merge and one
+> deployable are phase 3–4. See [`docs/plan.md`](docs/plan.md) for the target.
 
 ## Tech stack
 
@@ -31,7 +31,7 @@ modular monolith: a shared `Core` module and a `Portfolio` module composed by th
 ```
 src/JGBackend/     host: Program.cs, middleware pipeline, configuration wiring
 src/Core/          auth, health, rate limiting, forwarded headers, shared infra
-src/Portfolio/     portfolio read API (clean architecture today, slices next)
+src/Portfolio/     portfolio read API (vertical slices in one project)
 tests/Core/        tests for Core
 tests/Portfolio/   tests for Portfolio
 docs/              human-facing docs and ADRs
@@ -58,7 +58,7 @@ dotnet build JGBackend.sln --configuration Release
 dotnet test  JGBackend.sln --configuration Release
 
 dotnet run --project src/JGBackend
-dotnet run --project src/Portfolio/Portfolio.API
+dotnet run --project src/Portfolio/Portfolio.csproj
 ```
 
 Configuration comes from user secrets locally and environment variables in

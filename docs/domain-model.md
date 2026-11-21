@@ -153,18 +153,17 @@ enforced on the read path until a write path exists to validate it earlier.
 
 | Type | Where it is | Should be | Status |
 |---|---|---|---|
-| `DashboardItem` | `Application/Models` | — | A read model with no domain invariant |
-| `NotionPage` | `ExternalService/Notion/Models` (vendor); `Application/Models/PageContent` (application) | — | The application reads `PageContent` through `IPageContentReader` |
-| `INotionService` | `Application/Abstractions/IPageContentReader` | — | `Presentation/Adapters/NotionPageContentReader` bridges the application port to the Notion client |
+| `DashboardItem` | `Features/Overview` (`OverviewItemDto`) | — | A read model with no domain invariant |
+| `NotionPage` | `Features/Notion` (vendor); `PageContent` (handler-facing) | — | The handler reads `PageContent` through `IPageContentReader` |
+| `INotionService` | `Features/Notion/IPageContentReader` | — | `NotionPageContentReader` bridges the port to the Notion client |
 | `ExperienceId` | deleted | — | Unused identifier type removed |
 | `IService<T>` / `IMapper<,,>` | deleted | — | Unused abstractions removed |
 
-Everything in this table is now resolved. The Notion pair needed a bridge rather than a
-move: `Application` owns the port and cannot reference `ExternalService`, and
-`ExternalService` implements the vendor call and cannot reference `Application`
-(AGENTS §6 rule 2). The composition root is the only project that sees both, so the
-adapter lives there — a deliberate, documented exception to "no behaviour in
-Presentation", not a bent rule. See ADR-0005.
+Everything in this table is now resolved. The Notion pair still needs a bridge:
+the handler-facing `PageContent` stays out of the vendor payload, and
+`NotionPageContentReader` translates between them inside the Notion slice
+(ADR-0005). The layered names in the table are historical; phase 2 moved the code
+into `Features/Notion` without changing published contracts.
 
 ## 8. Domain events
 

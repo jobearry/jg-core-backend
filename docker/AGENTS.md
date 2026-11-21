@@ -17,7 +17,7 @@ Two images exist during the restructure:
 | File | App |
 |---|---|
 | `docker/JGBackend.Dockerfile` | `src/JGBackend` |
-| `docker/Portfolio.Dockerfile` | `src/Portfolio/Portfolio.API` |
+| `docker/Portfolio.Dockerfile` | `src/Portfolio/Portfolio.csproj` |
 | `docker/compose.yaml` | JGBackend |
 | `docker/compose.portfolio.yaml` | Portfolio + external PostgreSQL |
 

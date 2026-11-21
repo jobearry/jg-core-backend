@@ -12,9 +12,9 @@
 | **Aggregate root** | The only entity through which an aggregate is accessed; the only thing a repository returns. | `Project` is the root of its aggregate. `Experience` is a read-only aggregate-shaped projection. |
 | **Invariant** | A rule that must always hold. Enforced in constructors and behaviour methods. | Domain entities and value objects validate their required values and relationships. |
 | **Repository (port)** | An interface in the domain describing persistence needs. | `IRepository<T>`, `IPortfolio*Repository`. |
-| **Port / adapter** | Interface inside, implementation outside. | Ports in `Domain/Interfaces`, adapters in `Persistence` and `ExternalService`. |
-| **Use case** | One application-level operation. | The `GetAll*Async` methods on the services. |
-| **DTO** | A wire contract, decoupled from the domain model. | Endpoints use Application DTOs; `AuthDto` is the login request contract. |
+| **Port / adapter** | Interface inside, implementation outside. | Ports live with the owning slice or in `Shared/Common`; EF adapters live in the slice, vendor adapters in the Notion/GitHub slices. |
+| **Use case** | One application-level operation. | The `Handle(...)` methods on feature handlers. |
+| **DTO** | A wire contract, decoupled from the domain model. | Endpoints use DTOs in `Features/<Slice>`; `AuthDto` is the login request contract. |
 | **Anemic domain model** | Entities that are data bags with no behaviour; logic lives in services. | Not the intended model here: domain entities validate state and expose controlled behavior. |
 | **Anti-corruption layer** | Translation layer that keeps a foreign model out of the domain. | `NotionPageContentReader` translates the Notion adapter into the Application page-content port. |
 | **Domain event** | A fact that happened in the domain, published after commit. | None yet (no writes). |
@@ -30,7 +30,7 @@
 | **TechStackCategory** | Grouping of technologies (frontend, backend, …). |
 | **Recommendation** | A testimonial with person, position, text, and date. |
 | **Overview / DashboardItem** | Aggregated counts for the CV landing page. A read model, not a domain concept. |
-| **NotionPage** | The vendor's page shape, held in `ExternalService`; the core sees `PageContent` (ADR-0005). |
+| **NotionPage** | The vendor's page shape, held in the Notion slice; the handler sees `PageContent` (ADR-0005). |
 | **Service token** | The JWT issued by `/auth/login`: a single shared key, one role claim, no user identity. |
 | **`Result<T>`** | Application-layer return type carrying success/failure plus a value or typed error. Errors carry an `ErrorKind` and machine-readable code where applicable. |
 | **`ProblemDetails`** | RFC 7807 error response shape returned by ASP.NET. |

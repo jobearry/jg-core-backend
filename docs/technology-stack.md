@@ -8,52 +8,30 @@ table in sync when a package changes.
 | Item | Value |
 |---|---|
 | Target framework | `net10.0` |
-| SDK in use | 10.0.402 |
+| SDK in use | 10.0.114 |
 | Language | C# 14 (implicit), nullable enabled, implicit usings enabled |
-| Solution format | `.slnx` (`JGBackend.sln`) |
+| Solution format | `.sln` (`JGBackend.sln`) |
 | OS target | Linux containers |
 
 ## 2. Packages
 
-### Presentation — `Portfolio`
+### `Portfolio` (single Web SDK project)
 
 | Package | Version | Purpose | Notes |
 |---|---|---|---|
 | `Microsoft.AspNetCore.Authentication.JwtBearer` | 10.0.10 | Validate JWTs issued by `/auth/login` | `MapInboundClaims = false` |
+| `Microsoft.EntityFrameworkCore` | 10.0.10 | ORM | |
+| `Microsoft.EntityFrameworkCore.Relational` | 10.0.10 | Version pin | avoids MSB3277 with Npgsql |
 | `Microsoft.EntityFrameworkCore.Design` | 10.0.10 | Design-time migrations | `PrivateAssets=all` |
+| `Microsoft.EntityFrameworkCore.Tools` | 10.0.10 | `dotnet ef` integration | `PrivateAssets=all` |
+| `Npgsql.EntityFrameworkCore.PostgreSQL` | 10.0.3 | PostgreSQL provider | |
 | `Swashbuckle.AspNetCore` | 10.2.3 | OpenAPI + Swagger UI | UI at `/swagger`, Development only unless `Swagger:Enabled` |
 
-### Application — `Portfolio.Application`
-
-| Package | Version | Purpose |
-|---|---|---|
-| `Microsoft.Extensions.Logging.Abstractions` | 10.0.10 | `ILogger<T>` — the logging **contract** only. No provider, no EF, no ASP.NET, so the composition root still decides where output goes |
-
-The only other reference is `Domain`.
-
-### Domain — `Portfolio.Domain`
-
-No package references, by design.
-
-### Persistence — `Portfolio.Persistence`
-
-| Package | Version | Purpose |
-|---|---|---|
-| `AutoMapper` | 16.2.0 | Entity ↔ domain mapping |
-| `Microsoft.EntityFrameworkCore` | 10.0.10 | ORM |
-| `Microsoft.EntityFrameworkCore.Design` | 10.0.10 | Migrations |
-| `Microsoft.EntityFrameworkCore.Tools` | 10.0.10 | `dotnet ef` integration |
-| `Microsoft.Extensions.Configuration` (+ `.FileExtensions`, `.Json`, `.UserSecrets`) | 10.0.10 | Design-time connection string |
-| `Npgsql.EntityFrameworkCore.PostgreSQL` | 10.0.3 | PostgreSQL provider |
-
-### ExternalService — `Portfolio.ExternalService`
-
-| Package | Version | Purpose |
-|---|---|---|
-| `Microsoft.Extensions.Options` | 10.0.10 | `IOptions<NotionSettings>` |
-
-HTTP itself comes from `IHttpClientFactory` (`AddHttpClient`) registered in the
-presentation project.
+`src/Core` and `src/JGBackend` remain separate until phase 3. Portfolio has no
+`ProjectReference` to another module today. Entity ↔ domain mapping is
+hand-written in `Shared/Persistence/Mappers/`; AutoMapper was removed in phase 2.
+HTTP clients come from `IHttpClientFactory`, registered in
+`Features/DependencyInjection.cs`.
 
 ## 3. Runtime services
 
@@ -78,7 +56,7 @@ approval (AGENTS.md §10).
 
 | Concern | Candidate | Why |
 |---|---|---|
-| Testing | `Testcontainers.PostgreSql` | Four xUnit projects cover domain, application, persistence mapping, and API behavior, with repository ports faked. What is still missing is a **database-backed** test: nothing exercises the EF model or a migration against real PostgreSQL |
+| Testing | `Testcontainers.PostgreSql` | Portfolio's four xUnit projects cover domain, application, persistence mapping, and API behavior, with repository ports faked. What is still missing is a **database-backed** test: nothing exercises the EF model or a migration against real PostgreSQL |
 | Assertions | `Shouldly` or `FluentAssertions` | optional; xUnit asserts are enough to start |
 | Validation | `FluentValidation.AspNetCore` or a hand-written endpoint filter | minimal APIs do not validate automatically |
 | Resilience | `Microsoft.Extensions.Http.Resilience` (Polly v8) | the Notion client now has a 15s timeout and one manual retry on 429/5xx; Polly would add circuit breaking |
@@ -92,10 +70,9 @@ approval (AGENTS.md §10).
 
 - **Minimal APIs over controllers** — the surface is small and read-only; the
   project uses endpoint extension classes and has no controller registrations.
-- **AutoMapper** — chosen to keep persistence entities out of the domain. It is
-  a legitimate use, but the profile is currently the riskiest file in the
-  solution. An alternative is explicit mapping methods, which would be more
-  code but compile-time checked.
+- **Hand-written mappers** — chosen over AutoMapper after the profile repeatedly
+  hid bad conversions. More code, but explicit and testable at runtime; the
+  mappers now live in `Shared/Persistence/Mappers/`.
 - **EF Core + Npgsql** — PostgreSQL is the production database; the context was
   originally scaffolded (hence `partial` and `OnModelCreatingPartial`).
 - **JWT bearer** — a single shared key is enough for a machine-to-machine

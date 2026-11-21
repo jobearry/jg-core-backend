@@ -4,10 +4,9 @@ description: Add a new Portfolio feature end to end
 
 Add a portfolio feature named $ARGUMENTS.
 
-Follow the nearest `AGENTS.md` and `.opencode/rules/`. Today Portfolio is still
-layered (`API` / `Application` / `Domain` / `Persistence` / `ExternalService`);
-once the vertical-slice refactor lands, place the feature under
-`src/Portfolio/Features/<Name>/` instead.
+Follow the nearest `AGENTS.md` and `.opencode/rules/`. Place the feature under
+`src/Portfolio/Features/<Name>/`; only genuinely shared code belongs in
+`src/Portfolio/Shared/`. Register it from `Features/DependencyInjection.cs`.
 
 Requirements:
 
