@@ -1,114 +1,27 @@
 ﻿using Portfolio.Application.Settings;
 using Portfolio.Application.Services;
-using Portfolio.Domain.Entities;
-using Portfolio.Domain.Interfaces;
-using Portfolio.Persistence.Contexts;
+using Portfolio.Authentication;
+using Portfolio.ErrorHandling;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
-using System.Text;
-using System.Net.Http.Headers;
-using Portfolio.Features.Notion;
-using Portfolio.Features.Github;
-using Portfolio.Features.Experience;
-using Portfolio.Features.Project;
-using Portfolio.Features.Skill;
-using Portfolio.Features.Recommendation;
-using Portfolio.Features.Overview;
-using Portfolio.Authentication;
-using Portfolio.ErrorHandling;
-using Portfolio.Persistence.Repositories;
 using System.IdentityModel.Tokens.Jwt;
+using System.Text;
 
 namespace Portfolio
 {
     public static class ConfigurationSettings
     {
         /// <summary>
-        /// Registers the application use cases. These depend only on the repository and
-        /// page-content ports declared in the inner layers.
-        /// </summary>
-        public static void AddApplication(this IServiceCollection services)
-        {
-            services.AddScoped<GetNotionPageHandler>();
-            services.AddScoped<GetExperienceHandler>();
-            services.AddScoped<GetProjectHandler>();
-            services.AddScoped<GetRecommendationHandler>();
-            services.AddScoped<GetSkillHandler>();
-            services.AddScoped<GetOverviewHandler>();
-            services.AddScoped<GithubHandler>();
-        }
-
-        /// <summary>
-        /// Registers the persistence adapters: the EF Core context and one repository per
-        /// aggregate. Repositories map persistence entities to domain entities with the
-        /// hand-written mappers. Ports are declared in Domain; implementations live here.
-        /// </summary>
-        public static void AddPersistence(this IServiceCollection services, IConfiguration configuration)
-        {
-            // Read connection string from appsettings.json or environment variables
-            var jdbConnectionString = configuration.GetConnectionString("JDBConnection");
-
-            services.AddDbContext<PortfolioContext>(options =>
-                options.UseNpgsql(jdbConnectionString)
-            );
-
-            services.AddScoped<IExperienceRepository, EfExperienceRepository>();
-            services.AddScoped<IProjectRepository, EfProjectRepository>();
-            services.AddScoped<ISkillRepository, EfSkillRepository>();
-            services.AddScoped<IRecommendationRepository, EfRecommendationRepository>();
-        }
-
-        /// <summary>
-        /// Registers the outbound integrations. The Notion adapter (<see cref="IPageContentReader"/>)
-        /// is a presentation concern and is registered by <see cref="AddPresentation"/>.
-        /// </summary>
-        public static void AddExternalServices(this IServiceCollection services, IConfiguration configuration)
-        {
-            services.Configure<NotionSettings>(configuration.GetSection("Notion"));
-            services.Configure<GithubAPISettings>(configuration.GetSection("Github"));
-
-            // The typed client owns its transport settings: base address, auth headers and
-            // a 15s timeout. Keeping them here means NotionClientService knows only the
-            // path it calls, and every Notion request has the same limits.
-            services.AddHttpClient<NotionClientService>((provider, client) =>
-            {
-                var notion = provider.GetRequiredService<IOptions<NotionSettings>>().Value;
-
-                client.BaseAddress = new Uri("https://api.notion.com");
-                client.Timeout = TimeSpan.FromSeconds(15);
-                client.DefaultRequestHeaders.Authorization =
-                    new AuthenticationHeaderValue("Bearer", notion.Token);
-                client.DefaultRequestHeaders.Add("Notion-Version", notion.Version);
-            });
-
-            services.AddHttpClient("Github", (provider, client) =>
-            {
-                var github = provider.GetRequiredService<IOptions<GithubAPISettings>>().Value;
-
-                client.BaseAddress = new Uri($"{github.BaseUrl.TrimEnd('/')}/");
-                client.Timeout = TimeSpan.FromSeconds(15);
-            });
-            services.AddTransient(provider =>
-                new GithubClientService(
-                    provider.GetRequiredService<IHttpClientFactory>().CreateClient("Github"),
-                    provider.GetRequiredService<IOptions<GithubAPISettings>>().Value));
-        }
-
-        /// <summary>
-        /// Registers everything the HTTP host owns: the page-content adapter, Swagger,
-        /// authentication, CORS, and the exception-handling contract.
+        /// Registers everything the HTTP host owns: Swagger, authentication, CORS, and
+        /// the exception-handling contract.
         /// </summary>
         public static void AddPresentation(
             this IServiceCollection services,
             IConfiguration configuration,
             IWebHostEnvironment environment)
         {
-            services.AddScoped<IPageContentReader, NotionPageContentReader>();
-            services.AddScoped<IGithubRepositoryReader, GithubRepositoryReader>();
-
             services.AddSwaggerConfig(configuration);
             services.AddAuthentication(configuration);
             services.AddCorsOrigins(configuration, environment);

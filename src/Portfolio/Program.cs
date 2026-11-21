@@ -1,12 +1,6 @@
 using Portfolio;
 using Portfolio.Endpoints;
-using Portfolio.Features.Experience;
-using Portfolio.Features.Project;
-using Portfolio.Features.Skill;
-using Portfolio.Features.Recommendation;
-using Portfolio.Features.Overview;
-using Portfolio.Features.Notion;
-using Portfolio.Features.Github;
+using Portfolio.Features;
 using Portfolio.Persistence.Contexts;
 using Microsoft.EntityFrameworkCore;
 
@@ -15,11 +9,9 @@ var builder = WebApplication.CreateBuilder(args);
 // load configurations
 builder.Configuration.AddUserSecrets<Program>();
 
-// Add services to the container, one method per layer.
+// Host concerns stay here; feature registration lives in the Features namespace.
 builder.Services.AddPresentation(builder.Configuration, builder.Environment);
-builder.Services.AddApplication();
-builder.Services.AddPersistence(builder.Configuration);
-builder.Services.AddExternalServices(builder.Configuration);
+builder.Services.AddPortfolioFeatures(builder.Configuration);
 builder.Services.AddEndpointsApiExplorer();
 
 var app = builder.Build();
@@ -61,15 +53,7 @@ var api = app.MapGroup("api/v1");
 
 //endpoints
 api.MapAuthEndpoints();
-api.MapNotionEndpoints();
-api.MapGithubEndpoints();
-
-//portfolio endpoints
-api.MapExperienceEndpoints();
-api.MapProjectEndpoints();
-api.MapRecommendationEndpoints();
-api.MapSkillEndpoints();
-api.MapOverviewEndpoints();
+api.MapPortfolioFeatures();
 
 app.Run();
 
