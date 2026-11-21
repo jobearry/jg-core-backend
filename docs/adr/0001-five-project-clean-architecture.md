@@ -1,6 +1,6 @@
 # ADR-0001 — Five-project clean-architecture layout
 
-- **Status:** Accepted
+- **Status:** Superseded by [ADR-0006](0006-single-host-vertical-slices.md)
 - **Date:** 2026-08-08 (solution layout as found)
 - **Related:** [`../architecture.md`](../architecture.md), [`../../rules/architecture.md`](../../rules/architecture.md)
 

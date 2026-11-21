@@ -5,11 +5,12 @@ without context.
 
 | # | Decision | Status |
 |---|---|---|
-| [0001](0001-five-project-clean-architecture.md) | Five-project clean-architecture layout | Accepted |
+| [0001](0001-five-project-clean-architecture.md) | Five-project clean-architecture layout | Superseded by 0006 |
 | [0002](0002-separate-persistence-and-domain-models.md) | Persistence entities separate from domain model | Accepted |
 | [0003](0003-aggregate-boundary.md) | Aggregate boundary for Experience and Project | Accepted |
 | [0004](0004-dto-boundary-at-api-edge.md) | DTO boundary at the API edge | Accepted |
 | [0005](0005-page-content-port-and-adapter.md) | Page-content port in Application, adapter in Presentation | Accepted |
+| [0006](0006-single-host-vertical-slices.md) | One host, one class library, vertical slices | Accepted |
 
 ## Statuses
 
