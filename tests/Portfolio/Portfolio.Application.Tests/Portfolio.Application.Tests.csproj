@@ -1,0 +1,32 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+    <PackageReference Include="xunit" Version="2.9.3" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.4" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="..\Features\Experience\FakeExperienceRepository.cs" Link="Features\Experience\FakeExperienceRepository.cs" />
+    <Compile Include="..\Features\Experience\GetExperienceHandlerTests.cs" Link="Features\Experience\GetExperienceHandlerTests.cs" />
+    <Compile Include="..\Features\Github\GithubHandlerTests.cs" Link="Features\Github\GithubHandlerTests.cs" />
+    <Compile Include="..\Shared\Common\ResultErrorsTests.cs" Link="Shared\Common\ResultErrorsTests.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\src\Portfolio\Portfolio.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+
+</Project>

@@ -1,32 +1,76 @@
-name: Deploy to Azure
+name: Deploy JGBackend to Azure
+
 on:
   push:
     branches: [master]
+    paths:
+      - 'src/JGBackend/**'
+      - 'src/Core/**'
+      - 'src/Portfolio/**'
+      - 'tests/Portfolio/**'
+      - 'Directory.Build.props'
+      - 'JGBackend.sln'
+      - 'dotnet-tools.json'
+      - '.github/workflows/deploy.yaml'
+  workflow_dispatch:
+
+# One deployable owns the migrations. Two overlapping runs would race each other
+# and the database.
+concurrency:
+  group: jdbweb-production-deploy
+  cancel-in-progress: false
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
     permissions:
       id-token: write # for OIDC login
-      contents: read  # for checkout
+      contents: read # for checkout
     steps:
       - uses: actions/checkout@v4
-      
-      - name: Setup .NET
+
+      - name: Set up .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '10.0.x'   # adjust to your project’s target
+          dotnet-version: '10.0.x'
 
       - name: Restore dependencies
-        run: dotnet restore Generic/Generic.sln
+        run: dotnet restore JGBackend.sln
+
+      - name: Restore .NET tools
+        run: dotnet tool restore
+
+      # Fails when the model changed but no migration was written. Needs no database:
+      # the placeholder is only read by the design-time factory, never dialled.
+      - name: Check for pending model changes
+        env:
+          ConnectionStrings__JDBConnection: "Host=unused;Database=unused;Username=unused;Password=unused"
+        run: >
+          dotnet ef migrations has-pending-model-changes
+          --project src/Portfolio/Portfolio.csproj
+          --startup-project src/JGBackend/JGBackend.csproj
 
       - name: Build
-        run: dotnet build Generic/Generic.sln --configuration Release --no-restore
+        run: dotnet build JGBackend.sln --configuration Release --no-restore
 
       - name: Publish
-        run: dotnet publish Generic/Generic.API/Generic.API.csproj -c Release --no-build -o ./publish
+        run: dotnet publish src/JGBackend/JGBackend.csproj -c Release --no-build -o ./publish
 
-      # 🔑 Authenticate with Azure using Service Principal 
+      # Schema changes run here, once, before the app is replaced. A failure stops
+      # the deploy and leaves the running app untouched.
+      - name: Apply database migrations
+        env:
+          ConnectionStrings__JDBConnection: ${{ secrets.PRODUCTION_CONNECTION_STRING }}
+        run: |
+          if [ -z "$ConnectionStrings__JDBConnection" ]; then
+            echo "::error::PRODUCTION_CONNECTION_STRING is not set; refusing to deploy without migrations."
+            exit 1
+          fi
+          dotnet ef database update \
+            --project src/Portfolio/Portfolio.csproj \
+            --startup-project src/JGBackend/JGBackend.csproj
+
+      # Authenticate with Azure using Service Principal
       - name: Azure Login
         uses: azure/login@v2
         with:
@@ -38,4 +82,4 @@ jobs:
         uses: azure/webapps-deploy@v2
         with:
           app-name: jdbweb
-          package: ./publish 
+          package: ./publish

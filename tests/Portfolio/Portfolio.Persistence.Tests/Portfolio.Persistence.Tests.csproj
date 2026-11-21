@@ -1,0 +1,41 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+    <PackageReference Include="xunit" Version="2.9.3" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.4" />
+    <!-- Version pin, not a new dependency. Persistence compiles against EF Core
+         Relational 10.0.10 (via EF Design, which is PrivateAssets=all and so does
+         not flow transitively). Without this the test project resolves Npgsql's
+         lower 10.0.4 and MSBuild reports MSB3277. -->
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="10.0.10" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="..\Features\Experience\ExperienceMapperTests.cs" Link="Features\Experience\ExperienceMapperTests.cs" />
+    <Compile Include="..\Shared\Persistence\HandWrittenMapper.cs" Link="Shared\Persistence\HandWrittenMapper.cs" />
+    <Compile Include="..\Shared\Persistence\MappingConfigurationTests.cs" Link="Shared\Persistence\MappingConfigurationTests.cs" />
+    <Compile Include="..\Shared\Persistence\MappingTestBase.cs" Link="Shared\Persistence\MappingTestBase.cs" />
+    <Compile Include="..\Shared\Persistence\NpgsqlFailureTypeTests.cs" Link="Shared\Persistence\NpgsqlFailureTypeTests.cs" />
+    <Compile Include="..\Shared\Persistence\RequiredCompanyMappingTests.cs" Link="Shared\Persistence\RequiredCompanyMappingTests.cs" />
+    <Compile Include="..\Shared\Persistence\TechStackEntityMappingTests.cs" Link="Shared\Persistence\TechStackEntityMappingTests.cs" />
+    <Compile Include="..\Shared\Persistence\UndeclaredRoleMappingTests.cs" Link="Shared\Persistence\UndeclaredRoleMappingTests.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\src\Portfolio\Portfolio.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+
+</Project>

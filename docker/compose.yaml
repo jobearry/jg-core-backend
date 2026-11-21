@@ -8,7 +8,7 @@ services:
   server:
     build:
       context: .
-      dockerfile: docker/Dockerfile
+      dockerfile: docker/JGBackend.Dockerfile
       target: final
     ports:
       - 5031:8080
@@ -16,6 +16,12 @@ services:
       - Jwt__Key=${Jwt__Key}
       - Jwt__Issuer=${Jwt__Issuer}
       - Jwt__Audience=${Jwt__Audience}
-      - Jwt__Expires=${Jwt__Expires}
+      - Jwt__ExpirationInMinutes=${Jwt__ExpirationInMinutes:-60}
+
+      - ConnectionStrings__JDBConnection=${ConnectionStrings__JDBConnection:?}
+      - Notion__Version=${Notion__Version:-2026-03-11}
+      - Notion__Token=${Notion__Token:?}
+      - Github__Token=${Github__Token:?}
+      - Github__BaseUrl=${Github__BaseUrl:-https://api.github.com}
 
       - DOTNET_ENVIRONMENT=${DOTNET_ENVIRONMENT}
