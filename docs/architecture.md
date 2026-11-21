@@ -168,7 +168,7 @@ Current behavior of the host:
 | Cancellation | `CancellationToken` from endpoint → handler → repository → `ToListAsync(ct)` / `GetAsync(ct)` | — |
 | Mapping | hand-written mappers for entity ↔ domain; `PortfolioDtoMapper` for domain → DTO (ADR-0004) | reverse mappings are unused until a write path exists |
 | Auth | JWT **service token** (`sub=portfolio-api`) owned by `Core` and mapped by `JGBackend`; lifetime from `Jwt:ExpirationInMinutes`; only `/auth/me` requires it; portfolio, Notion, and GitHub reads are anonymous on purpose | — |
-| Observability | none | no health check, no metrics, no tracing |
+| Observability | `/healthz` liveness and `/api/v1/health` diagnostics (version, environment, uptime) | no PostgreSQL readiness probe, no metrics, no tracing |
 | Resilience | Notion client: 15s timeout, one retry on 429/5xx; per-IP passthrough rate limits (30/min) applied by the composed host | no circuit breaker |
 
 ## 7. Deployment topology
@@ -190,8 +190,9 @@ status codes are unchanged.
 Phase 3 completed the single-host merge: configuration, auth, JWT lifetime and
 rate-limit policies live in the host/`Core`, Portfolio is a class library, and
 the second Web App, Dockerfile, compose stack, and deploy workflow are retired.
-The remaining work is the owner's external handoff in
-[`operations.md`](operations.md) §8.
+The owner completed the repo rename, federated credential update, GitHub
+secrets, and `jdbweb` settings on 2026-11-22; retiring the old Web App remains
+open in [`operations.md`](operations.md) §8.
 Current design details are in this document and [`domain-model.md`](domain-model.md);
 schema details are in [`database.md`](database.md), and published contracts are
 in [`api-reference.md`](api-reference.md). Open decisions are tracked as ADRs in

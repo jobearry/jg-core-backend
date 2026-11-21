@@ -9,6 +9,8 @@ OpenAPI: `/swagger` (Development only, or `Swagger:Enabled=true`) · Document: `
 |---|---|---|---|---|
 | `POST` | `/api/v1/auth/login` | none | body `{ "key": "..." }` | `{ "token": "<jwt>" }` |
 | `GET` | `/api/v1/auth/me` | **JWT** | — | claims grouped by type |
+| `GET` | `/healthz` | none | — | liveness probe (`200` when alive) |
+| `GET` | `/api/v1/health` | none | — | `status`, `version`, `environment`, `timestamp`, `uptimeSeconds` |
 | `GET` | `/api/v1/experience` | none* | `includeProjects` (bool, default `false`) | `ExperienceDto[]` |
 | `GET` | `/api/v1/project` | none* | `includeTools` (bool, default `false`) | `ProjectDto[]` |
 | `GET` | `/api/v1/recommendation` | none* | — | `RecommendationDto[]` |
@@ -28,6 +30,10 @@ requires explicit authorization before implementation.
 
 Route nouns are **singular** (`/experience`, not `/experiences`). Keep that
 convention for consistency; a rename is a breaking change.
+
+Health endpoints are anonymous: `/healthz` is the liveness probe to point at
+from Azure, and `/api/v1/health` returns version, environment, and uptime for
+manual checks. Neither probes PostgreSQL; see `operations.md` §7.
 
 ## 2. Authentication
 

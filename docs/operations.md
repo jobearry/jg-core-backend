@@ -57,7 +57,7 @@ because the deploy workflow owns migrations there (see §5).
 | `Jwt:Audience` | user-secrets | `Jwt__Audience` | App Service setting |
 | `Jwt:ExpirationInMinutes` | default 60 | `Jwt__ExpirationInMinutes` | optional |
 | `Notion:Token` | user-secrets | `Notion__Token` | App Service setting |
-| `Notion:Version` | default `2026-03-11` | `Notion__Version` | optional |
+| `Notion:Version` | no in-code default; `2026-03-11` in `.env.example` | `Notion__Version` | set it — sent as the `Notion-Version` request header |
 | `Github:Token` | user-secrets | `Github__Token` | App Service setting |
 | `Github:BaseUrl` | `https://api.github.com` | `Github__BaseUrl` | optional |
 | `Cors:AllowedOrigins` | `appsettings.json` | `Cors__AllowedOrigins__0`, `__1`, … | App Service setting |
@@ -197,32 +197,56 @@ for a smoke test and off again.
 | A failure returns 502 `notion_*` | Notion is down, or returned something unreadable | distinguish by `code`; retry only `notion_unavailable` |
 | Browser reports a CORS error, `curl` works | the origin is not in `Cors:AllowedOrigins`, or it is a preview URL | add it as a setting; `Cors:DevelopmentOrigins` (localhost) applies only in Development |
 
-## 7. Missing operational features
+## 7. Operational features
 
-| Feature | Status | Recommendation |
+| Feature | Status | Notes / remaining gap |
 |---|---|---|
-| Health endpoint | none | add `/health` with an Npgsql probe before scaling |
+| Liveness | present | `/healthz` via `MapHealthChecks` (`src/JGBackend/Program.cs:57`); no checks are registered, so it does not probe PostgreSQL |
+| Diagnostics | present | `/api/v1/health` returns `status`, `version`, `environment`, `timestamp`, `uptimeSeconds` (`src/Core/Features/Health/HealthEndpoints.cs:17-35`) |
+| Rate limiting | present | fixed window per client IP: 5/min on `/api/v1/auth/login`, 30/min on each Notion and GitHub passthrough (`src/JGBackend/Configuration/RateLimitConfiguration.cs:16-22`). No global limit and no distributed store — limits are per instance |
 | Structured logs | default only | add Serilog or OpenTelemetry |
 | Metrics / tracing | none | OpenTelemetry + Azure Monitor |
-| Rate limiting | none | `AddRateLimiter` on `/auth/login` at minimum |
 | Backup / restore | not documented | define an RPO/RTO for the Neon PostgreSQL instance |
-| Config validation | none | fail fast at startup if `Jwt:Key` < 32 bytes |
+| Config validation | JWT key only | startup fails when `Jwt:Key` is missing or shorter than 32 bytes (`src/JGBackend/Configuration/AuthenticationConfiguration.cs:17-31`); other settings are not validated |
 
 ## 8. Post-restructure handoff
 
 The repository restructure moved code, docs, and workflows but did not touch
-anything outside the git repository. These items are owned by the human and are
-**still open**; the single-host merge is complete in git, so what remains is an
-Azure/handoff cleanup.
+anything outside git. The single-host merge is complete in git. The owner
+completed the items marked **Done** on 2026-11-22; the rest remain open.
 
-| Item | Why it matters |
-|---|---|
-| Rename the GitHub repository to `jg-core-backend` | the layout is named for the monorepo target, and the rename invalidates anything that keys off the repository name — most importantly the OIDC federated credential |
-| Review the Azure federated credential subject | it is currently `repo:jobearry/jg-generic-api:ref:refs/heads/master`. After the rename it must be `repo:jobearry/jg-core-backend:ref:refs/heads/master` or `azure/login@v2` fails in `deploy.yaml` |
-| Confirm repository secrets | `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID`, and `PRODUCTION_CONNECTION_STRING` (used by the single deploy workflow to apply migrations) |
-| Review the `jdbweb` App Service | app settings, the CORS allow-list (`Cors:AllowedOrigins`), and the custom domain/SSL binding, all of which must still match the frontend |
-| Retire the `jdb-portfolio-api` Web App | it is orphaned now that one host serves both modules; decommission it in Azure so it cannot be deployed or billed by mistake |
-| Update the local clone | the folder name and the `origin` remote still reference the old repository name |
+| Item | Status | Why it matters |
+|---|---|---|
+| Rename the GitHub repository to `jg-core-backend` | Done 2026-11-22 | the layout is named for the monorepo target; the rename invalidates anything keyed off the repository name, most importantly the OIDC federated credential |
+| Review the Azure federated credential subject | Done 2026-11-22 | updated to match the renamed repository; `azure/login@v2` must be `repo:jobearry/jg-core-backend:ref:refs/heads/master` or `deploy.yaml` fails. Confirm on the first deploy |
+| Confirm repository secrets | Done 2026-11-22 | `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID`, and `PRODUCTION_CONNECTION_STRING` are present; no values are stored in the repo |
+| Review the `jdbweb` App Service | Done 2026-11-22 | app settings and deployment secrets updated for the single host; confirm the CORS allow-list (`Cors:AllowedOrigins`) and custom domain/SSL binding still match the frontend after the first deploy |
+| Retire the `jdb-portfolio-api` Web App | Open | orphaned now that one host serves both modules; decommission it in Azure so it cannot be deployed or billed by mistake |
+| Update the local clone | Check locally | the folder name and the `origin` remote may still reference the old repository name |
+
+### Which `jdbweb` settings to keep
+
+The composed host reads only the keys in §3. On `jdbweb`, use this list;
+"remove" means delete the App Service setting if it exists.
+
+| Setting | Action | Why |
+|---|---|---|
+| `ConnectionStrings__JDBConnection` | keep | runtime database connection; the workflow's migration step uses the separate `PRODUCTION_CONNECTION_STRING` secret (§5) |
+| `Jwt__Key`, `Jwt__Issuer`, `Jwt__Audience` | keep | issuer and audience are validated on every request (`AuthenticationConfiguration.cs:47-52`); changing them invalidates existing tokens |
+| `Jwt__ExpirationInMinutes` | keep or unset | defaults to 60 |
+| `Jwt__Expires` | remove | old Generic-host key; the app reads `Jwt:ExpirationInMinutes` (KI-031) |
+| `Notion__Token` | keep | upstream bearer token |
+| `Notion__Version` | keep | no in-code default; sent as the `Notion-Version` header (`src/Portfolio/Features/DependencyInjection.cs:56`) |
+| `Github__Token` | keep | upstream token, kept server-side |
+| `Github__BaseUrl` | keep or unset | defaults to `https://api.github.com` in `appsettings.json` |
+| `Cors__AllowedOrigins__0`, `__1`, … | keep | production allow-list for the frontend |
+| `Cors__DevelopmentOrigins__0`, … | remove | applied only in Development (`src/JGBackend/Configuration/CorsConfiguration.cs:17-20`) |
+| `Database__AutoMigrate` | keep as `false` | the deploy workflow owns migrations (§5, KI-018/KI-038) |
+| `Swagger__Enabled` | remove or `false` | `true` exposes `/swagger` in production |
+| `AllowedHosts`, `Logging__*` | optional | framework defaults are in `appsettings.json` |
+
+Do not copy the retired app's settings wholesale: import only the keys above.
+Any App Service setting not listed here is no longer read by the composed host.
 
 The dead `docker/Dockerfile.dockerignore` was deleted with the second Dockerfile
 (KI-047); no external handoff is needed for it.

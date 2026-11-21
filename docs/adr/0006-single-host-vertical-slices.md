@@ -74,9 +74,9 @@ visible safety to justify two pipelines and two composition roots.
 
 **Follow-up work**
 
-- Complete the owner handoff in [`../operations.md`](../operations.md) §8:
-  retire the old app registration, update the federated credential subject,
-  confirm secrets, and review the surviving Web App settings.
+- Finish the owner handoff in [`../operations.md`](../operations.md) §8. The
+  repository rename, federated credential update, GitHub secrets, and `jdbweb`
+  settings were completed on 2026-11-22; retiring the old Web App remains open.
 - Track the secrets-overrides-environment precedence in KI-036 and the
   timestamp columns in `docs/known-issues.md`; neither is caused by this change.
 - ADR-0002 through ADR-0005 stay in force for the boundaries they describe
