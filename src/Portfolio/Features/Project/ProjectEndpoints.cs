@@ -1,4 +1,5 @@
-﻿using Portfolio.Endpoints;
+﻿using Microsoft.AspNetCore.Authorization;
+using Portfolio.Endpoints;
 
 namespace Portfolio.Features.Project;
 
@@ -13,6 +14,7 @@ public static class ProjectEndpoints
             (await handler.HandleAsync(includeTools, cancellationToken)).ToHttpResult())
         .WithName("GetPortfolioProjects")
         .WithTags("Portfolio")
+        .AllowAnonymous()
         .Produces<List<ProjectDto>>(StatusCodes.Status200OK)
         .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
     }

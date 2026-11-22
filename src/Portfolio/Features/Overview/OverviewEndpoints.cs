@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Portfolio.Endpoints;
 
 namespace Portfolio.Features.Overview;
@@ -12,6 +13,7 @@ public static class OverviewEndpoints
             (await handler.HandleAsync(cancellationToken)).ToHttpResult())
         .WithName("GetPortfolioOverview")
         .WithTags("Portfolio")
+        .AllowAnonymous()
         .Produces<List<OverviewItemDto>>(StatusCodes.Status200OK)
         .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
     }

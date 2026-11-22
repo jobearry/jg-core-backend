@@ -1,4 +1,5 @@
-﻿using Portfolio.Endpoints;
+﻿using Microsoft.AspNetCore.Authorization;
+using Portfolio.Endpoints;
 
 namespace Portfolio.Features.Skill;
 
@@ -14,6 +15,7 @@ public static class SkillEndpoints
             (await handler.HandleAsync(cancellationToken)).ToHttpResult())
         .WithName("GetPortfolioSkills")
         .WithTags("Portfolio")
+        .AllowAnonymous()
         .Produces<List<TechStackDto>>(StatusCodes.Status200OK)
         .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
     }

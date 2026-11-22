@@ -2,6 +2,7 @@ using System.Reflection;
 using JGBackend.Configuration;
 using Core.Features;
 using Core.Infrastructure;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
@@ -55,7 +56,7 @@ app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
 
-app.MapHealthChecks("/healthz").DisableRateLimiting();
+app.MapHealthChecks("/healthz").DisableRateLimiting().AllowAnonymous();
 app.MapFeatures(RateLimitPolicies.Default);
 
 // Portfolio endpoints declare only the segment below the version prefix. Core
@@ -65,6 +66,13 @@ app.MapGroup("api/v1").MapPortfolioFeatures(
     RateLimitPolicies.NotionPassthrough,
     RateLimitPolicies.GithubPassthrough,
     RateLimitPolicies.Default);
+
+// The admin fallback would otherwise challenge unmatched routes, turning a 404
+// into a 401. The explicit catch-all also matches dotted paths such as
+// /swagger/v1/swagger.json when Swagger is disabled.
+app.MapFallback("{*path}", () => Results.NotFound())
+    .AllowAnonymous()
+    .RequireRateLimiting(RateLimitPolicies.Default);
 
 app.Run();
 

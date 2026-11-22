@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Portfolio.Endpoints;
 using Portfolio.Features.Overview;
 
@@ -18,6 +19,7 @@ public static class GithubEndpoints
                     (await handler.GetRepositoriesByOwnerAsync(owner, cancellationToken)).ToHttpResult())
                 .WithName("GetGithubRepositoriesByOwner")
                 .WithTags("ExternalServices - GitHub")
+                .AllowAnonymous()
                 .WithSummary("Get all repositories for a GitHub owner")
                 .WithDescription("Returns public repositories owned by the GitHub account for the specified owner.")
                 .Produces<IReadOnlyList<GithubRepositoryDto>>(StatusCodes.Status200OK)
@@ -35,6 +37,7 @@ public static class GithubEndpoints
                     (await handler.GetRepositoryCountAsync(owner, cancellationToken)).ToHttpResult())
                 .WithName("GetGithubRepositoryCount")
                 .WithTags("ExternalServices - GitHub")
+                .AllowAnonymous()
                 .WithSummary("Get the number of public repositories for a GitHub owner")
                 .WithDescription("Returns the count of public repositories owned by the GitHub account.")
                 .Produces<OverviewItemDto>(StatusCodes.Status200OK)
@@ -52,6 +55,7 @@ public static class GithubEndpoints
                     (await handler.GetRepositoryLanguagesAsync(owner, repository, cancellationToken)).ToHttpResult())
                 .WithName("GetGithubRepositoryLanguages")
                 .WithTags("ExternalServices - GitHub")
+                .AllowAnonymous()
                 .WithSummary("Get repository languages")
                 .WithDescription("Returns language byte counts for a public repository.")
                 .Produces<GithubRepositoryLanguagesDto>(StatusCodes.Status200OK)
@@ -70,6 +74,7 @@ public static class GithubEndpoints
                     (await handler.GetRepositoryByOwnerAndIdAsync(owner, repositoryId, cancellationToken)).ToHttpResult())
                 .WithName("GetGithubRepositoryByOwnerAndId")
                 .WithTags("ExternalServices - GitHub")
+                .AllowAnonymous()
                 .WithSummary("Get a GitHub repository by owner and ID")
                 .WithDescription("Fetches details for a public repository by owner and ID and returns not found if it belongs to a different owner.")
                 .Produces<GithubRepositoryDto>(StatusCodes.Status200OK)

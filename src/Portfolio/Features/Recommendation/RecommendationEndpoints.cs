@@ -1,4 +1,5 @@
-﻿using Portfolio.Endpoints;
+﻿using Microsoft.AspNetCore.Authorization;
+using Portfolio.Endpoints;
 
 namespace Portfolio.Features.Recommendation;
 
@@ -12,6 +13,7 @@ public static class RecommendationEndpoints
             (await handler.HandleAsync(cancellationToken)).ToHttpResult())
         .WithName("GetPortfolioRecommendations")
         .WithTags("Portfolio")
+        .AllowAnonymous()
         .Produces<List<RecommendationDto>>(StatusCodes.Status200OK)
         .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
     }

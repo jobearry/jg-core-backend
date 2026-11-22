@@ -42,7 +42,7 @@ public class JwtTokenService : IJwtTokenService
             Subject = new ClaimsIdentity(new[]
             {
                 new Claim(JwtRegisteredClaimNames.Sub, Subject),
-                new Claim(ClaimTypes.Role, "User")
+                new Claim("role", "Admin")
             }),
             Expires = DateTime.UtcNow.AddMinutes(_jwtOptions.ExpirationInMinutes),
             Issuer = _jwtOptions.Issuer,

@@ -1,4 +1,5 @@
-﻿using Portfolio.Application.DTO;
+﻿using Microsoft.AspNetCore.Authorization;
+using Portfolio.Application.DTO;
 using Portfolio.Endpoints;
 
 namespace Portfolio.Features.Experience;
@@ -16,6 +17,7 @@ public static class ExperienceEndpoints
             (await handler.HandleAsync(includeProjects, cancellationToken)).ToHttpResult())
         .WithName("GetPortfolioExperience")
         .WithTags("Portfolio")
+        .AllowAnonymous()
         .Produces<List<ExperienceDto>>(StatusCodes.Status200OK)
         .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
     }
