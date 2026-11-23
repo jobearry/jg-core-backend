@@ -1,9 +1,10 @@
 using Portfolio.Domain.Entities;
 using Portfolio.Persistence.Entities;
+using Portfolio.Persistence.Mappers;
 
 namespace Portfolio.Persistence.Tests;
 
-public class TechStackEntityMappingTests : MappingTestBase
+public class TechStackEntityMappingTests
 {
     /// <summary>
     /// Regression guard for plan 001 item 1.2. The reverse mapping assigned the
@@ -17,7 +18,7 @@ public class TechStackEntityMappingTests : MappingTestBase
     {
         var stack = new TechStack(1, "Angular", "angular.png", "Frontend");
 
-        var entity = Mapper.Map<TechStackEntity>(stack);
+        var entity = TechStackMapper.ToEntity(stack);
 
         Assert.Equal(0, entity.TechStackCategoryId);
     }
@@ -34,7 +35,7 @@ public class TechStackEntityMappingTests : MappingTestBase
             TechStackCategory = new TechStackCategoryEntity { Id = 2, Category = "Frontend" }
         };
 
-        var stack = Mapper.Map<TechStack>(entity);
+        var stack = TechStackMapper.ToDomain(entity);
 
         Assert.Equal("Frontend", stack.Category);
         Assert.Equal("Angular", stack.StackName);

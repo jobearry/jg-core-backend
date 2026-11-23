@@ -12,7 +12,7 @@ public static class OverviewEndpoints
                 CancellationToken cancellationToken) =>
             (await handler.HandleAsync(cancellationToken)).ToHttpResult())
         .WithName("GetPortfolioOverview")
-        .WithTags("Portfolio")
+        .WithTags("Portfolio - Read")
         .AllowAnonymous()
         .Produces<List<OverviewItemDto>>(StatusCodes.Status200OK)
         .ProducesProblem(StatusCodes.Status503ServiceUnavailable);

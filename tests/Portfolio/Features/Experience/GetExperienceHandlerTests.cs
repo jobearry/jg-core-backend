@@ -1,12 +1,11 @@
+using Portfolio.Api.Tests.Fakes;
 using Portfolio.Application.Common;
-using Portfolio.Application.Tests.Fakes;
 using Portfolio.Domain.ValueObjects;
 using Portfolio.Features.Experience;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using System;
 using System.Collections.Generic;
-using System.Data.Common;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -206,14 +205,4 @@ public class GetExperienceHandlerTests
         new Company("Acme"),
         new Period(DateTime.UtcNow.AddYears(-1), null),
         new Role("Developer"));
-
-    /// <summary>
-    /// <see cref="DbException"/> has protected constructors, so a test cannot instantiate
-    /// it directly. Subclassing is the only way to simulate a provider failure without
-    /// taking a dependency on Npgsql in the Application tests.
-    /// </summary>
-    private sealed class FakeDbException : DbException
-    {
-        public FakeDbException(string message) : base(message) { }
-    }
 }

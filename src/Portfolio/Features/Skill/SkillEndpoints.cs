@@ -14,7 +14,7 @@ public static class SkillEndpoints
                 CancellationToken cancellationToken) =>
             (await handler.HandleAsync(cancellationToken)).ToHttpResult())
         .WithName("GetPortfolioSkills")
-        .WithTags("Portfolio")
+        .WithTags("Portfolio - Read")
         .AllowAnonymous()
         .Produces<List<TechStackDto>>(StatusCodes.Status200OK)
         .ProducesProblem(StatusCodes.Status503ServiceUnavailable);

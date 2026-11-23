@@ -21,10 +21,9 @@
 
   <ItemGroup>
     <Compile Include="..\Features\Experience\ExperienceMapperTests.cs" Link="Features\Experience\ExperienceMapperTests.cs" />
-    <Compile Include="..\Shared\Persistence\HandWrittenMapper.cs" Link="Shared\Persistence\HandWrittenMapper.cs" />
+    <Compile Include="..\Features\Recommendation\RecommendationMapperTests.cs" Link="Features\Recommendation\RecommendationMapperTests.cs" />
     <Compile Include="..\Shared\Persistence\DatabaseConnectionRegistrationTests.cs" Link="Shared\Persistence\DatabaseConnectionRegistrationTests.cs" />
     <Compile Include="..\Shared\Persistence\MappingConfigurationTests.cs" Link="Shared\Persistence\MappingConfigurationTests.cs" />
-    <Compile Include="..\Shared\Persistence\MappingTestBase.cs" Link="Shared\Persistence\MappingTestBase.cs" />
     <Compile Include="..\Shared\Persistence\NpgsqlFailureTypeTests.cs" Link="Shared\Persistence\NpgsqlFailureTypeTests.cs" />
     <Compile Include="..\Shared\Persistence\RequiredCompanyMappingTests.cs" Link="Shared\Persistence\RequiredCompanyMappingTests.cs" />
     <Compile Include="..\Shared\Persistence\TechStackEntityMappingTests.cs" Link="Shared\Persistence\TechStackEntityMappingTests.cs" />

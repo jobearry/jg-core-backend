@@ -5,8 +5,6 @@ using Portfolio.Domain.ValueObjects;
 using Portfolio.Features.Experience;
 using Portfolio.Features.Project;
 using Portfolio.Features.Skill;
-using Portfolio.Features.Recommendation;
-using System.Threading;
 
 namespace Portfolio.Api.Tests.Fakes;
 
@@ -41,16 +39,6 @@ public sealed class FakeExperienceRepository : IExperienceRepository
     }
 }
 
-/// <summary>
-/// Simulates a database failure. <see cref="System.Data.Common.DbException"/> has
-/// protected constructors, so subclassing is the only way to create one without taking
-/// a dependency on Npgsql in the test project.
-/// </summary>
-public sealed class FakeDbException : System.Data.Common.DbException
-{
-    public FakeDbException(string message) : base(message) { }
-}
-
 public sealed class FakeProjectRepository : IProjectRepository
 {
     public List<Project> Projects { get; } = new();
@@ -74,15 +62,6 @@ public sealed class FakeTechStackRepository : ISkillRepository
         Failure is null
             ? Task.FromResult(TechStacks)
             : Task.FromException<List<TechStack>>(Failure);
-}
-
-public sealed class FakeRecommendationRepository : IRecommendationRepository
-{
-    public List<Recommendation> Recommendations { get; } = new();
-
-    public Task<List<Recommendation>> GetAllAsync(CancellationToken cancellationToken) =>
-        Task.FromResult(Recommendations);
-
 }
 
 /// <summary>

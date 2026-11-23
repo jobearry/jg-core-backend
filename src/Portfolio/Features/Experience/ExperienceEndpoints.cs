@@ -16,7 +16,7 @@ public static class ExperienceEndpoints
                 bool includeProjects = false) =>
             (await handler.HandleAsync(includeProjects, cancellationToken)).ToHttpResult())
         .WithName("GetPortfolioExperience")
-        .WithTags("Portfolio")
+        .WithTags("Portfolio - Read")
         .AllowAnonymous()
         .Produces<List<ExperienceDto>>(StatusCodes.Status200OK)
         .ProducesProblem(StatusCodes.Status503ServiceUnavailable);

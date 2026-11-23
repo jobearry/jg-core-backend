@@ -44,7 +44,7 @@ Docker (build context is always the repo root):
 
 ```sh
 docker build -f docker/JGBackend.Dockerfile .
-docker compose -f docker/compose.yaml up --build
+docker compose --project-directory . -f docker/compose.yaml up --build
 ```
 
 ## Conventions

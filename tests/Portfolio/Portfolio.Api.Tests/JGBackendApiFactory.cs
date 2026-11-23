@@ -1,8 +1,12 @@
+using System.Net.Http.Headers;
+using Core.Features.Auth;
+using Core.Infrastructure.Options;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
 using Portfolio.Api.Tests.Fakes;
 using Portfolio.Features.Experience;
 using Portfolio.Features.Github;
@@ -28,11 +32,16 @@ public sealed class JGBackendHostCollection
 /// <remarks>
 /// Environment variables are used because the top-level <c>Program</c> reads JWT
 /// configuration while the service collection is being built, before a test host can
-/// add later configuration sources.
+/// add later configuration sources. The production host only loads User Secrets in
+/// Development, so these values are not shadowed.
 /// </remarks>
 public class JGBackendApiFactory : WebApplicationFactory<Program>
 {
     public const string SigningKey = "host-tests-signing-key-that-is-long-enough";
+
+    private const string JwtIssuer = "host-composition-tests";
+    private const string JwtAudience = "host-composition-tests";
+    private const int JwtExpirationInMinutes = 60;
 
     private static readonly Dictionary<string, string> Settings = new()
     {
@@ -42,9 +51,9 @@ public class JGBackendApiFactory : WebApplicationFactory<Program>
             "Host=unused;Database=unused;Username=unused;Password=unused",
         ["Database__AutoMigrate"] = "false",
         ["Jwt__Key"] = SigningKey,
-        ["Jwt__Issuer"] = "host-composition-tests",
-        ["Jwt__Audience"] = "host-composition-tests",
-        ["Jwt__ExpirationInMinutes"] = "60",
+        ["Jwt__Issuer"] = JwtIssuer,
+        ["Jwt__Audience"] = JwtAudience,
+        ["Jwt__ExpirationInMinutes"] = JwtExpirationInMinutes.ToString(),
         // Off by default, like Production. Tests that need Swagger derive a factory
         // which turns it on.
         ["Swagger__Enabled"] = "false",
@@ -64,6 +73,29 @@ public class JGBackendApiFactory : WebApplicationFactory<Program>
         {
             Environment.SetEnvironmentVariable(setting.Key, setting.Value);
         }
+    }
+
+    /// <summary>
+    /// A client carrying the test Admin token. The token is built directly because
+    /// <c>/auth/login</c> is limited to five requests per minute, which a suite of
+    /// endpoint tests would quickly exhaust.
+    /// </summary>
+    public HttpClient CreateAdminClient()
+    {
+        var options = Options.Create(new JwtOptions
+        {
+            Key = SigningKey,
+            Issuer = JwtIssuer,
+            Audience = JwtAudience,
+            ExpirationInMinutes = JwtExpirationInMinutes
+        });
+        var result = new JwtTokenService(options).CreateToken(SigningKey);
+        Assert.NotNull(result.Token);
+
+        var client = CreateClient();
+        client.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue("Bearer", result.Token);
+        return client;
     }
 
     public FakeExperienceRepository Experience { get; } = new();

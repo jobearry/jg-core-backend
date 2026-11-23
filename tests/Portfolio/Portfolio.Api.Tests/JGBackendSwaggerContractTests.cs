@@ -33,4 +33,32 @@ public sealed class JGBackendSwaggerContractTests : IClassFixture<SwaggerEnabled
         Assert.True(schemas.TryGetProperty("AuthDto", out _));
         Assert.True(schemas.TryGetProperty("AuthTokenDto", out _));
     }
+
+    [Fact]
+    public async Task Swagger_GroupsPortfolioEndpointsIntoReadAndWrite()
+    {
+        var json = await _client.GetStringAsync("/swagger/v1/swagger.json");
+        using var document = JsonDocument.Parse(json);
+        var paths = document.RootElement.GetProperty("paths");
+
+        foreach (var path in new[]
+        {
+            "/api/v1/experience",
+            "/api/v1/project",
+            "/api/v1/recommendation",
+            "/api/v1/recommendation/{id}",
+            "/api/v1/skill",
+            "/api/v1/overview"
+        })
+        {
+            Assert.Equal("Portfolio - Read", FirstTag(paths, path, "get"));
+        }
+
+        Assert.Equal("Portfolio - Write", FirstTag(paths, "/api/v1/admin/recommendation", "post"));
+        Assert.Equal("Portfolio - Write", FirstTag(paths, "/api/v1/admin/recommendation/{id}", "put"));
+        Assert.Equal("Portfolio - Write", FirstTag(paths, "/api/v1/admin/recommendation/{id}", "delete"));
+    }
+
+    private static string? FirstTag(JsonElement paths, string path, string method) =>
+        paths.GetProperty(path).GetProperty(method).GetProperty("tags")[0].GetString();
 }

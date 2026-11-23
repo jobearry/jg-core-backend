@@ -1,4 +1,5 @@
 using Portfolio.Persistence.Entities;
+using Portfolio.Persistence.Mappers;
 
 namespace Portfolio.Persistence.Tests;
 
@@ -22,7 +23,7 @@ namespace Portfolio.Persistence.Tests;
 /// <c>new Role("")</c> threw <see cref="ArgumentException"/> inside AutoMapper and
 /// took down the entire collection endpoint for one row.
 /// </summary>
-public class UndeclaredRoleMappingTests : MappingTestBase
+public class UndeclaredRoleMappingTests
 {
     [Theory]
     [InlineData("")]
@@ -38,7 +39,7 @@ public class UndeclaredRoleMappingTests : MappingTestBase
             Role = role
         };
 
-        var experience = Mapper.Map<Domain.Entities.Experience>(entity);
+        var experience = ExperienceMapper.ToDomain(entity);
 
         Assert.Null(experience.Role);
     }
@@ -59,7 +60,7 @@ public class UndeclaredRoleMappingTests : MappingTestBase
             PostedAt = new DateTime(2026, 6, 27)
         };
 
-        var recommendation = Mapper.Map<Domain.Entities.Recommendation>(entity);
+        var recommendation = RecommendationMapper.ToDomain(entity);
 
         Assert.Null(recommendation.CareerPosition);
     }
@@ -78,7 +79,7 @@ public class UndeclaredRoleMappingTests : MappingTestBase
             new Domain.ValueObjects.Period(null, null),
             null);
 
-        var entity = Mapper.Map<ExperienceEntity>(experience);
+        var entity = ExperienceMapper.ToEntity(experience);
 
         Assert.Equal(string.Empty, entity.Role);
     }
@@ -93,7 +94,7 @@ public class UndeclaredRoleMappingTests : MappingTestBase
             null,
             new DateTime(2026, 6, 27));
 
-        var entity = Mapper.Map<RecommendationEntity>(recommendation);
+        var entity = RecommendationMapper.ToEntity(recommendation);
 
         Assert.Equal(string.Empty, entity.CareerPosition);
     }
@@ -114,7 +115,7 @@ public class UndeclaredRoleMappingTests : MappingTestBase
             new Domain.ValueObjects.Role("Engineer"),
             new DateTime(2026, 6, 27));
 
-        var entity = Mapper.Map<RecommendationEntity>(recommendation);
+        var entity = RecommendationMapper.ToEntity(recommendation);
 
         Assert.Equal("Engineer", entity.CareerPosition);
     }

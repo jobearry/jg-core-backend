@@ -7,7 +7,7 @@ Image for the `src/JGBackend` host.
 From the repository root:
 
 ```sh
-docker compose -f docker/compose.yaml up --build
+docker compose --project-directory . -f docker/compose.yaml up --build
 ```
 
 Your application will be available at http://localhost:5031.

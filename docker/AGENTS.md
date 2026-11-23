@@ -5,7 +5,7 @@ One image, built from the repository root. Never set the build context to
 
 ```sh
 docker build -f docker/JGBackend.Dockerfile -t jg-backend .
-docker compose -f docker/compose.yaml up --build
+docker compose --project-directory . -f docker/compose.yaml up --build
 ```
 
 The `JGBackend` image serves the Core and Portfolio features from the single

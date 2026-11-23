@@ -12,6 +12,9 @@ public static class RateLimitConfiguration
     /// <summary>Shared limit for the two external-service passthroughs.</summary>
     private const int PassthroughPermitLimit = 30;
 
+    /// <summary>Admin writes are authenticated and rate-limited more tightly than reads.</summary>
+    private const int AdminWritePermitLimit = 30;
+
     private static readonly TimeSpan Window = TimeSpan.FromMinutes(1);
 
     public static IServiceCollection AddRateLimitingConfig(this IServiceCollection services)
@@ -24,6 +27,7 @@ public static class RateLimitConfiguration
             AddFixedWindow(options, RateLimitPolicies.AuthLogin, 5);
             AddFixedWindow(options, RateLimitPolicies.NotionPassthrough, PassthroughPermitLimit);
             AddFixedWindow(options, RateLimitPolicies.GithubPassthrough, PassthroughPermitLimit);
+            AddFixedWindow(options, RateLimitPolicies.AdminWrite, AdminWritePermitLimit);
         });
 
         return services;

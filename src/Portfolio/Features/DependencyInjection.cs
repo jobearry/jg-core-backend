@@ -44,6 +44,14 @@ public static class DependencyInjection
         services.AddScoped<GetOverviewHandler>();
         services.AddScoped<GetNotionPageHandler>();
         services.AddScoped<GithubHandler>();
+        services.AddScoped<GetRecommendationByIdHandler>();
+        services.AddScoped<CreateRecommendationHandler>();
+        services.AddScoped<UpdateRecommendationHandler>();
+        services.AddScoped<DeleteRecommendationHandler>();
+
+        // Server-supplied timestamps go through TimeProvider so the create handler's
+        // clock can be replaced in tests.
+        services.AddSingleton(TimeProvider.System);
 
         services.AddScoped<IPageContentReader, NotionPageContentReader>();
         services.AddScoped<IGithubRepositoryReader, GithubRepositoryReader>();
@@ -80,13 +88,14 @@ public static class DependencyInjection
     /// <summary>
     /// Maps the portfolio slices. The policy names are optional so a host without a
     /// rate-limiter middleware can leave them unset; the composed JGBackend host
-    /// supplies the passthrough policies and the default backstop.
+    /// supplies the passthrough, default and admin-write policies.
     /// </summary>
     public static IEndpointRouteBuilder MapPortfolioFeatures(
         this IEndpointRouteBuilder endpoints,
         string? notionRateLimitPolicy = null,
         string? githubRateLimitPolicy = null,
-        string? defaultRateLimitPolicy = null)
+        string? defaultRateLimitPolicy = null,
+        string? adminRateLimitPolicy = null)
     {
         var group = endpoints.MapGroup("");
         if (defaultRateLimitPolicy is not null)
@@ -98,7 +107,7 @@ public static class DependencyInjection
         group.MapGithubEndpoints(githubRateLimitPolicy);
         group.MapExperienceEndpoints();
         group.MapProjectEndpoints();
-        group.MapRecommendationEndpoints();
+        group.MapRecommendationEndpoints(adminRateLimitPolicy);
         group.MapSkillEndpoints();
         group.MapOverviewEndpoints();
 

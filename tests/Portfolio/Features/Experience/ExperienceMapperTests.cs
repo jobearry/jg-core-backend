@@ -1,9 +1,10 @@
 using Portfolio.Domain.Entities;
 using Portfolio.Persistence.Entities;
+using Portfolio.Persistence.Mappers;
 
 namespace Portfolio.Persistence.Tests;
 
-public class ExperienceMapperTests : MappingTestBase
+public class ExperienceMapperTests
 {
     private static readonly DateTime StartedAt = new(2020, 1, 1, 0, 0, 0, DateTimeKind.Utc);
     private static readonly DateTime FinishedAt = new(2021, 6, 30, 0, 0, 0, DateTimeKind.Utc);
@@ -19,7 +20,7 @@ public class ExperienceMapperTests : MappingTestBase
             Role = "Senior Developer"
         };
 
-        var experience = Mapper.Map<Experience>(entity);
+        var experience = ExperienceMapper.ToDomain(entity);
 
         Assert.Equal(3, experience.Id);
         Assert.Equal("Acme Corp", experience.Company?.Name);
@@ -46,7 +47,7 @@ public class ExperienceMapperTests : MappingTestBase
             Type = "Full time"
         };
 
-        var experience = Mapper.Map<Experience>(entity);
+        var experience = ExperienceMapper.ToDomain(entity);
 
         Assert.Equal("Built things", experience.Description);
         Assert.Equal("Owned the platform", experience.Responsibility);
@@ -64,7 +65,7 @@ public class ExperienceMapperTests : MappingTestBase
             Role = "Senior Developer"
         };
 
-        var experience = Mapper.Map<Experience>(entity);
+        var experience = ExperienceMapper.ToDomain(entity);
 
         Assert.Null(experience.Duration.FinishedAt);
     }
@@ -86,7 +87,7 @@ public class ExperienceMapperTests : MappingTestBase
             Role = "Senior Developer"
         };
 
-        var experience = Mapper.Map<Experience>(entity);
+        var experience = ExperienceMapper.ToDomain(entity);
 
         Assert.Equal(FinishedAt, experience.Duration.FinishedAt);
     }
@@ -107,7 +108,7 @@ public class ExperienceMapperTests : MappingTestBase
             Role = "Senior Developer"
         };
 
-        var experience = Mapper.Map<Experience>(entity);
+        var experience = ExperienceMapper.ToDomain(entity);
 
         // Note the double "Duration": Experience.Duration is the Period value object,
         // and Period.Duration is the TimeSpan it computes. The DTO layer flattens

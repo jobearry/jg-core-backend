@@ -89,7 +89,7 @@ repository), not by a transaction.
 | `Project` | `int Id` (get-only) | `(id, projectName)` or `(id, experienceId, projectName, description, contribution, techStacks)` | id/name get-only; the rest private set through `Update…`/`AttachToExperience`/`ReplaceTechStacks` | **name non-blank** (3.3); holds `IReadOnlyList<TechStackRef>`, never `TechStack` entities (3.4). `Period` was removed on 2026-10-22: it had no column and no mapping, so it was always `null` |
 | `TechStack` | `int Id` (get-only) | `(id, stackName, imgSrc, category)` | name/img get-only; category private via `SetCategory` | **name non-blank**; **category non-blank when present**, `null` allowed (3.3) |
 | `TechStackCategory` | `int Id` (get-only) | `(id, category)` | both get-only | **name non-blank** (3.3) |
-| `Recommendation` | `int Id` (get-only) | `(id, personName, description, careerPosition, postedAt)` | name/description/postedAt get-only; `CareerPosition` via `ChangeCareerPosition` | `PersonName` and `Description` **non-blank** (3.3, closes KI-041); `CareerPosition` is **optional** — `null` means it is deliberately not shown |
+| `Recommendation` | `int Id` (get-only) | `(id, personName, description, careerPosition, postedAt)` | `Id`/`PostedAt` get-only; name/description/career position private via `ChangeDetails` | `PersonName` and `Description` **non-blank** (3.3, closes KI-041; also enforced on edit by admin CRUD); `CareerPosition` is **optional** — `null` means it is deliberately not shown |
 
 Behaviour that exists:
 
@@ -97,9 +97,9 @@ Behaviour that exists:
 - `Experience.UpdateDescription` / `UpdateResponsibility` / `UpdateType` — the last two were added by 3.3; before, the entity could not express its own fields and AutoMapper wrote them by reflection.
 - `Experience.ReplaceProjects(IEnumerable<Project>?)` — copies the argument; `null` means none.
 - `Project.AttachToExperience`, `UpdateDescription`, `UpdateContribution`, `ReplaceTechStacks`.
-- `Recommendation.ChangeCareerPosition(Role?)`.
+- `Recommendation.ChangeDetails(string, string, Role?)` — the admin edit path; it preserves `PostedAt`.
 - `TechStack.SetCategory(string?)` — rejects blank, allows `null`.
-- Nothing else. `Id`, `ProjectName`, `StackName`, `Category`, `PersonName`, `Description` and `PostedAt` cannot be changed after construction.
+- Nothing else. `Id`, `ProjectName`, `StackName`, `Category` and `PostedAt` cannot be changed after construction; recommendation name/description can be changed only through `ChangeDetails`.
 
 ## 5. Value objects
 

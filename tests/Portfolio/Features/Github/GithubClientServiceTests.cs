@@ -1,6 +1,6 @@
 using System.Net;
-using System.Text;
 using System.Text.Json;
+using Portfolio.Api.Tests.Fakes;
 using Portfolio.Features.Github;
 
 namespace Portfolio.Api.Tests;
@@ -12,7 +12,7 @@ public class GithubClientServiceTests
     {
         const string responseBody =
             """[{"id":123,"name":"hello-world","full_name":"octocat/hello-world","private":false,"owner":{"login":"octocat","id":1}},{"id":124,"name":"secret","full_name":"octocat/secret","private":true,"owner":{"login":"octocat","id":1}}]""";
-        var handler = new StubHandler(responseBody);
+        var handler = new QueuedHttpMessageHandler((HttpStatusCode.OK, responseBody));
         var service = CreateService(handler);
 
         var repositories = await service.GetRepositoriesByOwnerAsync("octocat", CancellationToken.None);
@@ -39,7 +39,9 @@ public class GithubClientServiceTests
                 @private = false,
                 owner = new { login = "octocat" }
             }));
-        var handler = new StubHandler(firstPage, "[]");
+        var handler = new QueuedHttpMessageHandler(
+            (HttpStatusCode.OK, firstPage),
+            (HttpStatusCode.OK, "[]"));
         var service = CreateService(handler);
 
         var repositories = await service.GetRepositoriesByOwnerAsync("octocat", CancellationToken.None);
@@ -56,7 +58,7 @@ public class GithubClientServiceTests
     {
         const string responseBody =
             """[{"id":123,"name":"mine","private":false,"owner":{"login":"octocat"}},{"id":456,"name":"other","private":false,"owner":{"login":"someone-else"}}]""";
-        var service = CreateService(new StubHandler(responseBody));
+        var service = CreateService(new QueuedHttpMessageHandler((HttpStatusCode.OK, responseBody)));
 
         var repositories = await service.GetRepositoriesByOwnerAsync("octocat", CancellationToken.None);
 
@@ -67,9 +69,9 @@ public class GithubClientServiceTests
     [Fact]
     public async Task GetRepositoryLanguagesAsync_OwnerAndName_ReturnsLanguagesAndByteCounts()
     {
-        var handler = new StubHandler(
-            """{"id":123,"name":"hello-world","private":false,"owner":{"login":"octocat"}}""",
-            """{"C#":1234,"JavaScript":567}""");
+        var handler = new QueuedHttpMessageHandler(
+            (HttpStatusCode.OK, """{"id":123,"name":"hello-world","private":false,"owner":{"login":"octocat"}}"""),
+            (HttpStatusCode.OK, """{"C#":1234,"JavaScript":567}"""));
         var service = CreateService(handler);
 
         var languages = await service.GetRepositoryLanguagesAsync("octocat", "hello-world", CancellationToken.None);
@@ -89,7 +91,7 @@ public class GithubClientServiceTests
     {
         const string responseBody =
             """{"id":456,"name":"portfolio","full_name":"octocat/portfolio","private":false,"owner":{"login":"octocat","id":1}}""";
-        var handler = new StubHandler(responseBody);
+        var handler = new QueuedHttpMessageHandler((HttpStatusCode.OK, responseBody));
         var service = CreateService(handler);
 
         var repository = await service.GetRepositoryByOwnerAndIdAsync("octocat", 456, CancellationToken.None);
@@ -106,7 +108,7 @@ public class GithubClientServiceTests
     {
         const string responseBody =
             """{"id":456,"name":"portfolio","full_name":"other/portfolio","owner":{"login":"other","id":2}}""";
-        var handler = new StubHandler(responseBody);
+        var handler = new QueuedHttpMessageHandler((HttpStatusCode.OK, responseBody));
         var service = CreateService(handler);
 
         var exception = await Assert.ThrowsAsync<HttpRequestException>(
@@ -120,7 +122,7 @@ public class GithubClientServiceTests
     {
         const string responseBody =
             """{"id":123,"name":"secret","private":true,"owner":{"login":"octocat"}}""";
-        var handler = new StubHandler(responseBody);
+        var handler = new QueuedHttpMessageHandler((HttpStatusCode.OK, responseBody));
         var service = CreateService(handler);
 
         var exception = await Assert.ThrowsAsync<HttpRequestException>(
@@ -135,7 +137,7 @@ public class GithubClientServiceTests
     {
         const string responseBody =
             """{"id":456,"name":"secret","private":true,"full_name":"octocat/secret","owner":{"login":"octocat","id":1}}""";
-        var handler = new StubHandler(responseBody);
+        var handler = new QueuedHttpMessageHandler((HttpStatusCode.OK, responseBody));
         var service = CreateService(handler);
 
         var exception = await Assert.ThrowsAsync<HttpRequestException>(
@@ -153,25 +155,4 @@ public class GithubClientServiceTests
                 BaseUrl = "https://api.github.test/",
                 Token = "test-token"
             });
-
-    private sealed class StubHandler(params string[] responseBodies) : HttpMessageHandler
-    {
-        private readonly Queue<string> _responseBodies = new(responseBodies);
-
-        public List<Uri> RequestUris { get; } = [];
-        public List<System.Net.Http.Headers.AuthenticationHeaderValue?> AuthorizationHeaders { get; } = [];
-
-        protected override Task<HttpResponseMessage> SendAsync(
-            HttpRequestMessage request,
-            CancellationToken cancellationToken)
-        {
-            RequestUris.Add(request.RequestUri!);
-            AuthorizationHeaders.Add(request.Headers.Authorization);
-
-            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
-            {
-                Content = new StringContent(_responseBodies.Dequeue(), Encoding.UTF8, "application/json")
-            });
-        }
-    }
 }

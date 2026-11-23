@@ -26,21 +26,20 @@ internal sealed class FakeExperienceRepository : IExperienceRepository
     /// </summary>
     public CancellationToken LastCancellationToken { get; private set; }
 
-    public Task<List<DomainExperience>> GetAllAsync(CancellationToken cancellationToken)
+    public Task<List<DomainExperience>> GetAllAsync(CancellationToken cancellationToken) =>
+        Respond(All, cancellationToken);
+
+    public Task<List<DomainExperience>> GetAllWithProjectsAsync(CancellationToken cancellationToken) =>
+        Respond(WithProjects, cancellationToken);
+
+    private Task<List<DomainExperience>> Respond(
+        List<DomainExperience> data,
+        CancellationToken cancellationToken)
     {
         LastCancellationToken = cancellationToken;
 
         return Failure is null
-            ? Task.FromResult(All)
-            : Task.FromException<List<DomainExperience>>(Failure);
-    }
-
-    public Task<List<DomainExperience>> GetAllWithProjectsAsync(CancellationToken cancellationToken)
-    {
-        LastCancellationToken = cancellationToken;
-
-        return Failure is null
-            ? Task.FromResult(WithProjects)
+            ? Task.FromResult(data)
             : Task.FromException<List<DomainExperience>>(Failure);
     }
 }

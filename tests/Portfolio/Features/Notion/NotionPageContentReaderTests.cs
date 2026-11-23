@@ -1,6 +1,5 @@
 using System.Net;
-using System.Text;
-using System.Text.Json;
+using Portfolio.Api.Tests.Fakes;
 using Portfolio.Features.Notion;
 
 namespace Portfolio.Api.Tests;
@@ -16,7 +15,7 @@ public class NotionPageContentReaderTests
     [Fact]
     public async Task ReadPageAsync_MapsTheVendorPageOntoPageContent()
     {
-        var reader = CreateReader(HttpStatusCode.OK, MarkdownResponse);
+        var reader = CreateReader((HttpStatusCode.OK, NotionTestPayloads.MarkdownResponse));
 
         var pages = await reader.ReadPageAsync("page-id", CancellationToken.None);
 
@@ -35,43 +34,23 @@ public class NotionPageContentReaderTests
     [Fact]
     public async Task ReadPageAsync_WhenUpstreamFails_LetsTheExceptionEscape()
     {
-        var reader = CreateReader(HttpStatusCode.InternalServerError, "{}");
+        var reader = CreateReader(
+            (HttpStatusCode.InternalServerError, "{}"),
+            (HttpStatusCode.InternalServerError, "{}"));
 
         await Assert.ThrowsAsync<HttpRequestException>(
             () => reader.ReadPageAsync("page-id", CancellationToken.None));
     }
 
-    private const string MarkdownResponse =
-        """{"object":"page","id":"page-id","markdown":"<page url=\"https://notion.so/page\"><mention-date start=\"2026-06-27\"/>About me</page>","truncated":false,"unknownBlockIds":[],"requestId":"req"}""";
-
-    private static NotionPageContentReader CreateReader(HttpStatusCode status, string body)
+    private static NotionPageContentReader CreateReader(
+        params (HttpStatusCode Status, string Body)[] responses)
     {
-        var http = new HttpClient(new StubHandler(status, body))
+        var http = new HttpClient(new QueuedHttpMessageHandler(responses))
         {
             BaseAddress = new Uri("https://api.notion.com")
         };
         var client = new NotionClientService(http);
 
         return new NotionPageContentReader(client);
-    }
-
-    private sealed class StubHandler : HttpMessageHandler
-    {
-        private readonly HttpStatusCode _status;
-        private readonly string _body;
-
-        public StubHandler(HttpStatusCode status, string body)
-        {
-            _status = status;
-            _body = body;
-        }
-
-        protected override Task<HttpResponseMessage> SendAsync(
-            HttpRequestMessage request,
-            CancellationToken cancellationToken) =>
-            Task.FromResult(new HttpResponseMessage(_status)
-            {
-                Content = new StringContent(_body, Encoding.UTF8, "application/json")
-            });
     }
 }

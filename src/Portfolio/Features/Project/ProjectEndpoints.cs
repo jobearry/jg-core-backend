@@ -13,7 +13,7 @@ public static class ProjectEndpoints
                 bool includeTools = false) =>
             (await handler.HandleAsync(includeTools, cancellationToken)).ToHttpResult())
         .WithName("GetPortfolioProjects")
-        .WithTags("Portfolio")
+        .WithTags("Portfolio - Read")
         .AllowAnonymous()
         .Produces<List<ProjectDto>>(StatusCodes.Status200OK)
         .ProducesProblem(StatusCodes.Status503ServiceUnavailable);

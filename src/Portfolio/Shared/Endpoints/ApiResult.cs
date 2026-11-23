@@ -27,6 +27,26 @@ public static class ApiResult
     }
 
     /// <summary>
+    /// A created resource keeps the same error mapping but returns 201 and a Location
+    /// header on success. The location is built from the DTO, never from a domain type.
+    /// </summary>
+    public static IResult ToCreatedHttpResult<T>(this Result<T> result, Func<T, string> location)
+    {
+        if (!result.IsSuccess)
+        {
+            return result.Error!.ToHttpResult();
+        }
+
+        return Results.Created(location(result.Value!), result.Value);
+    }
+
+    /// <summary>
+    /// A delete has no body; failures still use the single error mapping.
+    /// </summary>
+    public static IResult ToNoContentHttpResult<T>(this Result<T> result) =>
+        result.IsSuccess ? Results.NoContent() : result.Error!.ToHttpResult();
+
+    /// <summary>
     /// The same mapping for an error that never had a value to return — an argument
     /// guard in an endpoint, for instance.
     /// </summary>

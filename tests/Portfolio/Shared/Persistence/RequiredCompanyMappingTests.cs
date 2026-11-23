@@ -1,6 +1,7 @@
 using Portfolio.Domain.Entities;
 using Portfolio.Domain.ValueObjects;
 using Portfolio.Persistence.Entities;
+using Portfolio.Persistence.Mappers;
 
 namespace Portfolio.Persistence.Tests;
 
@@ -20,7 +21,7 @@ namespace Portfolio.Persistence.Tests;
 /// "Self-employed" or "Contract — NDA", which are honest values rather than absence.
 /// </para>
 /// </summary>
-public class RequiredCompanyMappingTests : MappingTestBase
+public class RequiredCompanyMappingTests
 {
     [Fact]
     public void Map_ExperienceEntity_WithACompany_KeepsTheName()
@@ -33,7 +34,7 @@ public class RequiredCompanyMappingTests : MappingTestBase
             Role = "Developer"
         };
 
-        var experience = Mapper.Map<Experience>(entity);
+        var experience = ExperienceMapper.ToDomain(entity);
 
         Assert.Equal(new Company("Acme Corp"), experience.Company);
     }
@@ -47,7 +48,7 @@ public class RequiredCompanyMappingTests : MappingTestBase
             new Period(new DateTime(2020, 1, 1), null),
             new Role("Developer"));
 
-        var entity = Mapper.Map<ExperienceEntity>(experience);
+        var entity = ExperienceMapper.ToEntity(experience);
 
         Assert.Equal("Acme Corp", entity.CompanyName);
     }
@@ -70,6 +71,6 @@ public class RequiredCompanyMappingTests : MappingTestBase
             Role = "Developer"
         };
 
-        Assert.ThrowsAny<Exception>(() => Mapper.Map<Experience>(entity));
+        Assert.ThrowsAny<Exception>(() => ExperienceMapper.ToDomain(entity));
     }
 }

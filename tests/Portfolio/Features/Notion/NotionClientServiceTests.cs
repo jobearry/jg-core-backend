@@ -1,5 +1,5 @@
 using System.Net;
-using System.Text;
+using Portfolio.Api.Tests.Fakes;
 using Portfolio.Features.Notion;
 
 namespace Portfolio.Api.Tests;
@@ -11,13 +11,10 @@ namespace Portfolio.Api.Tests;
 /// </summary>
 public class NotionClientServiceTests
 {
-    private const string MarkdownResponse =
-        """{"object":"page","id":"page-id","markdown":"<page url=\"https://notion.so/page\"><mention-date start=\"2026-06-27\"/>About me</page>","truncated":false,"unknownBlockIds":[],"requestId":"req"}""";
-
     [Fact]
     public async Task QueryPageAsync_RequestsThePathRelativeToTheBaseAddress()
     {
-        var handler = new SequencedHandler((HttpStatusCode.OK, MarkdownResponse));
+        var handler = new QueuedHttpMessageHandler((HttpStatusCode.OK, NotionTestPayloads.MarkdownResponse));
 
         await CreateClient(handler).QueryPageAsync("page-id", CancellationToken.None);
 
@@ -29,9 +26,9 @@ public class NotionClientServiceTests
     [Fact]
     public async Task QueryPageAsync_RetriesOnceAfterATransientFailure()
     {
-        var handler = new SequencedHandler(
+        var handler = new QueuedHttpMessageHandler(
             (HttpStatusCode.InternalServerError, "{}"),
-            (HttpStatusCode.OK, MarkdownResponse));
+            (HttpStatusCode.OK, NotionTestPayloads.MarkdownResponse));
 
         var pages = await CreateClient(handler).QueryPageAsync("page-id", CancellationToken.None);
 
@@ -42,7 +39,7 @@ public class NotionClientServiceTests
     [Fact]
     public async Task QueryPageAsync_GivesUpAfterOneRetry()
     {
-        var handler = new SequencedHandler(
+        var handler = new QueuedHttpMessageHandler(
             (HttpStatusCode.ServiceUnavailable, "{}"),
             (HttpStatusCode.TooManyRequests, "{}"));
 
@@ -55,7 +52,7 @@ public class NotionClientServiceTests
     [Fact]
     public async Task QueryPageAsync_DoesNotRetryARequestTheServerRejected()
     {
-        var handler = new SequencedHandler((HttpStatusCode.NotFound, "{}"));
+        var handler = new QueuedHttpMessageHandler((HttpStatusCode.NotFound, "{}"));
 
         await Assert.ThrowsAsync<HttpRequestException>(
             () => CreateClient(handler).QueryPageAsync("page-id", CancellationToken.None));
@@ -65,30 +62,4 @@ public class NotionClientServiceTests
 
     private static NotionClientService CreateClient(HttpMessageHandler handler) =>
         new(new HttpClient(handler) { BaseAddress = new Uri("https://api.notion.com") });
-
-    private sealed class SequencedHandler : HttpMessageHandler
-    {
-        private readonly Queue<(HttpStatusCode Status, string Body)> _responses;
-
-        public SequencedHandler(params (HttpStatusCode Status, string Body)[] responses)
-        {
-            _responses = new Queue<(HttpStatusCode, string)>(responses);
-        }
-
-        public List<Uri> RequestUris { get; } = new();
-
-        protected override Task<HttpResponseMessage> SendAsync(
-            HttpRequestMessage request,
-            CancellationToken cancellationToken)
-        {
-            RequestUris.Add(request.RequestUri!);
-
-            var (status, body) = _responses.Dequeue();
-
-            return Task.FromResult(new HttpResponseMessage(status)
-            {
-                Content = new StringContent(body, Encoding.UTF8, "application/json")
-            });
-        }
-    }
 }

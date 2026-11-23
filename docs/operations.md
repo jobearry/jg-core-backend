@@ -76,6 +76,12 @@ and `DELETE` on the portfolio tables but no DDL. The GitHub Actions migration se
 `PRODUCTION_CONNECTION_STRING` is unchanged and remains the only owner connection.
 See [ADR-0007](adr/0007-admin-authorization-and-writer-role.md).
 
+Admin write routes live under `/api/v1/admin` and require the `role=Admin` token
+from `/api/v1/auth/login`. They are capped at 30 requests/minute per IP by the
+`admin-write` policy. The first slice is `recommendation`; the request/response
+contract and status codes are in [`api-reference.md`](api-reference.md) §3.
+Public reads do not present a token and never reach `PortfolioWriteContext`.
+
 Origins are configuration so that a new domain or a Vercel preview deployment
 (`https://demo-git-my-branch-team.vercel.app`) is an added setting rather than a code
 change and a redeploy. Adding one is still a security review item — see
@@ -99,7 +105,7 @@ host. `docker/compose.yaml` runs the **API only**; PostgreSQL is external.
 
 ```bash
 cp .env.example .env   # then set both JDBConnection and JDBConnectionWrite
-docker compose -f docker/compose.yaml up --build
+docker compose --project-directory . -f docker/compose.yaml up --build
 ```
 
 The connection string is supplied whole, with no `Host=db` shortcut, because
@@ -199,7 +205,7 @@ for a smoke test and off again.
 |---|---|---|
 | App fails at startup with an Npgsql connection error | `Migrate()` ran with a bad/missing connection string | check `ConnectionStrings__JDBConnection` |
 | Deploy fails at "Apply database migrations" | migration could not run: dirty data, unreachable DB, or a missing/wrong `PRODUCTION_CONNECTION_STRING` | read the step log; the old app is still live. Fix the data or secret and re-run |
-| `docker compose up` fails with "required variable ConnectionStrings__JDBConnection is missing" | `.env` not created | `cp .env.example .env` and fill it in |
+| `docker compose up` fails with "required variable ConnectionStrings__JDBConnection is missing" | `.env` is missing, or Compose is using `docker/` as the project directory | from the repo root, run `cp .env.example .env`, fill it in, then `docker compose --project-directory . -f docker/compose.yaml up --build`; `-f docker/compose.yaml` alone still makes `docker/` the project directory |
 | `dotnet ef` says "command not found" | the tool manifest was not restored | `dotnet tool restore` (from the repo root) |
 | `dotnet ef` sees a null connection string | no `JDBConnection` value was found in the host project's User Secrets, `appsettings.Development.json`, or environment | confirm the secret key is `ConnectionStrings:JDBConnection`, or set `ConnectionStrings__JDBConnection` |
 | `/auth/login` returns 401 with the right key | whitespace, or the key was rotated | re-read `Jwt:Key` |

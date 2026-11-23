@@ -21,14 +21,9 @@ public sealed class DefaultRateLimitTests
         using var factory = new JGBackendApiFactory();
         var client = factory.CreateClient();
 
-        for (var i = 0; i < DefaultPermitLimit; i++)
-        {
-            var allowed = await client.GetAsync("/api/v1/skill");
-            Assert.Equal(HttpStatusCode.OK, allowed.StatusCode);
-        }
-
-        var rejected = await client.GetAsync("/api/v1/skill");
-        Assert.Equal(HttpStatusCode.TooManyRequests, rejected.StatusCode);
+        await RateLimitAssertions.SendUntilRejectedAsync(
+            () => client.GetAsync("/api/v1/skill"),
+            DefaultPermitLimit);
     }
 
     [Fact]
@@ -52,6 +47,26 @@ public sealed class DefaultRateLimitTests
 
             Assert.NotNull(endpoint.Metadata.GetMetadata<EnableRateLimitingAttribute>());
         }
+    }
+
+    [Fact]
+    public void AdminWriteEndpoints_UseTheAdminWritePolicy()
+    {
+        using var factory = new JGBackendApiFactory();
+        using var scope = factory.Services.CreateScope();
+        var adminEndpoints = scope.ServiceProvider
+            .GetRequiredService<EndpointDataSource>()
+            .Endpoints
+            .OfType<RouteEndpoint>()
+            .Where(endpoint => endpoint.RoutePattern.RawText?.Contains("admin/recommendation") == true)
+            .ToList();
+
+        Assert.Equal(3, adminEndpoints.Count);
+        Assert.All(
+            adminEndpoints,
+            endpoint => Assert.Equal(
+                "admin-write",
+                endpoint.Metadata.GetMetadata<EnableRateLimitingAttribute>()?.PolicyName));
     }
 
     [Theory]

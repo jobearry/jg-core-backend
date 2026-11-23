@@ -15,4 +15,7 @@ public static class RateLimitPolicies
 
     /// <summary>GitHub-backed routes; each call costs a GitHub request.</summary>
     public const string GithubPassthrough = "github-passthrough";
+
+    /// <summary>Authenticated admin write routes.</summary>
+    public const string AdminWrite = "admin-write";
 }

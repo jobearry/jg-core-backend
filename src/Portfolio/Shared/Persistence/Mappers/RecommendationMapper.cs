@@ -20,6 +20,9 @@ public static class RecommendationMapper
             PersonName = source.PersonName,
             Description = source.Description,
             CareerPosition = MappingHelpers.ToStoredRole(source.CareerPosition),
-            PostedAt = source.PostedAt
+
+            // posted_at is timestamp without time zone. Npgsql rejects Kind=Utc for
+            // that column, so the clock value is normalised at the persistence edge.
+            PostedAt = DateTime.SpecifyKind(source.PostedAt, DateTimeKind.Unspecified)
         };
 }

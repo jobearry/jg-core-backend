@@ -1,5 +1,3 @@
-using System.Net;
-
 namespace Portfolio.Api.Tests;
 
 /// <summary>
@@ -18,14 +16,9 @@ public sealed class PassthroughRateLimitTests
         using var factory = new JGBackendApiFactory();
         var client = factory.CreateClient();
 
-        for (var i = 0; i < PermitLimit; i++)
-        {
-            var allowed = await client.GetAsync("/api/v1/notion/page-1");
-            Assert.Equal(HttpStatusCode.OK, allowed.StatusCode);
-        }
-
-        var rejected = await client.GetAsync("/api/v1/notion/page-1");
-        Assert.Equal(HttpStatusCode.TooManyRequests, rejected.StatusCode);
+        await RateLimitAssertions.SendUntilRejectedAsync(
+            () => client.GetAsync("/api/v1/notion/page-1"),
+            PermitLimit);
     }
 
     [Fact]
@@ -34,14 +27,9 @@ public sealed class PassthroughRateLimitTests
         using var factory = new JGBackendApiFactory();
         var client = factory.CreateClient();
 
-        for (var i = 0; i < PermitLimit; i++)
-        {
-            var allowed = await client.GetAsync("/api/v1/github/owner/octocat/repositories");
-            Assert.Equal(HttpStatusCode.OK, allowed.StatusCode);
-        }
-
-        var rejected = await client.GetAsync("/api/v1/github/owner/octocat/repositories");
-        Assert.Equal(HttpStatusCode.TooManyRequests, rejected.StatusCode);
+        await RateLimitAssertions.SendUntilRejectedAsync(
+            () => client.GetAsync("/api/v1/github/owner/octocat/repositories"),
+            PermitLimit);
     }
 
     [Fact]
@@ -50,14 +38,10 @@ public sealed class PassthroughRateLimitTests
         using var factory = new JGBackendApiFactory();
         var client = factory.CreateClient();
 
-        for (var i = 0; i < PermitLimit; i++)
-        {
-            await client.SendAsync(RequestWithAllowedOrigin());
-        }
+        var rejected = await RateLimitAssertions.SendUntilRejectedAsync(
+            () => client.SendAsync(RequestWithAllowedOrigin()),
+            PermitLimit);
 
-        var rejected = await client.SendAsync(RequestWithAllowedOrigin());
-
-        Assert.Equal(HttpStatusCode.TooManyRequests, rejected.StatusCode);
         Assert.Contains(
             "https://jgolimlim-portfolio.vercel.app",
             rejected.Headers.GetValues("Access-Control-Allow-Origin"));

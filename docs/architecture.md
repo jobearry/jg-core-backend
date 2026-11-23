@@ -122,11 +122,29 @@ Notion and GitHub slices call their clients from a handler, parse or project the
 vendor response, and return the same DTO + `Result<T>` shape. Their read endpoints
 are anonymous by design.
 
-### Write (not built)
+### Admin writes
 
-There is no write path. `IRepository<T>` exposes only reads. Revisit a unit-of-work
-abstraction only when writes are introduced; `Project` is the aggregate root
-(ADR-0003).
+Started with the `recommendation` slice and rolled out slice by slice. The flow is
+the read flow in reverse:
+
+```
+Client → Admin endpoint → Create/Update/Delete handler → IRecommendationRepository
+       → PortfolioWriteContext → RecommendationEntity → SaveChangesAsync(ct)
+       → domain → RecommendationDto → Result<T> → ApiResult
+```
+
+`EfRecommendationRepository` is the single port for the aggregate. Its inherited
+`GetAllAsync`, `GetByIdAsync` (including the anonymous detail GET and the
+pre-write lookup) use `PortfolioContext` (read-only credential); `AddAsync`,
+`UpdateAsync` and `DeleteAsync` use `PortfolioWriteContext` (DML credential).
+That keeps every public read off the writer connection without splitting one
+aggregate into two repository abstractions.
+
+A write command calls `SaveChangesAsync` once, so it saves one aggregate per
+transaction (ADR-0003). There is still no `IUnitOfWork`. `postedAt` is set from an
+injected `TimeProvider`, never from request JSON; update goes through
+`Recommendation.ChangeDetails(...)`, so the domain invariant runs on edits as well
+as construction. No audit table is written (ADR-0007).
 
 ## 5. Composition root
 
@@ -147,7 +165,8 @@ app
 ```
 
 The host assembles the Portfolio feature graph with `AddPortfolioFeatures()` and
-maps its routes under `/api/v1`, passing the passthrough rate-limit policy names.
+maps its routes under `/api/v1`, passing the passthrough, default and
+admin-write rate-limit policy names.
 Its appsettings and User Secrets are the canonical source for DB, GitHub, Notion,
 CORS, and Swagger settings; EF commands use it as `--startup-project`.
 
@@ -164,12 +183,12 @@ Current behavior of the host:
 |---|---|---|
 | Error handling | typed `Result<T>` → one `ApiResult` mapper → `503`/`502`/`500`; `GlobalExceptionHandler` for escapes | — |
 | Logging | `ILogger` in handlers and repositories; warning for a dependency failure, error for a bug | no structured sink or correlation id beyond `traceId` |
-| Validation | explicit `AuthDto` guard in `AuthEndpoints` → `400 + validation_failed` | no other endpoint takes input |
-| Cancellation | `CancellationToken` from endpoint → handler → repository → `ToListAsync(ct)` / `GetAsync(ct)` | — |
-| Mapping | hand-written mappers for entity ↔ domain; `PortfolioDtoMapper` for domain → DTO (ADR-0004) | reverse mappings are unused until a write path exists |
-| Auth | JWT **service token** (`sub=portfolio-api`, `role=Admin`) owned by `Core` and mapped by `JGBackend`; lifetime from `Jwt:ExpirationInMinutes`; `Admin` is the fallback policy, so new endpoints fail closed; public reads opt out with `.AllowAnonymous()` (ADR-0007) | — |
-| Observability | `/healthz` liveness and `/api/v1/health` diagnostics (version, environment, uptime) | no PostgreSQL readiness probe, no metrics, no tracing |
-| Resilience | Notion client: 15s timeout, one retry on 429/5xx; per-IP fixed-window policies applied as endpoint metadata by the host — 120/min `default`, 5/min login, 30/min per passthrough; health probes are exempt | no circuit breaker; limits are per instance |
+| Validation | explicit guards in `AuthEndpoints` and admin write handlers → `400 + validation_failed` | — |
+| Cancellation | `CancellationToken` from endpoint → handler → repository → `ToListAsync(ct)` / `SaveChangesAsync(ct)` / `GetAsync(ct)` | — |
+| Mapping | hand-written mappers for entity ↔ domain in both directions (the write path uses domain → entity); `PortfolioDtoMapper` for domain → DTO (ADR-0004) | — |
+| Auth | JWT **service token** (`sub=portfolio-api`, `role=Admin`) owned by `Core` and mapped by `JGBackend`; lifetime from `Jwt:ExpirationInMinutes`; `Admin` is the fallback policy, so new endpoints fail closed; public reads opt out with `.AllowAnonymous()`; admin writes live under `/api/v1/admin` and opt in explicitly (ADR-0007) | — |
+| Observability | `/healthz` liveness and `/api/v1/health` diagnostics (version, environment, uptime) | admin writes are logged, not audited to a table |
+| Resilience | Notion client: 15s timeout, one retry on 429/5xx; per-IP fixed-window policies applied as endpoint metadata by the host — 120/min `default`, 5/min login, 30/min per passthrough, 30/min `admin-write`; health probes are exempt | no circuit breaker; limits are per instance |
 
 ## 7. Deployment topology
 

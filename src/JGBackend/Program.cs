@@ -10,7 +10,13 @@ using Portfolio.Features;
 using Portfolio.Persistence.Contexts;
 
 var builder = WebApplication.CreateBuilder(args);
-builder.Configuration.AddUserSecrets(Assembly.GetExecutingAssembly());
+
+// User Secrets are a local development mechanism. Production and test hosts read
+// configuration from environment variables; loading secrets there would shadow them.
+if (builder.Environment.IsDevelopment())
+{
+    builder.Configuration.AddUserSecrets(Assembly.GetExecutingAssembly());
+}
 
 // Add services to the container.
 builder.Services.AddEndpointsApiExplorer();
@@ -65,7 +71,8 @@ app.MapFeatures(RateLimitPolicies.Default);
 app.MapGroup("api/v1").MapPortfolioFeatures(
     RateLimitPolicies.NotionPassthrough,
     RateLimitPolicies.GithubPassthrough,
-    RateLimitPolicies.Default);
+    RateLimitPolicies.Default,
+    RateLimitPolicies.AdminWrite);
 
 // The admin fallback would otherwise challenge unmatched routes, turning a 404
 // into a 401. The explicit catch-all also matches dotted paths such as

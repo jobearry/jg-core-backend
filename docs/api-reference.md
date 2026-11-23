@@ -14,6 +14,10 @@ OpenAPI: `/swagger` (Development only, or `Swagger:Enabled=true`) · Document: `
 | `GET` | `/api/v1/experience` | none* | `includeProjects` (bool, default `false`) | `ExperienceDto[]` |
 | `GET` | `/api/v1/project` | none* | `includeTools` (bool, default `false`) | `ProjectDto[]` |
 | `GET` | `/api/v1/recommendation` | none* | — | `RecommendationDto[]` |
+| `GET` | `/api/v1/recommendation/{id}` | none* | path `id` | `RecommendationDto` |
+| `POST` | `/api/v1/admin/recommendation` | **Admin** | body `CreateRecommendationRequest` | `201` + `RecommendationDto` + `Location` |
+| `PUT` | `/api/v1/admin/recommendation/{id}` | **Admin** | path `id`, body `UpdateRecommendationRequest` | `200` + `RecommendationDto` |
+| `DELETE` | `/api/v1/admin/recommendation/{id}` | **Admin** | path `id` | `204` |
 | `GET` | `/api/v1/skill` | none* | — | `TechStackDto[]` |
 | `GET` | `/api/v1/overview` | none* | — | `DashboardItemDto[]` |
 | `GET` | `/api/v1/notion/{pageId}` | none* | path `pageId` | `NotionPageDto[]` |
@@ -38,7 +42,8 @@ so a monitor never receives `429`; see `operations.md` §7.
 
 All other endpoints carry a 120 requests/minute per-IP `default` policy. The
 login and external-service passthroughs override it with their stricter 5/minute
-and 30/minute limits described below.
+and 30/minute limits described below. Admin writes use a dedicated 30/minute
+`admin-write` policy, so a busy reader cannot consume the write quota.
 
 ## 2. Authentication
 
@@ -94,7 +99,7 @@ Requires a token. Returns claims from the presented token, grouped by claim type
 ```json
 {
   "sub": ["portfolio-api"],
-  "role": ["User"]
+  "role": ["Admin"]
 }
 ```
 
@@ -199,6 +204,44 @@ Returns testimonials ordered by id ascending.
 `careerPosition` is a **string** and is **nullable**. `"careerPosition": null`
 means the recommender does not want their title published; it is a supported
 state, not missing data.
+
+### `GET /api/v1/recommendation/{id}`
+
+Returns one testimonial with the same shape as the collection. A missing id is
+`404` with `not_found`; `id <= 0` is `400` with `validation_failed`. Like the
+collection, this detail route is anonymous and uses the read-only credential.
+
+#### Admin writes
+
+The three write routes below are the first admin endpoints. They require the
+`role=Admin` service token from `POST /api/v1/auth/login`; an anonymous caller
+gets `401`. They are also the only routes that use the `JDBConnectionWrite`
+credential (`portfolio_writer`, DML only). Public reads still use
+`portfolio_app` and remain anonymous. See
+[ADR-0007](adr/0007-admin-authorization-and-writer-role.md).
+
+| Method | Path | Body | Success | Failure |
+|---|---|---|---|---|
+| `POST` | `/api/v1/admin/recommendation` | `{ "personName", "description", "careerPosition" }` | `201`, dto + `Location: /api/v1/recommendation/{id}` | `400`, `401`, `503` |
+| `PUT` | `/api/v1/admin/recommendation/{id}` | same shape | `200`, dto | `400`, `401`, `404`, `503` |
+| `DELETE` | `/api/v1/admin/recommendation/{id}` | — | `204`, empty | `400`, `401`, `404`, `503` |
+
+- `personName` and `description` are required, non-blank; `personName` is capped
+  at 50 characters by the column. `careerPosition` is optional, but an explicit
+  empty string is invalid — send `null` to hide the title. It is capped at 50
+  characters by the `Role` value object. A null or missing body is also `400`
+  with `validation_failed`.
+- `postedAt` is **not** accepted from the client. Create uses the server clock;
+  update and delete never change it.
+- `POST` returns the generated id in both the body and the `Location` header.
+  The header points at the anonymous `GET /api/v1/recommendation/{id}` detail
+  route, so a client can follow it.
+- A missing row on update/delete is `404` with `not_found`; invalid input is
+  `400` with `validation_failed`; a database outage is `503` with
+  `database_unavailable`.
+- All three use the `admin-write` limiter: 30 requests/minute per client IP.
+- No audit table or audit columns are written. The action is logged with the
+  operation name but no request body or credential.
 
 ### `GET /api/v1/skill`
 
