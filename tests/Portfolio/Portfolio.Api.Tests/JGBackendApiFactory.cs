@@ -104,6 +104,8 @@ public class JGBackendApiFactory : WebApplicationFactory<Program>
 
     public FakeTechStackRepository TechStacks { get; } = new();
 
+    public FakeTechStackCategoryRepository SkillCategories { get; } = new();
+
     public FakeRecommendationRepository Recommendations { get; } = new();
 
     public FakePageContentReader Notion { get; } = new();
@@ -119,6 +121,7 @@ public class JGBackendApiFactory : WebApplicationFactory<Program>
             services.RemoveAll<IExperienceRepository>();
             services.RemoveAll<IProjectRepository>();
             services.RemoveAll<ISkillRepository>();
+            services.RemoveAll<ITechStackCategoryRepository>();
             services.RemoveAll<IRecommendationRepository>();
             services.RemoveAll<IPageContentReader>();
             services.RemoveAll<IGithubRepositoryReader>();
@@ -126,6 +129,7 @@ public class JGBackendApiFactory : WebApplicationFactory<Program>
             services.AddSingleton<IExperienceRepository>(Experience);
             services.AddSingleton<IProjectRepository>(Projects);
             services.AddSingleton<ISkillRepository>(TechStacks);
+            services.AddSingleton<ITechStackCategoryRepository>(SkillCategories);
             services.AddSingleton<IRecommendationRepository>(Recommendations);
             services.AddSingleton<IPageContentReader>(Notion);
             services.AddSingleton<IGithubRepositoryReader>(Github);

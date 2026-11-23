@@ -146,6 +146,14 @@ injected `TimeProvider`, never from request JSON; update goes through
 `Recommendation.ChangeDetails(...)`, so the domain invariant runs on edits as well
 as construction. No audit table is written (ADR-0007).
 
+The `skill` slice follows the same pattern with two ports: `ISkillRepository`
+for the stack aggregate and `ITechStackCategoryRepository` for the shared
+category reference data. A stack write resolves the category by name through the
+read credential, then writes the stack with the category id through the writer.
+`TechStack.UpdateDetails` and `TechStackCategory.Rename` keep the invariants on
+edits. Deletes guard the join-table foreign keys with `409 + conflict`, and the
+anonymous detail GETs make the `201` `Location` followable without a token.
+
 ## 5. Composition root
 
 `src/JGBackend/Program.cs` is the only place the graph is assembled:

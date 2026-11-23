@@ -22,6 +22,7 @@
     <Compile Include="..\Features\Experience\ExperienceEndpointsTests.cs" Link="Features\Experience\ExperienceEndpointsTests.cs" />
     <Compile Include="..\Features\Project\ProjectEndpointsTests.cs" Link="Features\Project\ProjectEndpointsTests.cs" />
     <Compile Include="..\Features\Skill\SkillEndpointsTests.cs" Link="Features\Skill\SkillEndpointsTests.cs" />
+    <Compile Include="..\Features\Skill\SkillAdminEndpointsTests.cs" Link="Features\Skill\SkillAdminEndpointsTests.cs" />
     <Compile Include="..\Features\Recommendation\RecommendationEndpointsTests.cs" Link="Features\Recommendation\RecommendationEndpointsTests.cs" />
     <Compile Include="..\Features\Recommendation\RecommendationAdminEndpointsTests.cs" Link="Features\Recommendation\RecommendationAdminEndpointsTests.cs" />
     <Compile Include="..\Features\Overview\OverviewEndpointsTests.cs" Link="Features\Overview\OverviewEndpointsTests.cs" />

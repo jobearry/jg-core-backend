@@ -35,11 +35,20 @@ public static class DependencyInjection
         services.AddScoped<IExperienceRepository, EfExperienceRepository>();
         services.AddScoped<IProjectRepository, EfProjectRepository>();
         services.AddScoped<ISkillRepository, EfSkillRepository>();
+        services.AddScoped<ITechStackCategoryRepository, EfTechStackCategoryRepository>();
         services.AddScoped<IRecommendationRepository, EfRecommendationRepository>();
 
         services.AddScoped<GetExperienceHandler>();
         services.AddScoped<GetProjectHandler>();
         services.AddScoped<GetSkillHandler>();
+        services.AddScoped<GetSkillByIdHandler>();
+        services.AddScoped<CreateSkillHandler>();
+        services.AddScoped<UpdateSkillHandler>();
+        services.AddScoped<DeleteSkillHandler>();
+        services.AddScoped<GetSkillCategoryByIdHandler>();
+        services.AddScoped<CreateSkillCategoryHandler>();
+        services.AddScoped<UpdateSkillCategoryHandler>();
+        services.AddScoped<DeleteSkillCategoryHandler>();
         services.AddScoped<GetRecommendationHandler>();
         services.AddScoped<GetOverviewHandler>();
         services.AddScoped<GetNotionPageHandler>();
@@ -108,7 +117,7 @@ public static class DependencyInjection
         group.MapExperienceEndpoints();
         group.MapProjectEndpoints();
         group.MapRecommendationEndpoints(adminRateLimitPolicy);
-        group.MapSkillEndpoints();
+        group.MapSkillEndpoints(adminRateLimitPolicy);
         group.MapOverviewEndpoints();
 
         return endpoints;

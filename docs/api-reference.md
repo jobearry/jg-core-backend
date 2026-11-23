@@ -19,6 +19,14 @@ OpenAPI: `/swagger` (Development only, or `Swagger:Enabled=true`) · Document: `
 | `PUT` | `/api/v1/admin/recommendation/{id}` | **Admin** | path `id`, body `UpdateRecommendationRequest` | `200` + `RecommendationDto` |
 | `DELETE` | `/api/v1/admin/recommendation/{id}` | **Admin** | path `id` | `204` |
 | `GET` | `/api/v1/skill` | none* | — | `TechStackDto[]` |
+| `GET` | `/api/v1/skill/{id}` | none* | path `id` | `TechStackDto` |
+| `GET` | `/api/v1/skill-category/{id}` | none* | path `id` | `SkillCategoryDto` |
+| `POST` | `/api/v1/admin/skill` | **Admin** | body `CreateSkillRequest` | `201` + `TechStackDto` + `Location` |
+| `PUT` | `/api/v1/admin/skill/{id}` | **Admin** | path `id`, body `UpdateSkillRequest` | `200` + `TechStackDto` |
+| `DELETE` | `/api/v1/admin/skill/{id}` | **Admin** | path `id` | `204` |
+| `POST` | `/api/v1/admin/skill-category` | **Admin** | body `SkillCategoryRequest` | `201` + `SkillCategoryDto` + `Location` |
+| `PUT` | `/api/v1/admin/skill-category/{id}` | **Admin** | path `id`, body `SkillCategoryRequest` | `200` + `SkillCategoryDto` |
+| `DELETE` | `/api/v1/admin/skill-category/{id}` | **Admin** | path `id` | `204` |
 | `GET` | `/api/v1/overview` | none* | — | `DashboardItemDto[]` |
 | `GET` | `/api/v1/notion/{pageId}` | none* | path `pageId` | `NotionPageDto[]` |
 | `GET` | `/api/v1/notion/{pageId}/count` | none* | path `pageId` | `OverviewItemDto` |
@@ -259,6 +267,33 @@ for.
 On failure, this endpoint uses the same typed error mapping as the other
 portfolio endpoints; a database failure returns `503` with
 `database_unavailable`.
+
+The two detail GETs return the same stack shape, or a category as
+`{ "id", "category" }`. Missing ids are `404`; public reads stay anonymous.
+
+#### Admin writes
+
+The Skill writes use the same `role=Admin` token, `admin-write` limiter and
+writer credential as the recommendation writes above. See
+[ADR-0007](adr/0007-admin-authorization-and-writer-role.md).
+
+| Method | Path | Body | Success | Failure |
+|---|---|---|---|---|
+| `POST` | `/api/v1/admin/skill` | `{ "stackName", "imgSrc", "category" }` | `201`, dto + `Location: /api/v1/skill/{id}` | `400`, `401`, `503` |
+| `PUT` | `/api/v1/admin/skill/{id}` | same shape | `200`, dto | `400`, `401`, `404`, `503` |
+| `DELETE` | `/api/v1/admin/skill/{id}` | — | `204`, empty | `400`, `401`, `404`, `409`, `503` |
+| `POST` | `/api/v1/admin/skill-category` | `{ "category": "..." }` | `201`, dto + `Location: /api/v1/skill-category/{id}` | `400`, `401`, `503` |
+| `PUT` | `/api/v1/admin/skill-category/{id}` | same shape | `200`, dto | `400`, `401`, `404`, `503` |
+| `DELETE` | `/api/v1/admin/skill-category/{id}` | — | `204`, empty | `400`, `401`, `404`, `409`, `503` |
+
+- `stackName` and `category` are required and non-blank; text fields are capped
+  at 255 characters. `imgSrc` is optional and may be `null`.
+- `category` is the **name** of an existing category, not an id. The handler
+  resolves it to the id the row needs; an unknown name is `400 + validation_failed`.
+- `POST` returns a `Location` pointing at the anonymous detail GET, so a client
+  can follow it without a token.
+- Delete is `409 + conflict` when a stack is cited by a project or a category
+  still has stacks. Missing ids are `404`; a database outage is `503`.
 
 ### `GET /api/v1/overview`
 
