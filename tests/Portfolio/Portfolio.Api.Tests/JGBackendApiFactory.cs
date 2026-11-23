@@ -38,6 +38,8 @@ public class JGBackendApiFactory : WebApplicationFactory<Program>
     {
         ["ConnectionStrings__JDBConnection"] =
             "Host=unused;Database=unused;Username=unused;Password=unused",
+        ["ConnectionStrings__JDBConnectionWrite"] =
+            "Host=unused;Database=unused;Username=unused;Password=unused",
         ["Database__AutoMigrate"] = "false",
         ["Jwt__Key"] = SigningKey,
         ["Jwt__Issuer"] = "host-composition-tests",

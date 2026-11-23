@@ -55,7 +55,11 @@ and a token that says so.
 ### `POST /api/v1/auth/login`
 
 Compares `key` against `Jwt:Key` in constant time. On success returns a JWT with
-`sub=portfolio-api` and `role=User`, valid for `Jwt:ExpirationInMinutes`.
+`sub=portfolio-api` and `role=Admin`, valid for `Jwt:ExpirationInMinutes`.
+
+The `Admin` role is also the fallback authorization policy: an endpoint with no
+explicit rule is admin-only. Public reads opt out with `.AllowAnonymous()`, so they
+stay anonymous. See [ADR-0007](adr/0007-admin-authorization-and-writer-role.md).
 
 ```http
 POST /api/v1/auth/login

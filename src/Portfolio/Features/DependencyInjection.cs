@@ -27,6 +27,11 @@ public static class DependencyInjection
         services.AddDbContext<PortfolioContext>(options =>
             options.UseNpgsql(configuration.GetConnectionString("JDBConnection")));
 
+        // Admin writes use a separate DML-only credential. Local development may set
+        // both connection strings to the same value; production must not.
+        services.AddDbContext<PortfolioWriteContext>(options =>
+            options.UseNpgsql(configuration.GetConnectionString("JDBConnectionWrite")));
+
         services.AddScoped<IExperienceRepository, EfExperienceRepository>();
         services.AddScoped<IProjectRepository, EfProjectRepository>();
         services.AddScoped<ISkillRepository, EfSkillRepository>();
