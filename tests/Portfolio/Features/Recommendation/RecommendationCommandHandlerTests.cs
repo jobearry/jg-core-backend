@@ -103,6 +103,66 @@ public class RecommendationCommandHandlerTests
     }
 
     [Fact]
+    public async Task CreateAsync_WithOverlongPersonName_ReturnsValidationError()
+    {
+        var repository = new FakeRecommendationRepository();
+        var handler = new CreateRecommendationHandler(
+            repository,
+            NullLogger<CreateRecommendationHandler>.Instance,
+            new FixedTimeProvider(ServerNow));
+
+        var result = await handler.HandleAsync(
+            new CreateRecommendationRequest(new string('a', 51), "Excellent teammate", null),
+            CancellationToken.None);
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(ErrorKind.Validation, result.Error!.Kind);
+        Assert.Equal("validation_failed", result.Error.Code);
+        Assert.Empty(repository.Recommendations);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    public async Task CreateAsync_WithBlankCareerPosition_ReturnsValidationError(string careerPosition)
+    {
+        var repository = new FakeRecommendationRepository();
+        var handler = new CreateRecommendationHandler(
+            repository,
+            NullLogger<CreateRecommendationHandler>.Instance,
+            new FixedTimeProvider(ServerNow));
+
+        var result = await handler.HandleAsync(
+            new CreateRecommendationRequest("Jane Doe", "Excellent teammate", careerPosition),
+            CancellationToken.None);
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(ErrorKind.Validation, result.Error!.Kind);
+        Assert.Equal("validation_failed", result.Error.Code);
+        Assert.Empty(repository.Recommendations);
+    }
+
+    [Fact]
+    public async Task CreateAsync_WithOverlongCareerPosition_ReturnsValidationError()
+    {
+        var repository = new FakeRecommendationRepository();
+        var handler = new CreateRecommendationHandler(
+            repository,
+            NullLogger<CreateRecommendationHandler>.Instance,
+            new FixedTimeProvider(ServerNow));
+
+        var result = await handler.HandleAsync(
+            new CreateRecommendationRequest(
+                "Jane Doe", "Excellent teammate", new string('a', Role.MaxLength + 1)),
+            CancellationToken.None);
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(ErrorKind.Validation, result.Error!.Kind);
+        Assert.Equal("validation_failed", result.Error.Code);
+        Assert.Empty(repository.Recommendations);
+    }
+
+    [Fact]
     public async Task CreateAsync_WithNullRequest_ReturnsValidationError()
     {
         var handler = new CreateRecommendationHandler(
@@ -136,6 +196,25 @@ public class RecommendationCommandHandlerTests
         Assert.False(result.IsSuccess);
         Assert.Equal(ErrorKind.Infrastructure, result.Error!.Kind);
         Assert.Equal("database_unavailable", result.Error.Code);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    public async Task UpdateAsync_WithInvalidId_ReturnsValidationError(int id)
+    {
+        var handler = new UpdateRecommendationHandler(
+            new FakeRecommendationRepository(),
+            NullLogger<UpdateRecommendationHandler>.Instance);
+
+        var result = await handler.HandleAsync(
+            id,
+            new UpdateRecommendationRequest("Jane Doe", "Excellent teammate", null),
+            CancellationToken.None);
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(ErrorKind.Validation, result.Error!.Kind);
+        Assert.Equal("validation_failed", result.Error.Code);
     }
 
     [Fact]
@@ -186,6 +265,22 @@ public class RecommendationCommandHandlerTests
             NullLogger<UpdateRecommendationHandler>.Instance);
 
         var result = await handler.HandleAsync(1, null!, CancellationToken.None);
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(ErrorKind.Validation, result.Error!.Kind);
+        Assert.Equal("validation_failed", result.Error.Code);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    public async Task DeleteAsync_WithInvalidId_ReturnsValidationError(int id)
+    {
+        var handler = new DeleteRecommendationHandler(
+            new FakeRecommendationRepository(),
+            NullLogger<DeleteRecommendationHandler>.Instance);
+
+        var result = await handler.HandleAsync(id, CancellationToken.None);
 
         Assert.False(result.IsSuccess);
         Assert.Equal(ErrorKind.Validation, result.Error!.Kind);
