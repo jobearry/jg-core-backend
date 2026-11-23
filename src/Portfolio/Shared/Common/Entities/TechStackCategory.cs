@@ -13,7 +13,7 @@ public class TechStackCategory
 {
     public int Id { get; }
 
-    public string Category { get; }
+    public string Category { get; private set; }
 
     public TechStackCategory(int id, string category)
     {
@@ -21,6 +21,14 @@ public class TechStackCategory
             throw new ArgumentException("Category name cannot be empty.", nameof(category));
 
         Id = id;
+        Category = category;
+    }
+
+    public void Rename(string category)
+    {
+        if (string.IsNullOrWhiteSpace(category))
+            throw new ArgumentException("Category name cannot be empty.", nameof(category));
+
         Category = category;
     }
 }

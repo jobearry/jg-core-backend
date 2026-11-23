@@ -56,12 +56,157 @@ public sealed class FakeTechStackRepository : ISkillRepository
 
     public Exception? Failure { get; set; }
 
+    public bool IsUsedByProjects { get; set; }
+
     public Task<List<TechStack>> GetAllAsync(CancellationToken cancellationToken) => Respond();
+
+    public Task<TechStack?> GetByIdAsync(int id, CancellationToken cancellationToken)
+    {
+        if (Failure is not null)
+        {
+            return Task.FromException<TechStack?>(Failure);
+        }
+
+        return Task.FromResult(TechStacks.FirstOrDefault(stack => stack.Id == id));
+    }
+
+    public Task<TechStack> AddAsync(
+        TechStack stack, int categoryId, CancellationToken cancellationToken)
+    {
+        if (Failure is not null)
+        {
+            return Task.FromException<TechStack>(Failure);
+        }
+
+        var created = new TechStack(
+            TechStacks.Count == 0 ? 1 : TechStacks.Max(item => item.Id) + 1,
+            stack.StackName,
+            stack.ImgSrc,
+            stack.Category);
+        TechStacks.Add(created);
+        return Task.FromResult(created);
+    }
+
+    public Task<TechStack> UpdateAsync(
+        TechStack stack, int categoryId, CancellationToken cancellationToken)
+    {
+        if (Failure is not null)
+        {
+            return Task.FromException<TechStack>(Failure);
+        }
+
+        var index = TechStacks.FindIndex(item => item.Id == stack.Id);
+        if (index >= 0)
+        {
+            TechStacks[index] = stack;
+        }
+
+        return Task.FromResult(stack);
+    }
+
+    public Task<bool> IsUsedByProjectsAsync(int stackId, CancellationToken cancellationToken) =>
+        Failure is null
+            ? Task.FromResult(IsUsedByProjects)
+            : Task.FromException<bool>(Failure);
+
+    public Task DeleteAsync(TechStack stack, CancellationToken cancellationToken)
+    {
+        if (Failure is not null)
+        {
+            return Task.FromException(Failure);
+        }
+
+        TechStacks.RemoveAll(item => item.Id == stack.Id);
+        return Task.CompletedTask;
+    }
 
     private Task<List<TechStack>> Respond() =>
         Failure is null
             ? Task.FromResult(TechStacks)
             : Task.FromException<List<TechStack>>(Failure);
+}
+
+public sealed class FakeTechStackCategoryRepository : ITechStackCategoryRepository
+{
+    public List<TechStackCategory> Categories { get; } = new();
+
+    public Exception? Failure { get; set; }
+
+    public bool HasStacks { get; set; }
+
+    public Task<List<TechStackCategory>> GetAllAsync(CancellationToken cancellationToken) =>
+        Failure is null
+            ? Task.FromResult(Categories)
+            : Task.FromException<List<TechStackCategory>>(Failure);
+
+    public Task<TechStackCategory?> GetByIdAsync(int id, CancellationToken cancellationToken)
+    {
+        if (Failure is not null)
+        {
+            return Task.FromException<TechStackCategory?>(Failure);
+        }
+
+        return Task.FromResult(Categories.FirstOrDefault(category => category.Id == id));
+    }
+
+    public Task<TechStackCategory?> GetByNameAsync(
+        string category, CancellationToken cancellationToken)
+    {
+        if (Failure is not null)
+        {
+            return Task.FromException<TechStackCategory?>(Failure);
+        }
+
+        return Task.FromResult(Categories.FirstOrDefault(item => item.Category == category));
+    }
+
+    public Task<TechStackCategory> AddAsync(
+        TechStackCategory category, CancellationToken cancellationToken)
+    {
+        if (Failure is not null)
+        {
+            return Task.FromException<TechStackCategory>(Failure);
+        }
+
+        var created = new TechStackCategory(
+            Categories.Count == 0 ? 1 : Categories.Max(item => item.Id) + 1,
+            category.Category);
+        Categories.Add(created);
+        return Task.FromResult(created);
+    }
+
+    public Task<TechStackCategory> UpdateAsync(
+        TechStackCategory category, CancellationToken cancellationToken)
+    {
+        if (Failure is not null)
+        {
+            return Task.FromException<TechStackCategory>(Failure);
+        }
+
+        var index = Categories.FindIndex(item => item.Id == category.Id);
+        if (index >= 0)
+        {
+            Categories[index] = category;
+        }
+
+        return Task.FromResult(category);
+    }
+
+    public Task<bool> HasStacksAsync(int categoryId, CancellationToken cancellationToken) =>
+        Failure is null
+            ? Task.FromResult(HasStacks)
+            : Task.FromException<bool>(Failure);
+
+    public Task DeleteAsync(TechStackCategory category, CancellationToken cancellationToken)
+    {
+        if (Failure is not null)
+        {
+            return Task.FromException(Failure);
+        }
+
+        Categories.RemoveAll(item => item.Id == category.Id);
+        return Task.CompletedTask;
+    }
 }
 
 /// <summary>

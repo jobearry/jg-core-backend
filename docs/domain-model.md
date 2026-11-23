@@ -77,9 +77,8 @@ only thing that owns the relationship: a project may exist with no experience, a
 `Experience.Projects` is a read-only projection of the projects that point at it.
 `TechStack` is shared reference data, so a project cites a `TechStackRef` (id + name +
 image + category) rather than holding the entity — one project cannot mutate a stack
-every other project cites. No write endpoint exists yet, so the rule is currently
-enforced by shape (read-only collections, `AttachToExperience`, no write methods on any
-repository), not by a transaction.
+every other project cites. Admin writes are added slice by slice under ADR-0007;
+`Project` remains the only write entry point for projects.
 
 ## 4. Entities
 
@@ -87,8 +86,8 @@ repository), not by a transaction.
 |---|---|---|---|---|
 | `Experience` | `int Id` (DB identity) | `(id, company, period, role)` | `Id`/`Company` get-only; `Duration`/`Role`/`Description`/`Responsibility`/`Type` private set; `Projects` `IReadOnlyList` + `ReplaceProjects` | `Company` is **required** (3.1a); `Role` is **optional** — `null` means the role is deliberately undeclared; `Role`/`Company`/`Period` rules via VOs |
 | `Project` | `int Id` (get-only) | `(id, projectName)` or `(id, experienceId, projectName, description, contribution, techStacks)` | id/name get-only; the rest private set through `Update…`/`AttachToExperience`/`ReplaceTechStacks` | **name non-blank** (3.3); holds `IReadOnlyList<TechStackRef>`, never `TechStack` entities (3.4). `Period` was removed on 2026-10-22: it had no column and no mapping, so it was always `null` |
-| `TechStack` | `int Id` (get-only) | `(id, stackName, imgSrc, category)` | name/img get-only; category private via `SetCategory` | **name non-blank**; **category non-blank when present**, `null` allowed (3.3) |
-| `TechStackCategory` | `int Id` (get-only) | `(id, category)` | both get-only | **name non-blank** (3.3) |
+| `TechStack` | `int Id` (get-only) | `(id, stackName, imgSrc, category)` | name/img private via `UpdateDetails`; category private via `SetCategory` | **name non-blank**; **category non-blank when present**, `null` allowed (3.3) |
+| `TechStackCategory` | `int Id` (get-only) | `(id, category)` | name private via `Rename` | **name non-blank** (3.3) |
 | `Recommendation` | `int Id` (get-only) | `(id, personName, description, careerPosition, postedAt)` | `Id`/`PostedAt` get-only; name/description/career position private via `ChangeDetails` | `PersonName` and `Description` **non-blank** (3.3, closes KI-041; also enforced on edit by admin CRUD); `CareerPosition` is **optional** — `null` means it is deliberately not shown |
 
 Behaviour that exists:
@@ -98,8 +97,9 @@ Behaviour that exists:
 - `Experience.ReplaceProjects(IEnumerable<Project>?)` — copies the argument; `null` means none.
 - `Project.AttachToExperience`, `UpdateDescription`, `UpdateContribution`, `ReplaceTechStacks`.
 - `Recommendation.ChangeDetails(string, string, Role?)` — the admin edit path; it preserves `PostedAt`.
-- `TechStack.SetCategory(string?)` — rejects blank, allows `null`.
-- Nothing else. `Id`, `ProjectName`, `StackName`, `Category` and `PostedAt` cannot be changed after construction; recommendation name/description can be changed only through `ChangeDetails`.
+- `TechStack.SetCategory(string?)` — rejects blank, allows `null`; `TechStack.UpdateDetails(name, imgSrc)` — rejects a blank name.
+- `TechStackCategory.Rename(string)` — rejects a blank name.
+- Nothing else. `Id`, `ProjectName` and `PostedAt` are fixed; editable fields move only through the methods above, `ChangeDetails`, or the `Project` update methods.
 
 ## 5. Value objects
 

@@ -61,6 +61,42 @@ public class TechStackTests
     }
 
     [Fact]
+    public void UpdateDetails_ChangesNameAndImage_KeepsIdAndCategory()
+    {
+        var stack = new TechStack(2, "C#", "https://example.test/csharp.svg", "Backend");
+
+        stack.UpdateDetails("C# 12", "https://example.test/csharp12.svg");
+
+        Assert.Equal(2, stack.Id);
+        Assert.Equal("C# 12", stack.StackName);
+        Assert.Equal("https://example.test/csharp12.svg", stack.ImgSrc);
+        Assert.Equal("Backend", stack.Category);
+    }
+
+    [Fact]
+    public void UpdateDetails_WithNoImage_ClearsTheImage()
+    {
+        var stack = new TechStack(2, "C#", "csharp.svg", "Backend");
+
+        stack.UpdateDetails("C# 12", null);
+
+        Assert.Null(stack.ImgSrc);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void UpdateDetails_WithBlankName_ThrowsAndKeepsTheOldValues(string? stackName)
+    {
+        var stack = new TechStack(2, "C#", "csharp.svg", "Backend");
+
+        Assert.Throws<ArgumentException>(() => stack.UpdateDetails(stackName!, "new.svg"));
+        Assert.Equal("C#", stack.StackName);
+        Assert.Equal("csharp.svg", stack.ImgSrc);
+    }
+
+    [Fact]
     public void DomainType_DoesNotCarryCreatedAt()
     {
         Assert.Null(typeof(TechStack).GetProperty("CreatedAt"));

@@ -13,12 +13,17 @@ public static class TechStackMapper
             source.ImgSrc,
             MappingHelpers.ToCategoryName(source.TechStackCategory));
 
-    public static TechStackEntity ToEntity(TechStack source) =>
+    /// <summary>
+    /// The category id is a separate argument because the domain holds the category
+    /// <em>name</em>; mapping a string into the int foreign key is the bug this guards.
+    /// </summary>
+    public static TechStackEntity ToEntity(TechStack source, int categoryId) =>
         new()
         {
             Id = source.Id,
             StackName = source.StackName,
-            ImgSrc = source.ImgSrc
+            ImgSrc = source.ImgSrc,
+            TechStackCategoryId = categoryId
         };
 
     internal static TechStackRef ToRef(ProjectTechStack source) =>
