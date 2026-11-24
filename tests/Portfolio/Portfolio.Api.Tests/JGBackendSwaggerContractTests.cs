@@ -44,6 +44,7 @@ public sealed class JGBackendSwaggerContractTests : IClassFixture<SwaggerEnabled
         foreach (var path in new[]
         {
             "/api/v1/experience",
+            "/api/v1/experience/{id}",
             "/api/v1/project",
             "/api/v1/project/{id}",
             "/api/v1/recommendation",
@@ -59,6 +60,9 @@ public sealed class JGBackendSwaggerContractTests : IClassFixture<SwaggerEnabled
         Assert.Equal("Portfolio - Write", FirstTag(paths, "/api/v1/admin/recommendation", "post"));
         Assert.Equal("Portfolio - Write", FirstTag(paths, "/api/v1/admin/recommendation/{id}", "put"));
         Assert.Equal("Portfolio - Write", FirstTag(paths, "/api/v1/admin/recommendation/{id}", "delete"));
+        Assert.Equal("Portfolio - Write", FirstTag(paths, "/api/v1/admin/experience", "post"));
+        Assert.Equal("Portfolio - Write", FirstTag(paths, "/api/v1/admin/experience/{id}", "put"));
+        Assert.Equal("Portfolio - Write", FirstTag(paths, "/api/v1/admin/experience/{id}", "delete"));
         Assert.Equal("Portfolio - Write", FirstTag(paths, "/api/v1/admin/project", "post"));
         Assert.Equal("Portfolio - Write", FirstTag(paths, "/api/v1/admin/project/{id}", "put"));
         Assert.Equal("Portfolio - Write", FirstTag(paths, "/api/v1/admin/project/{id}", "delete"));

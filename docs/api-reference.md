@@ -12,6 +12,10 @@ OpenAPI: `/swagger` (Development only, or `Swagger:Enabled=true`) · Document: `
 | `GET` | `/healthz` | none | — | liveness probe (`200` when alive) |
 | `GET` | `/api/v1/health` | none | — | `status`, `version`, `environment`, `timestamp`, `uptimeSeconds` |
 | `GET` | `/api/v1/experience` | none* | `includeProjects` (bool, default `false`) | `ExperienceDto[]` |
+| `GET` | `/api/v1/experience/{id}` | none* | path `id` | `ExperienceDto` |
+| `POST` | `/api/v1/admin/experience` | **Admin** | body `CreateExperienceRequest` | `201` + `ExperienceDto` + `Location` |
+| `PUT` | `/api/v1/admin/experience/{id}` | **Admin** | path `id`, body `UpdateExperienceRequest` | `200` + `ExperienceDto` |
+| `DELETE` | `/api/v1/admin/experience/{id}` | **Admin** | path `id` | `204` |
 | `GET` | `/api/v1/project` | none* | `includeTools` (bool, default `false`) | `ProjectDto[]` |
 | `GET` | `/api/v1/project/{id}` | none* | path `id` | `ProjectDto` |
 | `POST` | `/api/v1/admin/project` | **Admin** | body `CreateProjectRequest` | `201` + `ProjectDto` + `Location` |
@@ -180,6 +184,33 @@ Notes:
   `20261022064321_AddExperienceFinishedAt`); the existing rows still need their
   end dates backfilled, which is why past roles currently show a growing
   `durationMonths`.
+
+`GET /api/v1/experience/{id}` returns the same shape including nested projects.
+Missing ids are `404`; public reads stay anonymous.
+
+#### Admin writes
+
+Experience writes use the same `role=Admin` token, `admin-write` limiter and
+writer credential as the other slices. See
+[ADR-0007](adr/0007-admin-authorization-and-writer-role.md).
+
+| Method | Path | Body | Success | Failure |
+|---|---|---|---|---|
+| `POST` | `/api/v1/admin/experience` | `{ "company", "role", "startedAt", "finishedAt", "description", "responsibility", "type" }` | `201`, dto + `Location: /api/v1/experience/{id}` | `400`, `401`, `503` |
+| `PUT` | `/api/v1/admin/experience/{id}` | same shape | `200`, dto | `400`, `401`, `404`, `503` |
+| `DELETE` | `/api/v1/admin/experience/{id}` | — | `204`, empty | `400`, `401`, `404`, `503` |
+
+- `company` is required, non-blank and at most 255 characters; `role` is optional
+  and blank input means "undeclared" (`null` on the wire). `type` is at most 20
+  characters. `description` and `responsibility` are unbounded.
+- `startedAt` must not be in the future and `finishedAt` must not be before
+  `startedAt`. All value-object limits are checked before the write, so bad input
+  is `400 + validation_failed`, never `500`.
+- `projects` is a read-only projection (ADR-0003). It is never changed by these
+  routes; deleting an experience leaves its projects as standalone rows via
+  `ON DELETE SET NULL`.
+- `POST` returns a `Location` pointing at the anonymous detail GET. Missing
+  ids are `404 + not_found`; a database outage is `503`.
 
 ### `GET /api/v1/project?includeTools=false`
 

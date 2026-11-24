@@ -39,6 +39,10 @@ public static class DependencyInjection
         services.AddScoped<IRecommendationRepository, EfRecommendationRepository>();
 
         services.AddScoped<GetExperienceHandler>();
+        services.AddScoped<GetExperienceByIdHandler>();
+        services.AddScoped<CreateExperienceHandler>();
+        services.AddScoped<UpdateExperienceHandler>();
+        services.AddScoped<DeleteExperienceHandler>();
         services.AddScoped<GetProjectHandler>();
         services.AddScoped<GetProjectByIdHandler>();
         services.AddScoped<CreateProjectHandler>();
@@ -119,7 +123,7 @@ public static class DependencyInjection
 
         group.MapNotionEndpoints(notionRateLimitPolicy);
         group.MapGithubEndpoints(githubRateLimitPolicy);
-        group.MapExperienceEndpoints();
+        group.MapExperienceEndpoints(adminRateLimitPolicy);
         group.MapProjectEndpoints(adminRateLimitPolicy);
         group.MapRecommendationEndpoints(adminRateLimitPolicy);
         group.MapSkillEndpoints(adminRateLimitPolicy);
