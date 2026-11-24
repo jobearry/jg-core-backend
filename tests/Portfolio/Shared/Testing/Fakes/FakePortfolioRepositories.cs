@@ -156,6 +156,32 @@ public sealed class FakeProjectRepository : IProjectRepository
         return Task.FromResult(project);
     }
 
+    public Task<Project> ReplaceTechStacksAsync(
+        Project project, CancellationToken cancellationToken)
+    {
+        if (Failure is not null)
+        {
+            return Task.FromException<Project>(Failure);
+        }
+
+        var index = Projects.FindIndex(item => item.Id == project.Id);
+        if (index < 0)
+        {
+            return Task.FromException<Project>(
+                new InvalidOperationException($"Project {project.Id} does not exist."));
+        }
+
+        var updated = new Project(
+            project.Id,
+            Projects[index].ExperienceId,
+            Projects[index].ProjectName,
+            Projects[index].Description,
+            Projects[index].Contribution,
+            project.TechStacks);
+        Projects[index] = updated;
+        return Task.FromResult(updated);
+    }
+
     public Task DeleteAsync(Project project, CancellationToken cancellationToken)
     {
         if (Failure is not null)

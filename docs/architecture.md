@@ -155,10 +155,12 @@ edits. Deletes guard the join-table foreign keys with `409 + conflict`, and the
 anonymous detail GETs make the `201` `Location` followable without a token.
 
 The `project` slice keeps `IProjectRepository` as its single write entry point
-(ADR-0003). Its write methods cover `ProjectName`, `Description` and
-`Contribution`; `ExperienceId` and `ProjectTechStacks` stay out of this slice.
-The adapter marks only the root row modified on update, so a project edit cannot
-rewrite the many-to-many rows it does not own.
+(ADR-0003). Its scalar write methods cover `ProjectName`, `Description` and
+`Contribution`; `ExperienceId` stays out. The adapter marks only the root row
+modified on update, so a project edit cannot rewrite the many-to-many rows.
+The join table has one explicit `ReplaceTechStacksAsync`: it loads the tracked
+join rows, swaps the collection and saves once. Only the two foreign keys are
+written — names, images and categories stay on the shared TechStack row.
 
 The `experience` slice writes every scalar field — company, dates, role,
 description, responsibility and type — through `IExperienceRepository`. Its

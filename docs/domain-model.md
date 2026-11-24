@@ -98,6 +98,7 @@ Behaviour that exists:
 - `Experience.ReplaceProjects(IEnumerable<Project>?)` — copies the argument; `null` means none.
 - `Project.AttachToExperience`, `UpdateDescription`, `UpdateContribution`, `ReplaceTechStacks`.
 - `Project.UpdateDetails(string, string?, string?)` — the admin edit path; it never touches the experience link or the stack refs.
+- `Project.ReplaceTechStacks(IEnumerable<TechStackRef>?)` — the admin join path. The refs must already be resolved from shared stack rows, so only their ids reach `project_tech_stack`.
 - `Recommendation.ChangeDetails(string, string, Role?)` — the admin edit path; it preserves `PostedAt`.
 - `TechStack.SetCategory(string?)` — rejects blank, allows `null`; `TechStack.UpdateDetails(name, imgSrc)` — rejects a blank name.
 - `TechStackCategory.Rename(string)` — rejects a blank name.

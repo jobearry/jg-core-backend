@@ -18,5 +18,12 @@ public interface IProjectRepository : IRepository<DomainProject>
 
     Task<DomainProject> UpdateAsync(DomainProject project, CancellationToken cancellationToken);
 
+    /// <summary>
+    /// Replaces the project_tech_stack rows for this project. The refs must already
+    /// have been resolved from the shared stack rows, so no name or category is written.
+    /// </summary>
+    Task<DomainProject> ReplaceTechStacksAsync(
+        DomainProject project, CancellationToken cancellationToken);
+
     Task DeleteAsync(DomainProject project, CancellationToken cancellationToken);
 }

@@ -64,4 +64,34 @@ public class ProjectMapperTests
         Assert.Equal("All of it", entity.Contribution);
         Assert.Empty(entity.ProjectTechStacks);
     }
+
+    /// <summary>
+    /// The join slice's write direction. Only the two foreign keys are written: the
+    /// names, image and category live on the shared TechStack row, never on the join.
+    /// </summary>
+    [Fact]
+    public void Map_Project_ToJoinEntities_UsesOnlyForeignKeys()
+    {
+        var project = new Project(
+            7,
+            null,
+            "Portfolio API",
+            null,
+            null,
+            new[]
+            {
+                new TechStackRef(2, "C#", null, "Backend"),
+                new TechStackRef(5, "SQL", null, "Data"),
+                new TechStackRef(2, "C#", null, "Backend")
+            });
+
+        var joins = ProjectMapper.ToJoinEntities(project).ToList();
+
+        // The composite primary key cannot hold a duplicate; the mapper drops it.
+        Assert.Equal(2, joins.Count);
+        Assert.Equal(new[] { 7, 7 }, joins.Select(join => join.ProjectId));
+        Assert.Equal(new[] { 2, 5 }, joins.Select(join => join.TechStackId));
+        Assert.All(joins, join => Assert.Null(join.Project));
+        Assert.All(joins, join => Assert.Null(join.TechStack));
+    }
 }

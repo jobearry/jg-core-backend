@@ -10,7 +10,7 @@ namespace Portfolio.Features.Project;
 /// <summary>
 /// EF adapter for the Project port. Reads (including the anonymous detail lookups and
 /// pre-write checks) use the read-only context; admin writes use the DML credential.
-/// The many-to-many rows are not touched here — that relationship gets its own slice.
+/// The many-to-many rows have one explicit method; the scalar update leaves them alone.
 /// </summary>
 public sealed class EfProjectRepository
     : BasePortfolioRepository<DomainProject, ProjectEntity>, IProjectRepository
@@ -70,6 +70,28 @@ public sealed class EfProjectRepository
         await _writeContext.SaveChangesAsync(cancellationToken);
 
         return ProjectMapper.ToDomain(entity);
+    }
+
+    public async Task<DomainProject> ReplaceTechStacksAsync(
+        DomainProject project, CancellationToken cancellationToken)
+    {
+        var entity = await _writeContext.Projects
+            .Include(item => item.ProjectTechStacks)
+            .SingleAsync(item => item.Id == project.Id, cancellationToken);
+
+        entity.ProjectTechStacks.Clear();
+        foreach (var join in ProjectMapper.ToJoinEntities(project))
+        {
+            entity.ProjectTechStacks.Add(join);
+        }
+
+        await _writeContext.SaveChangesAsync(cancellationToken);
+
+        // The tracked joins have no TechStack navigation, so the returned DTO is
+        // rebuilt through the read context where the category is loaded.
+        return await GetByIdAsync(project.Id, cancellationToken)
+            ?? throw new InvalidOperationException(
+                $"Project {project.Id} disappeared after its tech stacks were saved.");
     }
 
     public async Task DeleteAsync(
