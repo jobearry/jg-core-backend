@@ -15,7 +15,7 @@ public class Experience
     /// always names a company — use "Self-employed" or "Contract — NDA" rather than
     /// leaving it empty.
     /// </summary>
-    public Company Company { get; }
+    public Company Company { get; private set; }
 
     public Period Duration { get; private set; }
 
@@ -62,6 +62,33 @@ public class Experience
     public void UpdateResponsibility(string? responsibility) => Responsibility = responsibility;
 
     public void UpdateType(string? type) => Type = type;
+
+    /// <summary>
+    /// The admin edit path. Every value object is built before any field is assigned,
+    /// so a rejected company, period or role leaves the aggregate untouched. A blank
+    /// role means "undeclared", matching the persistence mapping. The read-only
+    /// <see cref="Projects"/> projection is not part of this command (ADR-0003).
+    /// </summary>
+    public void UpdateDetails(
+        string company,
+        DateTime? startedAt,
+        DateTime? finishedAt,
+        string? role,
+        string? description,
+        string? responsibility,
+        string? type)
+    {
+        var updatedCompany = new Company(company);
+        var updatedDuration = new Period(startedAt, finishedAt);
+        var updatedRole = string.IsNullOrWhiteSpace(role) ? null : new Role(role);
+
+        Company = updatedCompany;
+        Duration = updatedDuration;
+        Role = updatedRole;
+        Description = description;
+        Responsibility = responsibility;
+        Type = type;
+    }
 
     /// <summary>
     /// Replaces the projects. The argument is copied, so the caller's list cannot mutate

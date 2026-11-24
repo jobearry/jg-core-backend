@@ -32,6 +32,70 @@ internal sealed class FakeExperienceRepository : IExperienceRepository
     public Task<List<DomainExperience>> GetAllWithProjectsAsync(CancellationToken cancellationToken) =>
         Respond(WithProjects, cancellationToken);
 
+    public Task<DomainExperience?> GetByIdAsync(int id, CancellationToken cancellationToken)
+    {
+        LastCancellationToken = cancellationToken;
+
+        return Failure is not null
+            ? Task.FromException<DomainExperience?>(Failure)
+            : Task.FromResult(All.FirstOrDefault(experience => experience.Id == id));
+    }
+
+    public Task<DomainExperience> AddAsync(
+        DomainExperience experience, CancellationToken cancellationToken)
+    {
+        LastCancellationToken = cancellationToken;
+        if (Failure is not null)
+        {
+            return Task.FromException<DomainExperience>(Failure);
+        }
+
+        var created = WithId(
+            All.Count == 0 ? 1 : All.Max(item => item.Id) + 1, experience);
+        All.Add(created);
+        return Task.FromResult(created);
+    }
+
+    public Task<DomainExperience> UpdateAsync(
+        DomainExperience experience, CancellationToken cancellationToken)
+    {
+        LastCancellationToken = cancellationToken;
+        if (Failure is not null)
+        {
+            return Task.FromException<DomainExperience>(Failure);
+        }
+
+        var index = All.FindIndex(item => item.Id == experience.Id);
+        if (index >= 0)
+        {
+            All[index] = WithId(experience.Id, experience);
+        }
+
+        return Task.FromResult(experience);
+    }
+
+    public Task DeleteAsync(DomainExperience experience, CancellationToken cancellationToken)
+    {
+        LastCancellationToken = cancellationToken;
+        if (Failure is not null)
+        {
+            return Task.FromException(Failure);
+        }
+
+        All.RemoveAll(item => item.Id == experience.Id);
+        return Task.CompletedTask;
+    }
+
+    private static DomainExperience WithId(int id, DomainExperience source)
+    {
+        var copy = new DomainExperience(id, source.Company, source.Duration, source.Role);
+        copy.UpdateDescription(source.Description);
+        copy.UpdateResponsibility(source.Responsibility);
+        copy.UpdateType(source.Type);
+        copy.ReplaceProjects(source.Projects);
+        return copy;
+    }
+
     private Task<List<DomainExperience>> Respond(
         List<DomainExperience> data,
         CancellationToken cancellationToken)

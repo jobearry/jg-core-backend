@@ -160,6 +160,15 @@ The `project` slice keeps `IProjectRepository` as its single write entry point
 The adapter marks only the root row modified on update, so a project edit cannot
 rewrite the many-to-many rows it does not own.
 
+The `experience` slice writes every scalar field — company, dates, role,
+description, responsibility and type — through `IExperienceRepository`. Its
+edit method rebuilds `Company`, `Period` and `Role` so their invariants run on
+edits, and builds all three before assigning anything so a rejected value leaves
+the aggregate unchanged. `Experience.Projects` is a read-only projection of rows
+owned by the Project slice (ADR-0003): the adapter marks only the root row
+modified, and deleting an experience leaves its projects as standalone rows via
+`ON DELETE SET NULL`.
+
 ## 5. Composition root
 
 `src/JGBackend/Program.cs` is the only place the graph is assembled:

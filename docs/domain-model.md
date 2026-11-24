@@ -84,7 +84,7 @@ every other project cites. Admin writes are added slice by slice under ADR-0007;
 
 | Entity | Identity | Constructor | Mutability | Invariants enforced |
 |---|---|---|---|---|
-| `Experience` | `int Id` (DB identity) | `(id, company, period, role)` | `Id`/`Company` get-only; `Duration`/`Role`/`Description`/`Responsibility`/`Type` private set; `Projects` `IReadOnlyList` + `ReplaceProjects` | `Company` is **required** (3.1a); `Role` is **optional** — `null` means the role is deliberately undeclared; `Role`/`Company`/`Period` rules via VOs |
+| `Experience` | `int Id` (DB identity) | `(id, company, period, role)` | `Id` get-only; `Company`/`Duration`/`Role`/`Description`/`Responsibility`/`Type` private set through `UpdateDetails`; `Projects` `IReadOnlyList` + `ReplaceProjects` | `Company` is **required** (3.1a, also enforced on edit by admin CRUD); `Role` is **optional** — `null` means the role is deliberately undeclared (a blank edit input clears it); `Role`/`Company`/`Period` rules via VOs on create and edit |
 | `Project` | `int Id` (get-only) | `(id, projectName)` or `(id, experienceId, projectName, description, contribution, techStacks)` | id get-only; name/description/contribution private set through `UpdateDetails`; experience link and refs private through `AttachToExperience`/`ReplaceTechStacks` | **name non-blank** (3.3, also enforced on edit by admin CRUD); holds `IReadOnlyList<TechStackRef>`, never `TechStack` entities (3.4). `Period` was removed on 2026-10-22: it had no column and no mapping, so it was always `null` |
 | `TechStack` | `int Id` (get-only) | `(id, stackName, imgSrc, category)` | name/img private via `UpdateDetails`; category private via `SetCategory` | **name non-blank**; **category non-blank when present**, `null` allowed (3.3) |
 | `TechStackCategory` | `int Id` (get-only) | `(id, category)` | name private via `Rename` | **name non-blank** (3.3) |
@@ -93,6 +93,7 @@ every other project cites. Admin writes are added slice by slice under ADR-0007;
 Behaviour that exists:
 
 - `Experience.ChangeRole(Role?)` — sets or clears the role; `null` means "not declared".
+- `Experience.UpdateDetails(company, startedAt, finishedAt, role, description, responsibility, type)` — the admin edit path. It builds every value object before assigning anything, so a rejected company, period or role leaves the aggregate unchanged; the `Projects` projection is never touched.
 - `Experience.UpdateDescription` / `UpdateResponsibility` / `UpdateType` — the last two were added by 3.3; before, the entity could not express its own fields and AutoMapper wrote them by reflection.
 - `Experience.ReplaceProjects(IEnumerable<Project>?)` — copies the argument; `null` means none.
 - `Project.AttachToExperience`, `UpdateDescription`, `UpdateContribution`, `ReplaceTechStacks`.
