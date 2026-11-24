@@ -147,6 +147,89 @@ public class ProjectAdminEndpointsTests : IClassFixture<JGBackendApiFactory>
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
 
+    [Fact]
+    public async Task AdminReplaceProjectTechStacks_WithToken_Returns200AndResolvedSnapshots()
+    {
+        using var client = _factory.CreateAdminClient();
+
+        var response = await client.PutAsJsonAsync(
+            $"{ProjectPath}/7/tech-stacks", new { techStackIds = new[] { 2, 5 } });
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal(7, body.GetProperty("id").GetInt32());
+
+        var stacks = body.GetProperty("techStacks").EnumerateArray().ToList();
+        Assert.Equal(2, stacks.Count);
+        Assert.Equal("C#", stacks[0].GetProperty("stackName").GetString());
+        Assert.Equal("https://example.test/csharp.svg", stacks[0].GetProperty("imgSrc").GetString());
+        Assert.Equal("Backend", stacks[0].GetProperty("category").GetString());
+        Assert.Equal("SQL", stacks[1].GetProperty("stackName").GetString());
+    }
+
+    [Fact]
+    public async Task AdminReplaceProjectTechStacks_WithEmptyList_ClearsTheStacks()
+    {
+        using var client = _factory.CreateAdminClient();
+
+        var response = await client.PutAsJsonAsync(
+            $"{ProjectPath}/7/tech-stacks", new { techStackIds = Array.Empty<int>() });
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Empty(body.GetProperty("techStacks").EnumerateArray());
+        Assert.Empty(Assert.Single(_factory.Projects.Projects).TechStacks);
+    }
+
+    [Fact]
+    public async Task AdminReplaceProjectTechStacks_WithoutToken_Returns401()
+    {
+        using var client = _factory.CreateClient();
+
+        var response = await client.PutAsJsonAsync(
+            $"{ProjectPath}/7/tech-stacks", new { techStackIds = new[] { 2 } });
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task AdminReplaceProjectTechStacks_WithUnknownStackId_Returns400()
+    {
+        using var client = _factory.CreateAdminClient();
+
+        var response = await client.PutAsJsonAsync(
+            $"{ProjectPath}/7/tech-stacks", new { techStackIds = new[] { 2, 99 } });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+
+        var problem = await response.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal("validation_failed", problem.GetProperty("code").GetString());
+    }
+
+    [Fact]
+    public async Task AdminReplaceProjectTechStacks_WithDuplicateIds_Returns400()
+    {
+        using var client = _factory.CreateAdminClient();
+
+        var response = await client.PutAsJsonAsync(
+            $"{ProjectPath}/7/tech-stacks", new { techStackIds = new[] { 2, 2 } });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task AdminReplaceProjectTechStacks_ForMissingProject_Returns404()
+    {
+        using var client = _factory.CreateAdminClient();
+
+        var response = await client.PutAsJsonAsync(
+            $"{ProjectPath}/99/tech-stacks", new { techStackIds = new[] { 2 } });
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
     private static void Seed(JGBackendApiFactory factory)
     {
         factory.Projects.Failure = null;
@@ -158,5 +241,11 @@ public class ProjectAdminEndpointsTests : IClassFixture<JGBackendApiFactory>
             "The API behind the site",
             "Everything",
             new[] { new TechStackRef(2, "C#", null, "Backend") }));
+
+        factory.TechStacks.Failure = null;
+        factory.TechStacks.TechStacks.Clear();
+        factory.TechStacks.TechStacks.Add(new TechStack(
+            2, "C#", "https://example.test/csharp.svg", "Backend"));
+        factory.TechStacks.TechStacks.Add(new TechStack(5, "SQL", null, "Data"));
     }
 }

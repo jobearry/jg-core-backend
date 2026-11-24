@@ -160,7 +160,10 @@ The `project` slice keeps `IProjectRepository` as its single write entry point
 modified on update, so a project edit cannot rewrite the many-to-many rows.
 The join table has one explicit `ReplaceTechStacksAsync`: it loads the tracked
 join rows, swaps the collection and saves once. Only the two foreign keys are
-written — names, images and categories stay on the shared TechStack row.
+written — names, images and categories stay on the shared TechStack row. Its
+admin route resolves the body's stack ids through `ISkillRepository` before
+calling the domain method, so the project aggregate never accepts client-built
+refs.
 
 The `experience` slice writes every scalar field — company, dates, role,
 description, responsibility and type — through `IExperienceRepository`. Its

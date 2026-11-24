@@ -20,6 +20,7 @@ OpenAPI: `/swagger` (Development only, or `Swagger:Enabled=true`) · Document: `
 | `GET` | `/api/v1/project/{id}` | none* | path `id` | `ProjectDto` |
 | `POST` | `/api/v1/admin/project` | **Admin** | body `CreateProjectRequest` | `201` + `ProjectDto` + `Location` |
 | `PUT` | `/api/v1/admin/project/{id}` | **Admin** | path `id`, body `UpdateProjectRequest` | `200` + `ProjectDto` |
+| `PUT` | `/api/v1/admin/project/{id}/tech-stacks` | **Admin** | path `id`, body `{ "techStackIds": [...] }` | `200` + `ProjectDto` |
 | `DELETE` | `/api/v1/admin/project/{id}` | **Admin** | path `id` | `204` |
 | `GET` | `/api/v1/recommendation` | none* | — | `RecommendationDto[]` |
 | `GET` | `/api/v1/recommendation/{id}` | none* | path `id` | `RecommendationDto` |
@@ -242,6 +243,7 @@ credential as the other slices. See
 |---|---|---|---|---|
 | `POST` | `/api/v1/admin/project` | `{ "projectName", "description", "contribution" }` | `201`, dto + `Location: /api/v1/project/{id}` | `400`, `401`, `503` |
 | `PUT` | `/api/v1/admin/project/{id}` | same shape | `200`, dto | `400`, `401`, `404`, `503` |
+| `PUT` | `/api/v1/admin/project/{id}/tech-stacks` | `{ "techStackIds": [2, 5] }` | `200`, dto | `400`, `401`, `404`, `503` |
 | `DELETE` | `/api/v1/admin/project/{id}` | — | `204`, empty | `400`, `401`, `404`, `503` |
 
 - `projectName` is required and non-blank; the columns are unbounded `text`, so
@@ -252,6 +254,13 @@ credential as the other slices. See
   changed by these routes.
 - `POST` returns a `Location` pointing at the anonymous detail GET.
 - Missing ids are `404 + not_found`; a database outage is `503`.
+
+`PUT /api/v1/admin/project/{id}/tech-stacks` replaces the whole tool set. It
+accepts only an array of existing shared stack ids: names, images and categories
+are resolved through the Skill read port, so a client cannot forge them. Ids
+must be positive and unique; unknown ids are `400 + validation_failed`. An empty
+array clears the project's tools. `Project` owns this join write through
+`IProjectRepository` (ADR-0003) — the scalar routes above never touch it.
 
 ### `GET /api/v1/recommendation`
 

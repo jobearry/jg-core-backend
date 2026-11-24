@@ -107,6 +107,9 @@ public sealed class FakeProjectRepository : IProjectRepository
 
     public Exception? Failure { get; set; }
 
+    /// <summary>The token the last call received, so a test can assert it flowed.</summary>
+    public CancellationToken? LastCancellationToken { get; private set; }
+
     public Task<List<Project>> GetAllAsync(CancellationToken cancellationToken) => Respond();
 
     public Task<List<Project>> GetAllWithTechStacksAsync(CancellationToken cancellationToken) =>
@@ -114,6 +117,7 @@ public sealed class FakeProjectRepository : IProjectRepository
 
     public Task<Project?> GetByIdAsync(int id, CancellationToken cancellationToken)
     {
+        LastCancellationToken = cancellationToken;
         if (Failure is not null)
         {
             return Task.FromException<Project?>(Failure);
@@ -159,6 +163,7 @@ public sealed class FakeProjectRepository : IProjectRepository
     public Task<Project> ReplaceTechStacksAsync(
         Project project, CancellationToken cancellationToken)
     {
+        LastCancellationToken = cancellationToken;
         if (Failure is not null)
         {
             return Task.FromException<Project>(Failure);
@@ -207,10 +212,14 @@ public sealed class FakeTechStackRepository : ISkillRepository
 
     public bool IsUsedByProjects { get; set; }
 
+    /// <summary>The token the last call received, so a test can assert it flowed.</summary>
+    public CancellationToken? LastCancellationToken { get; private set; }
+
     public Task<List<TechStack>> GetAllAsync(CancellationToken cancellationToken) => Respond();
 
     public Task<TechStack?> GetByIdAsync(int id, CancellationToken cancellationToken)
     {
+        LastCancellationToken = cancellationToken;
         if (Failure is not null)
         {
             return Task.FromException<TechStack?>(Failure);
