@@ -54,6 +54,32 @@ public class SkillEndpointsTests : IClassFixture<JGBackendApiFactory>
     }
 
     [Fact]
+    public async Task GetSkillCategories_ReturnsTheCategoryCollection()
+    {
+        var response = await _client.GetAsync("/api/v1/skill-category");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        var json = await response.Content.ReadFromJsonAsync<JsonElement>();
+        var category = Assert.Single(json.EnumerateArray());
+        Assert.Equal(1, category.GetProperty("id").GetInt32());
+        Assert.Equal("Backend", category.GetProperty("category").GetString());
+    }
+
+    [Fact]
+    public async Task GetSkillCategories_WhenTheDatabaseFails_Returns503()
+    {
+        _factory.SkillCategories.Failure = new FakeDbException("could not connect");
+
+        var response = await _client.GetAsync("/api/v1/skill-category");
+
+        Assert.Equal(HttpStatusCode.ServiceUnavailable, response.StatusCode);
+
+        var problem = await response.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal("database_unavailable", problem.GetProperty("code").GetString());
+    }
+
+    [Fact]
     public async Task GetSkillById_WhenFound_ReturnsTheDto()
     {
         var response = await _client.GetAsync("/api/v1/skill/2");

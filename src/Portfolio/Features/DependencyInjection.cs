@@ -42,6 +42,7 @@ public static class DependencyInjection
         services.AddScoped<GetProjectHandler>();
         services.AddScoped<GetSkillHandler>();
         services.AddScoped<GetSkillByIdHandler>();
+        services.AddScoped<GetSkillCategoriesHandler>();
         services.AddScoped<CreateSkillHandler>();
         services.AddScoped<UpdateSkillHandler>();
         services.AddScoped<DeleteSkillHandler>();

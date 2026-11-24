@@ -48,6 +48,7 @@ public sealed class JGBackendSwaggerContractTests : IClassFixture<SwaggerEnabled
             "/api/v1/recommendation",
             "/api/v1/recommendation/{id}",
             "/api/v1/skill",
+            "/api/v1/skill-category",
             "/api/v1/overview"
         })
         {

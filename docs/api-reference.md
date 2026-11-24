@@ -20,6 +20,7 @@ OpenAPI: `/swagger` (Development only, or `Swagger:Enabled=true`) · Document: `
 | `DELETE` | `/api/v1/admin/recommendation/{id}` | **Admin** | path `id` | `204` |
 | `GET` | `/api/v1/skill` | none* | — | `TechStackDto[]` |
 | `GET` | `/api/v1/skill/{id}` | none* | path `id` | `TechStackDto` |
+| `GET` | `/api/v1/skill-category` | none* | — | `SkillCategoryDto[]` |
 | `GET` | `/api/v1/skill-category/{id}` | none* | path `id` | `SkillCategoryDto` |
 | `POST` | `/api/v1/admin/skill` | **Admin** | body `CreateSkillRequest` | `201` + `TechStackDto` + `Location` |
 | `PUT` | `/api/v1/admin/skill/{id}` | **Admin** | path `id`, body `UpdateSkillRequest` | `200` + `TechStackDto` |
@@ -268,8 +269,9 @@ On failure, this endpoint uses the same typed error mapping as the other
 portfolio endpoints; a database failure returns `503` with
 `database_unavailable`.
 
-The two detail GETs return the same stack shape, or a category as
-`{ "id", "category" }`. Missing ids are `404`; public reads stay anonymous.
+`GET /api/v1/skill-category` returns `{ "id", "category" }` items ordered by id.
+The two detail GETs return the same shapes. Missing ids are `404`; all these
+reads stay anonymous.
 
 #### Admin writes
 

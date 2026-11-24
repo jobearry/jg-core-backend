@@ -34,6 +34,16 @@ public static class SkillEndpoints
         .ProducesProblem(StatusCodes.Status404NotFound)
         .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
 
+        routes.MapGet("skill-category", async (
+                GetSkillCategoriesHandler handler,
+                CancellationToken cancellationToken) =>
+            (await handler.HandleAsync(cancellationToken)).ToHttpResult())
+        .WithName("GetPortfolioSkillCategories")
+        .WithTags("Portfolio - Read")
+        .AllowAnonymous()
+        .Produces<List<SkillCategoryDto>>(StatusCodes.Status200OK)
+        .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
+
         routes.MapGet("skill-category/{id:int}", async (
                 int id,
                 GetSkillCategoryByIdHandler handler,
