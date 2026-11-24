@@ -23,12 +23,7 @@ public sealed class EfProjectRepository
 
     public async Task<List<DomainProject>> GetAllWithTechStacksAsync(CancellationToken cancellationToken)
     {
-        var projectEntities = await _dbSet.AsNoTracking()
-                                          .AsSplitQuery()
-                                          .Include(p => p.ProjectTechStacks)
-                                          .ThenInclude(pt => pt.TechStack)
-                                          .ThenInclude(ts => ts.TechStackCategory)
-                                          .ToListAsync(cancellationToken);
+        var projectEntities = await WithTechStacks().ToListAsync(cancellationToken);
 
         return projectEntities.Select(ProjectMapper.ToDomain).ToList();
     }
@@ -36,11 +31,20 @@ public sealed class EfProjectRepository
     public async Task<DomainProject?> GetByIdAsync(
         int id, CancellationToken cancellationToken)
     {
-        var entity = await _dbSet.AsNoTracking()
+        // Includes the stack refs so the anonymous detail GET publishes the same
+        // shape as the collection with includeTools=true.
+        var entity = await WithTechStacks()
             .SingleOrDefaultAsync(project => project.Id == id, cancellationToken);
 
         return entity is null ? null : ProjectMapper.ToDomain(entity);
     }
+
+    private IQueryable<ProjectEntity> WithTechStacks() =>
+        _dbSet.AsNoTracking()
+            .AsSplitQuery()
+            .Include(project => project.ProjectTechStacks)
+            .ThenInclude(join => join.TechStack)
+            .ThenInclude(stack => stack.TechStackCategory);
 
     public async Task<DomainProject> AddAsync(
         DomainProject project, CancellationToken cancellationToken)

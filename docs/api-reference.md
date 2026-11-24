@@ -13,6 +13,10 @@ OpenAPI: `/swagger` (Development only, or `Swagger:Enabled=true`) · Document: `
 | `GET` | `/api/v1/health` | none | — | `status`, `version`, `environment`, `timestamp`, `uptimeSeconds` |
 | `GET` | `/api/v1/experience` | none* | `includeProjects` (bool, default `false`) | `ExperienceDto[]` |
 | `GET` | `/api/v1/project` | none* | `includeTools` (bool, default `false`) | `ProjectDto[]` |
+| `GET` | `/api/v1/project/{id}` | none* | path `id` | `ProjectDto` |
+| `POST` | `/api/v1/admin/project` | **Admin** | body `CreateProjectRequest` | `201` + `ProjectDto` + `Location` |
+| `PUT` | `/api/v1/admin/project/{id}` | **Admin** | path `id`, body `UpdateProjectRequest` | `200` + `ProjectDto` |
+| `DELETE` | `/api/v1/admin/project/{id}` | **Admin** | path `id` | `204` |
 | `GET` | `/api/v1/recommendation` | none* | — | `RecommendationDto[]` |
 | `GET` | `/api/v1/recommendation/{id}` | none* | path `id` | `RecommendationDto` |
 | `POST` | `/api/v1/admin/recommendation` | **Admin** | body `CreateRecommendationRequest` | `201` + `RecommendationDto` + `Location` |
@@ -193,6 +197,30 @@ Two keys are deliberately absent:
   the role it sits under.
 
 `techStacks[]` items are `{ id, stackName, imgSrc, category }` — no `createdAt`.
+
+`GET /api/v1/project/{id}` returns the same shape including stack refs. Missing
+ids are `404`; public reads stay anonymous.
+
+#### Admin writes
+
+Project writes use the same `role=Admin` token, `admin-write` limiter and writer
+credential as the other slices. See
+[ADR-0007](adr/0007-admin-authorization-and-writer-role.md).
+
+| Method | Path | Body | Success | Failure |
+|---|---|---|---|---|
+| `POST` | `/api/v1/admin/project` | `{ "projectName", "description", "contribution" }` | `201`, dto + `Location: /api/v1/project/{id}` | `400`, `401`, `503` |
+| `PUT` | `/api/v1/admin/project/{id}` | same shape | `200`, dto | `400`, `401`, `404`, `503` |
+| `DELETE` | `/api/v1/admin/project/{id}` | — | `204`, empty | `400`, `401`, `404`, `503` |
+
+- `projectName` is required and non-blank; the columns are unbounded `text`, so
+  there is no server-side length cap. `description` and `contribution` are
+  optional and may be `null`.
+- A created project is **standalone**: `ExperienceId` stays `null`. The experience
+  link and `techStacks[]` are owned by other operations (ADR-0003) and are never
+  changed by these routes.
+- `POST` returns a `Location` pointing at the anonymous detail GET.
+- Missing ids are `404 + not_found`; a database outage is `503`.
 
 ### `GET /api/v1/recommendation`
 

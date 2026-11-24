@@ -45,6 +45,7 @@ public sealed class JGBackendSwaggerContractTests : IClassFixture<SwaggerEnabled
         {
             "/api/v1/experience",
             "/api/v1/project",
+            "/api/v1/project/{id}",
             "/api/v1/recommendation",
             "/api/v1/recommendation/{id}",
             "/api/v1/skill",
@@ -58,6 +59,9 @@ public sealed class JGBackendSwaggerContractTests : IClassFixture<SwaggerEnabled
         Assert.Equal("Portfolio - Write", FirstTag(paths, "/api/v1/admin/recommendation", "post"));
         Assert.Equal("Portfolio - Write", FirstTag(paths, "/api/v1/admin/recommendation/{id}", "put"));
         Assert.Equal("Portfolio - Write", FirstTag(paths, "/api/v1/admin/recommendation/{id}", "delete"));
+        Assert.Equal("Portfolio - Write", FirstTag(paths, "/api/v1/admin/project", "post"));
+        Assert.Equal("Portfolio - Write", FirstTag(paths, "/api/v1/admin/project/{id}", "put"));
+        Assert.Equal("Portfolio - Write", FirstTag(paths, "/api/v1/admin/project/{id}", "delete"));
     }
 
     private static string? FirstTag(JsonElement paths, string path, string method) =>

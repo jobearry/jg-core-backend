@@ -18,6 +18,7 @@
     <Compile Include="..\Features\Experience\FakeExperienceRepository.cs" Link="Features\Experience\FakeExperienceRepository.cs" />
     <Compile Include="..\Features\Experience\GetExperienceHandlerTests.cs" Link="Features\Experience\GetExperienceHandlerTests.cs" />
     <Compile Include="..\Features\Github\GithubHandlerTests.cs" Link="Features\Github\GithubHandlerTests.cs" />
+    <Compile Include="..\Features\Project\ProjectCommandHandlerTests.cs" Link="Features\Project\ProjectCommandHandlerTests.cs" />
     <Compile Include="..\Features\Recommendation\RecommendationCommandHandlerTests.cs" Link="Features\Recommendation\RecommendationCommandHandlerTests.cs" />
     <Compile Include="..\Features\Skill\SkillCommandHandlerTests.cs" Link="Features\Skill\SkillCommandHandlerTests.cs" />
     <Compile Include="..\Shared\Common\ResultErrorsTests.cs" Link="Shared\Common\ResultErrorsTests.cs" />
