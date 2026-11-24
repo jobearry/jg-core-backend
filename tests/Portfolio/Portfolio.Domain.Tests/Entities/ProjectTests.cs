@@ -65,6 +65,36 @@ public class ProjectTests
     }
 
     [Fact]
+    public void UpdateDetails_ChangesNameDescriptionAndContribution_KeepsIdAndExperience()
+    {
+        var project = new Project(7, 4, "Portfolio API", "old", "old contribution");
+
+        project.UpdateDetails("Portfolio API v2", "new", "new contribution");
+
+        Assert.Equal(7, project.Id);
+        Assert.Equal(4, project.ExperienceId);
+        Assert.Equal("Portfolio API v2", project.ProjectName);
+        Assert.Equal("new", project.Description);
+        Assert.Equal("new contribution", project.Contribution);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void UpdateDetails_WithBlankProjectName_ThrowsAndKeepsOldValues(string? projectName)
+    {
+        var project = new Project(7, null, "Portfolio API", "old", "old contribution");
+
+        Assert.Throws<ArgumentException>(
+            () => project.UpdateDetails(projectName!, "new", "new contribution"));
+
+        Assert.Equal("Portfolio API", project.ProjectName);
+        Assert.Equal("old", project.Description);
+        Assert.Equal("old contribution", project.Contribution);
+    }
+
+    [Fact]
     public void AttachToExperience_SetsTheExperienceId()
     {
         var project = new Project(7, "Portfolio API");

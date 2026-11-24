@@ -72,6 +72,21 @@ public class Project
     public void UpdateContribution(string? contribution) => Contribution = contribution;
 
     /// <summary>
+    /// The admin edit path. The name keeps the constructor's invariant; the experience
+    /// link and tech-stack refs stay untouched because they belong to their own
+    /// operations (ADR-0003).
+    /// </summary>
+    public void UpdateDetails(string projectName, string? description, string? contribution)
+    {
+        if (string.IsNullOrWhiteSpace(projectName))
+            throw new ArgumentException("Project name cannot be empty.", nameof(projectName));
+
+        ProjectName = projectName;
+        Description = description;
+        Contribution = contribution;
+    }
+
+    /// <summary>
     /// Replaces the tech stacks. The argument is copied, so a caller that keeps its own
     /// list cannot change this project afterwards.
     /// </summary>

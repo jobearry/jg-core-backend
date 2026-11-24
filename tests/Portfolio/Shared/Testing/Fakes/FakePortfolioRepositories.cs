@@ -43,11 +43,72 @@ public sealed class FakeProjectRepository : IProjectRepository
 {
     public List<Project> Projects { get; } = new();
 
-    public Task<List<Project>> GetAllAsync(CancellationToken cancellationToken) =>
-        Task.FromResult(Projects);
+    public Exception? Failure { get; set; }
+
+    public Task<List<Project>> GetAllAsync(CancellationToken cancellationToken) => Respond();
 
     public Task<List<Project>> GetAllWithTechStacksAsync(CancellationToken cancellationToken) =>
-        Task.FromResult(Projects);
+        Respond();
+
+    public Task<Project?> GetByIdAsync(int id, CancellationToken cancellationToken)
+    {
+        if (Failure is not null)
+        {
+            return Task.FromException<Project?>(Failure);
+        }
+
+        return Task.FromResult(Projects.FirstOrDefault(project => project.Id == id));
+    }
+
+    public Task<Project> AddAsync(Project project, CancellationToken cancellationToken)
+    {
+        if (Failure is not null)
+        {
+            return Task.FromException<Project>(Failure);
+        }
+
+        var created = new Project(
+            Projects.Count == 0 ? 1 : Projects.Max(item => item.Id) + 1,
+            project.ExperienceId,
+            project.ProjectName,
+            project.Description,
+            project.Contribution,
+            project.TechStacks);
+        Projects.Add(created);
+        return Task.FromResult(created);
+    }
+
+    public Task<Project> UpdateAsync(Project project, CancellationToken cancellationToken)
+    {
+        if (Failure is not null)
+        {
+            return Task.FromException<Project>(Failure);
+        }
+
+        var index = Projects.FindIndex(item => item.Id == project.Id);
+        if (index >= 0)
+        {
+            Projects[index] = project;
+        }
+
+        return Task.FromResult(project);
+    }
+
+    public Task DeleteAsync(Project project, CancellationToken cancellationToken)
+    {
+        if (Failure is not null)
+        {
+            return Task.FromException(Failure);
+        }
+
+        Projects.RemoveAll(item => item.Id == project.Id);
+        return Task.CompletedTask;
+    }
+
+    private Task<List<Project>> Respond() =>
+        Failure is null
+            ? Task.FromResult(Projects)
+            : Task.FromException<List<Project>>(Failure);
 }
 
 public sealed class FakeTechStackRepository : ISkillRepository

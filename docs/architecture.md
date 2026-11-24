@@ -154,6 +154,12 @@ read credential, then writes the stack with the category id through the writer.
 edits. Deletes guard the join-table foreign keys with `409 + conflict`, and the
 anonymous detail GETs make the `201` `Location` followable without a token.
 
+The `project` slice keeps `IProjectRepository` as its single write entry point
+(ADR-0003). Its write methods cover `ProjectName`, `Description` and
+`Contribution`; `ExperienceId` and `ProjectTechStacks` stay out of this slice.
+The adapter marks only the root row modified on update, so a project edit cannot
+rewrite the many-to-many rows it does not own.
+
 ## 5. Composition root
 
 `src/JGBackend/Program.cs` is the only place the graph is assembled:

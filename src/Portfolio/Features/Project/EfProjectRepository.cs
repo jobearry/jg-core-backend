@@ -8,14 +8,18 @@ using DomainProject = Portfolio.Domain.Entities.Project;
 namespace Portfolio.Features.Project;
 
 /// <summary>
-/// EF adapter for the Project port. The tech-stack graph is loaded only when the
-/// caller asks for tools; otherwise the base repository reads the plain rows.
+/// EF adapter for the Project port. Reads (including the anonymous detail lookups and
+/// pre-write checks) use the read-only context; admin writes use the DML credential.
+/// The many-to-many rows are not touched here — that relationship gets its own slice.
 /// </summary>
 public sealed class EfProjectRepository
     : BasePortfolioRepository<DomainProject, ProjectEntity>, IProjectRepository
 {
-    public EfProjectRepository(PortfolioContext context)
-        : base(context, ProjectMapper.ToDomain) { }
+    private readonly PortfolioWriteContext _writeContext;
+
+    public EfProjectRepository(PortfolioContext context, PortfolioWriteContext writeContext)
+        : base(context, ProjectMapper.ToDomain) =>
+        _writeContext = writeContext;
 
     public async Task<List<DomainProject>> GetAllWithTechStacksAsync(CancellationToken cancellationToken)
     {
@@ -27,5 +31,47 @@ public sealed class EfProjectRepository
                                           .ToListAsync(cancellationToken);
 
         return projectEntities.Select(ProjectMapper.ToDomain).ToList();
+    }
+
+    public async Task<DomainProject?> GetByIdAsync(
+        int id, CancellationToken cancellationToken)
+    {
+        var entity = await _dbSet.AsNoTracking()
+            .SingleOrDefaultAsync(project => project.Id == id, cancellationToken);
+
+        return entity is null ? null : ProjectMapper.ToDomain(entity);
+    }
+
+    public async Task<DomainProject> AddAsync(
+        DomainProject project, CancellationToken cancellationToken)
+    {
+        var entity = ProjectMapper.ToEntity(project);
+
+        _writeContext.Projects.Add(entity);
+        await _writeContext.SaveChangesAsync(cancellationToken);
+
+        return ProjectMapper.ToDomain(entity);
+    }
+
+    public async Task<DomainProject> UpdateAsync(
+        DomainProject project, CancellationToken cancellationToken)
+    {
+        var entity = ProjectMapper.ToEntity(project);
+
+        // Mark only the root row modified. Update() would also attach the empty
+        // ProjectTechStacks collection, which risks rewriting join rows this slice
+        // does not own.
+        _writeContext.Projects.Attach(entity);
+        _writeContext.Entry(entity).State = EntityState.Modified;
+        await _writeContext.SaveChangesAsync(cancellationToken);
+
+        return ProjectMapper.ToDomain(entity);
+    }
+
+    public async Task DeleteAsync(
+        DomainProject project, CancellationToken cancellationToken)
+    {
+        _writeContext.Projects.Remove(new ProjectEntity { Id = project.Id });
+        await _writeContext.SaveChangesAsync(cancellationToken);
     }
 }
