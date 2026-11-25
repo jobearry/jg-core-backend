@@ -86,6 +86,12 @@ task/<short-topic>         task/phase-3-incremental-tech-stack
 - Task branches are short-lived and deleted after their PR is merged to the feature branch.
 - **Only the `feature/<topic>` branch is PR'd to `main`/`master`.** Task branches never target main directly.
 
+**Commit and push discipline:**
+
+- **Commit locally by default.** Each logical change gets a commit with a proper Conventional Commit message.
+- **Ask before pushing.** After a phase finishes (or when the user says so), request explicit permission to push the task branch and open its PR to the feature branch. Do not auto-push on every commit.
+- The feature branch is pushed when its PR to main/master is authorized.
+
 Commit messages follow Conventional Commits:
 
 ```
