@@ -86,8 +86,8 @@ unless this plan is explicitly authorized and implemented.
 
 ## B. Relationship endpoints
 
-**Status:** Proposed for discussion. Phase 1 is implemented on this branch; the
-remaining phases are not authorized.
+**Status:** Phase 1 is implemented. The phase-2 route shape is chosen; the other
+decisions remain open and no further phase is authorized.
 
 ### Scope
 
@@ -101,15 +101,31 @@ repository port.
 
 | Relationship | Covered today | Gap |
 |---|---|---|
-| `experience` → `project` | `POST /admin/experience/{experienceId}/project` creates and attaches | Attach an existing project, detach, move, role-scoped list |
+| `experience` → `project` | `POST /admin/experience/{experienceId}/project` creates and attaches | Attach an existing project, detach or move via the chosen route below; role-scoped list remains open |
 | `project` → `tech_stack` | `PUT /admin/project/{id}/tech-stacks` replaces the whole set | Incremental add/remove |
 | `tech_stack` → `tech_stack_category` | Set by name in `POST`/`PUT /admin/skill`, resolved to an id | Standalone reassignment (probably not needed) |
 
-### Decisions needed
+### Chosen endpoint contract — phase 2, not implemented
+
+`PUT /api/v1/admin/project/{id}/experience` updates **only** an existing project's
+`experience_id`. It does not create a project, edit the experience, change the
+project's name/description/contribution, or touch its tech stacks.
+
+- `{ "experienceId": 4 }` attaches the project to experience `4`, or moves it
+  there if it already has a parent.
+- `{ "experienceId": null }` detaches the project while keeping the experience;
+  it matches the schema's `ON DELETE SET NULL` behaviour without deleting the role.
+- The project must already exist. When `experienceId` is non-null, that experience
+  must exist.
+- Success is `200` + `ProjectDto`. `ProjectDto` does not expose `ExperienceId`, so
+  the effect is visible through `GET /api/v1/experience?includeProjects=true`.
+  Malformed or non-positive ids are `400`, missing rows `404`, outages `503`.
+
+### Decisions
 
 | Decision | Options | Recommendation | Status |
 |---|---|---|---|
-| Attach, detach or move an existing project | A single `PUT /admin/project/{id}/experience` with `experienceId` set to an id or `null`, or paired `POST`/`DELETE` under `/admin/experience/{experienceId}/project/{projectId}` | The single project-side route: `Project` owns `experience_id`, and one contract covers attach, move and detach | Open |
+| Attach, detach or move an existing project | A single `PUT /admin/project/{id}/experience`, or paired `POST`/`DELETE` under `/admin/experience/{experienceId}/project/{projectId}` | The single project-side route above: `Project` owns `experience_id`, and one contract covers attach, move and detach | Chosen |
 | Admin list of projects for a role | Reuse `GET /api/v1/experience?includeProjects=true`, or add `GET /admin/experience/{experienceId}/project` | Reuse the public projection until the admin app proves it needs a separate raw list | Open |
 | Incremental tech-stack links | Add `POST`/`DELETE /admin/project/{id}/tech-stack/{stackId}`, or keep replace-all | Keep replace-all: it is deterministic and avoids half-applied sets | Open |
 | Standalone category reassignment | Add `PUT /admin/skill/{id}/category`, or keep the existing skill update | Keep the existing update; the category is already resolved by name there | Open |
@@ -119,9 +135,9 @@ repository port.
 
 1. **Done — phase 1:** create a project under an existing experience with
    `Project.AttachToExperience` (ADR-0003).
-2. **Phase 2:** after the route-shape decision, attach/detach/move an existing
-   project. Tests cover invalid ids, missing parent/child, a failed lookup and the
-   three success outcomes.
+2. **Phase 2:** implement the chosen project-side `PUT .../experience` route.
+   Tests cover invalid ids, missing parent/child, a failed lookup and the three
+   success outcomes.
 3. **Phase 3:** only if the owner confirms the need, add incremental stack links
    or a role-scoped admin list.
 
