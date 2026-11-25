@@ -66,6 +66,9 @@ public sealed class JGBackendSwaggerContractTests : IClassFixture<SwaggerEnabled
         Assert.Equal("Portfolio - Write", FirstTag(paths, "/api/v1/admin/experience/{id}", "put"));
         Assert.Equal("Portfolio - Write", FirstTag(paths, "/api/v1/admin/experience/{id}", "delete"));
         Assert.Equal("Portfolio - Write", FirstTag(paths, "/api/v1/admin/project", "post"));
+        Assert.Equal(
+            "Portfolio - Write",
+            FirstTag(paths, "/api/v1/admin/experience/{experienceId}/project", "post"));
         Assert.Equal("Portfolio - Write", FirstTag(paths, "/api/v1/admin/project/{id}", "put"));
         Assert.Equal("Portfolio - Write", FirstTag(paths, "/api/v1/admin/project/{id}", "delete"));
         Assert.Equal("Portfolio - Write", FirstTag(paths, "/api/v1/admin/project/{id}/tech-stacks", "put"));

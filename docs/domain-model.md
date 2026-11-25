@@ -143,7 +143,7 @@ deliberate — a typo such as `2062` should be loud. Admin input is checked by
 | Invariant | Enforcement |
 |---|---|---|
 | `Project.ProjectName` is non-blank | `Project` constructor and `Project.UpdateDetails` |
-| A project is linked to at most one experience | `Project.AttachToExperience`; the link is optional |
+| A project is linked to at most one experience | `Project.AttachToExperience`, used by `POST /api/v1/admin/experience/{experienceId}/project`; the link is optional |
 | `TechStack.StackName` and `TechStackCategory.Category` are non-blank | Entity constructors, `TechStack.UpdateDetails` and `TechStackCategory.Rename` |
 | `TechStack.Category` is non-blank when present | `TechStack.SetCategory`; `null` is allowed |
 | `Recommendation.PersonName` and `Description` are non-blank | `Recommendation` constructor and `Recommendation.ChangeDetails` |

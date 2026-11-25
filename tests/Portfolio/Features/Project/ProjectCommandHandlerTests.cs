@@ -2,6 +2,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Portfolio.Api.Tests.Fakes;
 using Portfolio.Application.Common;
 using Portfolio.Domain.ValueObjects;
+using DomainExperience = Portfolio.Domain.Entities.Experience;
 using DomainProject = Portfolio.Domain.Entities.Project;
 
 namespace Portfolio.Features.Project.Tests;
@@ -14,6 +15,104 @@ public class ProjectCommandHandlerTests
 {
     private static readonly TechStackRef[] StackRefs =
         [new(2, "C#", "https://example.test/csharp.svg", "Backend")];
+
+    [Fact]
+    public async Task CreateProjectForExperience_WithValidRequest_AttachesTheProject()
+    {
+        var projects = new FakeProjectRepository();
+        var experiences = new FakeExperienceRepository
+        {
+            Experiences = { AnExperience(4) }
+        };
+        var handler = new CreateProjectForExperienceHandler(
+            projects, experiences, NullLogger<CreateProjectForExperienceHandler>.Instance);
+
+        var result = await handler.HandleAsync(
+            4,
+            new CreateProjectRequest("Portfolio API", "A backend", "Everything"),
+            CancellationToken.None);
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal("Portfolio API", result.Value!.ProjectName);
+        Assert.Equal(4, Assert.Single(projects.Projects).ExperienceId);
+    }
+
+    [Fact]
+    public async Task CreateProjectForExperience_ForMissingExperience_ReturnsNotFoundAndWritesNothing()
+    {
+        var projects = new FakeProjectRepository();
+        var handler = new CreateProjectForExperienceHandler(
+            projects, new FakeExperienceRepository(),
+            NullLogger<CreateProjectForExperienceHandler>.Instance);
+
+        var result = await handler.HandleAsync(
+            99, new CreateProjectRequest("Portfolio API", null, null), CancellationToken.None);
+
+        AssertFailure(result, ErrorKind.NotFound, "not_found");
+        Assert.Empty(projects.Projects);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    public async Task CreateProjectForExperience_WithInvalidExperienceId_ReturnsValidationError(int id)
+    {
+        var projects = new FakeProjectRepository();
+        var handler = new CreateProjectForExperienceHandler(
+            projects, new FakeExperienceRepository(),
+            NullLogger<CreateProjectForExperienceHandler>.Instance);
+
+        var result = await handler.HandleAsync(
+            id, new CreateProjectRequest("Portfolio API", null, null), CancellationToken.None);
+
+        AssertFailure(result, ErrorKind.Validation, "validation_failed");
+        Assert.Empty(projects.Projects);
+    }
+
+    [Fact]
+    public async Task CreateProjectForExperience_WithNullBody_ReturnsValidationError()
+    {
+        var handler = new CreateProjectForExperienceHandler(
+            new FakeProjectRepository(), new FakeExperienceRepository(),
+            NullLogger<CreateProjectForExperienceHandler>.Instance);
+
+        var result = await handler.HandleAsync(4, null, CancellationToken.None);
+
+        AssertFailure(result, ErrorKind.Validation, "validation_failed");
+    }
+
+    [Fact]
+    public async Task CreateProjectForExperience_WithBlankName_ReturnsValidationError()
+    {
+        var projects = new FakeProjectRepository();
+        var handler = new CreateProjectForExperienceHandler(
+            projects, new FakeExperienceRepository(),
+            NullLogger<CreateProjectForExperienceHandler>.Instance);
+
+        var result = await handler.HandleAsync(
+            4, new CreateProjectRequest("  ", null, null), CancellationToken.None);
+
+        AssertFailure(result, ErrorKind.Validation, "validation_failed");
+        Assert.Empty(projects.Projects);
+    }
+
+    [Fact]
+    public async Task CreateProjectForExperience_WhenExperienceLookupFails_ReturnsInfrastructureError()
+    {
+        var projects = new FakeProjectRepository();
+        var experiences = new FakeExperienceRepository
+        {
+            Failure = new FakeDbException("database down")
+        };
+        var handler = new CreateProjectForExperienceHandler(
+            projects, experiences, NullLogger<CreateProjectForExperienceHandler>.Instance);
+
+        var result = await handler.HandleAsync(
+            4, new CreateProjectRequest("Portfolio API", null, null), CancellationToken.None);
+
+        AssertFailure(result, ErrorKind.Infrastructure, "database_unavailable");
+        Assert.Empty(projects.Projects);
+    }
 
     [Fact]
     public async Task CreateProject_WithValidRequest_CreatesFieldsOnly()
@@ -199,6 +298,13 @@ public class ProjectCommandHandlerTests
 
         AssertFailure(result, ErrorKind.Infrastructure, "database_unavailable");
     }
+
+    private static DomainExperience AnExperience(int id) =>
+        new(
+            id,
+            new Company("Applied ICT Inc."),
+            new Period(new DateTime(2020, 1, 1), null),
+            new Role("Software Engineer"));
 
     private static FakeProjectRepository ProjectsWithOne() => new()
     {

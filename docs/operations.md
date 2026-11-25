@@ -80,8 +80,9 @@ Admin write routes live under `/api/v1/admin` and require the `role=Admin` token
 from `/api/v1/auth/login`. They are capped at 30 requests/minute per IP by the
 `admin-write` policy and use a CORS policy that permits `PUT` and `DELETE` from the
 configured origins. CRUD is available for experience, project, recommendation,
-skill and skill-category, plus project tech-stack replacement; the request/response
-contract and status codes are in [`api-reference.md`](api-reference.md) §3.
+skill and skill-category, plus creating a project under an experience and replacing
+project tech stacks; the request/response contract and status codes are in
+[`api-reference.md`](api-reference.md) §3.
 Public reads do not present a token and never reach `PortfolioWriteContext`.
 
 Origins are configuration so that a new domain or a Vercel preview deployment

@@ -63,6 +63,25 @@ public static class ProjectEndpoints
         .ProducesProblem(StatusCodes.Status401Unauthorized)
         .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
 
+        admin.MapPost("experience/{experienceId:int}/project", async (
+                int experienceId,
+                CreateProjectForExperienceHandler handler,
+                LinkGenerator links,
+                CreateProjectRequest? request,
+                CancellationToken cancellationToken) =>
+            (await handler.HandleAsync(experienceId, request, cancellationToken))
+                .ToCreatedHttpResult(dto =>
+                    links.GetPathByName("GetPortfolioProjectById", new { id = dto.Id })
+                        ?? throw new InvalidOperationException(
+                            "The project detail route is not registered.")))
+        .WithName("AdminCreateProjectForExperience")
+        .RequireAuthorization("Admin")
+        .Produces<ProjectDto>(StatusCodes.Status201Created)
+        .ProducesProblem(StatusCodes.Status400BadRequest)
+        .ProducesProblem(StatusCodes.Status401Unauthorized)
+        .ProducesProblem(StatusCodes.Status404NotFound)
+        .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
+
         admin.MapPut("project/{id:int}", async (
                 int id,
                 UpdateProjectRequest? request,

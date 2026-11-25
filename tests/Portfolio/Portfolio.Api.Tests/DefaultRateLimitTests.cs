@@ -61,7 +61,7 @@ public sealed class DefaultRateLimitTests
             .Where(endpoint => endpoint.RoutePattern.RawText?.Contains("admin/") == true)
             .ToList();
 
-        Assert.Equal(16, adminEndpoints.Count);
+        Assert.Equal(17, adminEndpoints.Count);
         Assert.All(
             adminEndpoints,
             endpoint => Assert.Equal(

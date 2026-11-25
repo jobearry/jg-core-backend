@@ -19,6 +19,7 @@ OpenAPI: `/swagger` (Development only, or `Swagger:Enabled=true`) · Document: `
 | `GET` | `/api/v1/project` | none* | `includeTools` (bool, default `false`) | `ProjectDto[]` |
 | `GET` | `/api/v1/project/{id}` | none* | path `id` | `ProjectDto` |
 | `POST` | `/api/v1/admin/project` | **Admin** | body `CreateProjectRequest` | `201` + `ProjectDto` + `Location` |
+| `POST` | `/api/v1/admin/experience/{experienceId}/project` | **Admin** | path `experienceId`, body `CreateProjectRequest` | `201` + `ProjectDto` + `Location` |
 | `PUT` | `/api/v1/admin/project/{id}` | **Admin** | path `id`, body `UpdateProjectRequest` | `200` + `ProjectDto` |
 | `PUT` | `/api/v1/admin/project/{id}/tech-stacks` | **Admin** | path `id`, body `{ "techStackIds": [...] }` | `200` + `ProjectDto` |
 | `DELETE` | `/api/v1/admin/project/{id}` | **Admin** | path `id` | `204` |
@@ -242,6 +243,7 @@ credential as the other slices. See
 | Method | Path | Body | Success | Failure |
 |---|---|---|---|---|
 | `POST` | `/api/v1/admin/project` | `{ "projectName", "description", "contribution" }` | `201`, dto + `Location: /api/v1/project/{id}` | `400`, `401`, `503` |
+| `POST` | `/api/v1/admin/experience/{experienceId}/project` | same shape | `201`, dto + `Location: /api/v1/project/{id}` | `400`, `401`, `404`, `503` |
 | `PUT` | `/api/v1/admin/project/{id}` | same shape | `200`, dto | `400`, `401`, `404`, `503` |
 | `PUT` | `/api/v1/admin/project/{id}/tech-stacks` | `{ "techStackIds": [2, 5] }` | `200`, dto | `400`, `401`, `404`, `503` |
 | `DELETE` | `/api/v1/admin/project/{id}` | — | `204`, empty | `400`, `401`, `404`, `503` |
@@ -249,10 +251,11 @@ credential as the other slices. See
 - `projectName` is required and non-blank; the columns are unbounded `text`, so
   there is no server-side length cap. `description` and `contribution` are
   optional and may be `null`.
-- A created project is **standalone**: `ExperienceId` stays `null`. The experience
-  link and `techStacks[]` are owned by other operations (ADR-0003) and are never
-  changed by these routes.
-- `POST` returns a `Location` pointing at the anonymous detail GET.
+- `POST /admin/project` creates a **standalone** project (`ExperienceId` is
+  `null`). Use `POST /admin/experience/{experienceId}/project` to create one under
+  an existing role; a missing role is `404`. Both leave `techStacks[]` empty — the
+  join has its own route below (ADR-0003).
+- Both `POST` routes return a `Location` pointing at the anonymous detail GET.
 - Missing ids are `404 + not_found`; a database outage is `503`.
 
 `PUT /api/v1/admin/project/{id}/tech-stacks` replaces the whole tool set. It
