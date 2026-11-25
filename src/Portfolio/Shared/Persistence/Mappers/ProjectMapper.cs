@@ -1,4 +1,5 @@
 using Portfolio.Domain.Entities;
+using Portfolio.Domain.ValueObjects;
 using Portfolio.Persistence.Entities;
 
 namespace Portfolio.Persistence.Mappers;
@@ -37,4 +38,14 @@ public static class ProjectMapper
                 ProjectId = source.Id,
                 TechStackId = stack.Id
             });
+
+    /// <summary>
+    /// Creates a single join entity for an incremental add.
+    /// </summary>
+    public static ProjectTechStack ToJoinEntity(int projectId, TechStackRef stack) =>
+        new ProjectTechStack
+        {
+            ProjectId = projectId,
+            TechStackId = stack.Id
+        };
 }

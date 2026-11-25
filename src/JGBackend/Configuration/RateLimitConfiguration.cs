@@ -17,8 +17,24 @@ public static class RateLimitConfiguration
 
     private static readonly TimeSpan Window = TimeSpan.FromMinutes(1);
 
-    public static IServiceCollection AddRateLimitingConfig(this IServiceCollection services)
+    public static IServiceCollection AddRateLimitingConfig(this IServiceCollection services, IConfiguration configuration)
     {
+        // Allow tests to disable rate limiting entirely
+        if (configuration.GetValue("RateLimiting:Disabled", false))
+        {
+            services.AddRateLimiter(options =>
+            {
+                options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+                // Add a no-op policy that allows unlimited requests
+                options.AddPolicy<string>(RateLimitPolicies.Default, _ => RateLimitPartition.GetNoLimiter("disabled"));
+                options.AddPolicy<string>(RateLimitPolicies.AdminWrite, _ => RateLimitPartition.GetNoLimiter("disabled"));
+                options.AddPolicy<string>(RateLimitPolicies.NotionPassthrough, _ => RateLimitPartition.GetNoLimiter("disabled"));
+                options.AddPolicy<string>(RateLimitPolicies.GithubPassthrough, _ => RateLimitPartition.GetNoLimiter("disabled"));
+                options.AddPolicy<string>(RateLimitPolicies.AuthLogin, _ => RateLimitPartition.GetNoLimiter("disabled"));
+            });
+            return services;
+        }
+
         services.AddRateLimiter(options =>
         {
             options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;

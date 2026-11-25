@@ -92,4 +92,14 @@ public class Project
     /// </summary>
     public void ReplaceTechStacks(IEnumerable<TechStackRef>? techStacks) =>
         TechStacks = techStacks is null ? Array.Empty<TechStackRef>() : techStacks.ToList();
+
+    /// <summary>
+    /// Sentinel returned when a tech stack is already linked and the handler treats it as a conflict.
+    /// </summary>
+    public static readonly Project AlreadyLinked = new(-1, "sentinel-already-linked");
+
+    /// <summary>
+    /// Sentinel returned when a tech stack is not linked and the handler treats it as not found.
+    /// </summary>
+    public static readonly Project NotLinked = new(-2, "sentinel-not-linked");
 }

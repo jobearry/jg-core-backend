@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using Portfolio.Domain.ValueObjects;
 using Portfolio.Persistence.Contexts;
 using Portfolio.Persistence.Entities;
 using Portfolio.Persistence.Mappers;
@@ -101,6 +102,49 @@ public sealed class EfProjectRepository
         return await GetByIdAsync(project.Id, cancellationToken)
             ?? throw new InvalidOperationException(
                 $"Project {project.Id} disappeared after its tech stacks were saved.");
+    }
+
+    public async Task<DomainProject> AddTechStackAsync(
+        DomainProject project, TechStackRef techStackRef, CancellationToken cancellationToken)
+    {
+        var entity = await _writeContext.Projects
+            .Include(item => item.ProjectTechStacks)
+            .SingleAsync(item => item.Id == project.Id, cancellationToken);
+
+        if (entity.ProjectTechStacks.Any(j => j.TechStackId == techStackRef.Id))
+        {
+            throw new InvalidOperationException($"Tech stack {techStackRef.Id} is already linked to project {project.Id}.");
+        }
+
+        entity.ProjectTechStacks.Add(ProjectMapper.ToJoinEntity(project.Id, techStackRef));
+        StampUpdatedAt(entity);
+        await _writeContext.SaveChangesAsync(cancellationToken);
+
+        return await GetByIdAsync(project.Id, cancellationToken)
+            ?? throw new InvalidOperationException(
+                $"Project {project.Id} disappeared after tech stack was added.");
+    }
+
+    public async Task<DomainProject> RemoveTechStackAsync(
+        DomainProject project, int techStackId, CancellationToken cancellationToken)
+    {
+        var entity = await _writeContext.Projects
+            .Include(item => item.ProjectTechStacks)
+            .SingleAsync(item => item.Id == project.Id, cancellationToken);
+
+        var join = entity.ProjectTechStacks.FirstOrDefault(j => j.TechStackId == techStackId);
+        if (join is null)
+        {
+            throw new InvalidOperationException($"Tech stack {techStackId} is not linked to project {project.Id}.");
+        }
+
+        entity.ProjectTechStacks.Remove(join);
+        StampUpdatedAt(entity);
+        await _writeContext.SaveChangesAsync(cancellationToken);
+
+        return await GetByIdAsync(project.Id, cancellationToken)
+            ?? throw new InvalidOperationException(
+                $"Project {project.Id} disappeared after tech stack was removed.");
     }
 
     private void StampUpdatedAt(ProjectEntity entity) =>
