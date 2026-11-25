@@ -75,7 +75,15 @@ feature/<short-topic>      feature/recommendations
 fix/<short-topic>          fix/compose-db-service
 chore/<short-topic>        chore/agents-docs
 docs/<short-topic>
+task/<short-topic>         task/phase-3-incremental-tech-stack
 ```
+
+**Branch strategy:**
+
+- **One `feature/<topic>` branch per feature** — the integration branch that accumulates completed phases.
+- **Each phase gets a `task/<phase-name>` branch** cut from the feature branch. Implement the phase on the task branch, verify, then merge back to the feature branch (fast-forward or merge commit). The feature branch is what eventually goes to PR/main.
+- Do not chain task branches (task-2 cut from task-1); always cut from the current tip of the feature branch so phases integrate cleanly.
+- Task branches are short-lived and deleted after merge. They are not separate PRs unless explicitly discussed.
 
 Commit messages follow Conventional Commits:
 
@@ -87,8 +95,19 @@ refactor(domain): convert value objects to records
 test(domain): cover Period invariants
 ```
 
-- Subject in imperative mood, ≤ 72 chars, no trailing period.
-- Body explains **why**, not what (the diff shows what).
+Type quick-reference:
+
+| Type | Purpose | Example from this repo |
+|---|---|---|
+| `feat` | New user-facing behaviour | `feat(project): create projects under an experience` |
+| `fix` | Bug fix | `fix(admin): address review findings for write slices` |
+| `docs` | Documentation only | `docs(plan): choose project-side experience route` |
+| `refactor` | Code change, no behaviour change | `refactor(domain): convert value objects to records` |
+| `test` | Adding/updating tests | `test(domain): cover Period invariants` |
+| `chore` | Maintenance, tooling | `chore(ci): bump actions versions` |
+
+- Subject: imperative mood, ≤ 72 chars, no trailing period.
+- Body: explains **why**, not what (the diff shows what). Wrapped at ~72 chars.
 - One logical change per commit. Do not mix formatting with behaviour.
 
 ## 7. Pull requests
