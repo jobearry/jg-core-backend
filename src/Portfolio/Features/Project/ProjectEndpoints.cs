@@ -96,6 +96,20 @@ public static class ProjectEndpoints
         .ProducesProblem(StatusCodes.Status404NotFound)
         .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
 
+        admin.MapPut("project/{id:int}/experience", async (
+                int id,
+                UpdateProjectExperienceRequest? request,
+                UpdateProjectExperienceHandler handler,
+                CancellationToken cancellationToken) =>
+            (await handler.HandleAsync(id, request, cancellationToken)).ToHttpResult())
+        .WithName("AdminUpdateProjectExperience")
+        .RequireAuthorization("Admin")
+        .Produces<ProjectDto>(StatusCodes.Status200OK)
+        .ProducesProblem(StatusCodes.Status400BadRequest)
+        .ProducesProblem(StatusCodes.Status401Unauthorized)
+        .ProducesProblem(StatusCodes.Status404NotFound)
+        .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
+
         admin.MapPut("project/{id:int}/tech-stacks", async (
                 int id,
                 ReplaceProjectTechStacksRequest? request,

@@ -158,6 +158,131 @@ public class ProjectAdminEndpointsTests : IClassFixture<JGBackendApiFactory>
     }
 
     [Fact]
+    public async Task AdminUpdateProjectExperience_Attach_WithToken_Returns200AndLinks()
+    {
+        using var client = _factory.CreateAdminClient();
+
+        var response = await client.PutAsJsonAsync(
+            $"{ProjectPath}/7/experience",
+            new { experienceId = 4 });
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal(7, body.GetProperty("id").GetInt32());
+        Assert.Equal(4, Assert.Single(_factory.Projects.Projects, p => p.Id == 7).ExperienceId);
+    }
+
+    [Fact]
+    public async Task AdminUpdateProjectExperience_Move_WithToken_Returns200AndChangesLink()
+    {
+        using var client = _factory.CreateAdminClient();
+        _factory.Projects.Projects.Add(new Project(
+            9, 4, "Move target", "Desc", "Contr", Array.Empty<TechStackRef>()));
+
+        var response = await client.PutAsJsonAsync(
+            $"{ProjectPath}/9/experience",
+            new { experienceId = 5 });
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(5, Assert.Single(_factory.Projects.Projects, p => p.Id == 9).ExperienceId);
+    }
+
+    [Fact]
+    public async Task AdminUpdateProjectExperience_Detach_WithToken_Returns200AndNullsLink()
+    {
+        using var client = _factory.CreateAdminClient();
+
+        var response = await client.PutAsJsonAsync(
+            $"{ProjectPath}/7/experience",
+            new { experienceId = (int?)null });
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Null(Assert.Single(_factory.Projects.Projects, p => p.Id == 7).ExperienceId);
+    }
+
+    [Fact]
+    public async Task AdminUpdateProjectExperience_ForMissingProject_Returns404()
+    {
+        using var client = _factory.CreateAdminClient();
+
+        var response = await client.PutAsJsonAsync(
+            $"{ProjectPath}/99/experience",
+            new { experienceId = 4 });
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task AdminUpdateProjectExperience_ForMissingExperience_Returns404()
+    {
+        using var client = _factory.CreateAdminClient();
+
+        var response = await client.PutAsJsonAsync(
+            $"{ProjectPath}/7/experience",
+            new { experienceId = 99 });
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task AdminUpdateProjectExperience_WithInvalidProjectId_Returns400()
+    {
+        using var client = _factory.CreateAdminClient();
+
+        var response = await client.PutAsJsonAsync(
+            $"{ProjectPath}/0/experience",
+            new { experienceId = 4 });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+
+        var problem = await response.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal("validation_failed", problem.GetProperty("code").GetString());
+    }
+
+    [Fact]
+    public async Task AdminUpdateProjectExperience_WithInvalidExperienceId_Returns400()
+    {
+        using var client = _factory.CreateAdminClient();
+
+        var response = await client.PutAsJsonAsync(
+            $"{ProjectPath}/7/experience",
+            new { experienceId = 0 });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+
+        var problem = await response.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal("validation_failed", problem.GetProperty("code").GetString());
+    }
+
+    [Fact]
+    public async Task AdminUpdateProjectExperience_WithoutToken_Returns401()
+    {
+        using var client = _factory.CreateClient();
+
+        var response = await client.PutAsJsonAsync(
+            $"{ProjectPath}/7/experience",
+            new { experienceId = 4 });
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task AdminUpdateProjectExperience_WithNullBody_Returns400()
+    {
+        using var client = _factory.CreateAdminClient();
+
+        var response = await client.PutAsync(
+            $"{ProjectPath}/7/experience",
+            new StringContent("null", Encoding.UTF8, "application/json"));
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+
+        var problem = await response.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal("validation_failed", problem.GetProperty("code").GetString());
+    }
+
+    [Fact]
     public async Task AdminUpdateProject_WithToken_Returns200AndKeepsTheId()
     {
         using var client = _factory.CreateAdminClient();
@@ -315,6 +440,11 @@ public class ProjectAdminEndpointsTests : IClassFixture<JGBackendApiFactory>
             new Company("Applied ICT Inc."),
             new Period(new DateTime(2020, 1, 1), null),
             new Role("Software Engineer")));
+        factory.Experience.Experiences.Add(new Experience(
+            5,
+            new Company("Another Co."),
+            new Period(new DateTime(2021, 1, 1), null),
+            new Role("Senior Engineer")));
 
         factory.TechStacks.Failure = null;
         factory.TechStacks.TechStacks.Clear();
