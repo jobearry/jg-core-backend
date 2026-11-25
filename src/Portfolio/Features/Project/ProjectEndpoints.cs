@@ -17,6 +17,8 @@ public static class ProjectEndpoints
                 bool includeTools = false) =>
             (await handler.HandleAsync(includeTools, cancellationToken)).ToHttpResult())
         .WithName("GetPortfolioProjects")
+        .WithSummary("Get all projects")
+        .WithDescription("Returns all projects. Optionally include tech stacks.")
         .WithTags("Portfolio - Read")
         .AllowAnonymous()
         .Produces<List<ProjectDto>>(StatusCodes.Status200OK)
@@ -28,6 +30,8 @@ public static class ProjectEndpoints
                 CancellationToken cancellationToken) =>
             (await handler.HandleAsync(id, cancellationToken)).ToHttpResult())
         .WithName("GetPortfolioProjectById")
+        .WithSummary("Get a project by id")
+        .WithDescription("Returns a single project including tech stacks.")
         .WithTags("Portfolio - Read")
         .AllowAnonymous()
         .Produces<ProjectDto>(StatusCodes.Status200OK)
@@ -57,6 +61,8 @@ public static class ProjectEndpoints
                         ?? throw new InvalidOperationException(
                             "The project detail route is not registered.")))
         .WithName("AdminCreateProject")
+        .WithSummary("Create a standalone project")
+        .WithDescription("Creates a project with no experience link. Tech stacks are empty.")
         .RequireAuthorization("Admin")
         .Produces<ProjectDto>(StatusCodes.Status201Created)
         .ProducesProblem(StatusCodes.Status400BadRequest)
@@ -75,6 +81,8 @@ public static class ProjectEndpoints
                         ?? throw new InvalidOperationException(
                             "The project detail route is not registered.")))
         .WithName("AdminCreateProjectForExperience")
+        .WithSummary("Create a project under an experience")
+        .WithDescription("Creates a project and attaches it to the specified experience. The experience must exist.")
         .RequireAuthorization("Admin")
         .Produces<ProjectDto>(StatusCodes.Status201Created)
         .ProducesProblem(StatusCodes.Status400BadRequest)
@@ -89,6 +97,8 @@ public static class ProjectEndpoints
                 CancellationToken cancellationToken) =>
             (await handler.HandleAsync(id, request, cancellationToken)).ToHttpResult())
         .WithName("AdminUpdateProject")
+        .WithSummary("Update a project's fields")
+        .WithDescription("Replaces the project's name, description and contribution. Experience link and tech stacks are not changed.")
         .RequireAuthorization("Admin")
         .Produces<ProjectDto>(StatusCodes.Status200OK)
         .ProducesProblem(StatusCodes.Status400BadRequest)
@@ -103,6 +113,8 @@ public static class ProjectEndpoints
                 CancellationToken cancellationToken) =>
             (await handler.HandleAsync(id, request, cancellationToken)).ToHttpResult())
         .WithName("AdminUpdateProjectExperience")
+        .WithSummary("Update a project's experience link")
+        .WithDescription("Attaches, moves or detaches an existing project. A positive experienceId attaches or moves; null detaches. The project must exist; the experience must exist when the id is non-null.")
         .RequireAuthorization("Admin")
         .Produces<ProjectDto>(StatusCodes.Status200OK)
         .ProducesProblem(StatusCodes.Status400BadRequest)
@@ -117,6 +129,8 @@ public static class ProjectEndpoints
                 CancellationToken cancellationToken) =>
             (await handler.HandleAsync(id, request, cancellationToken)).ToHttpResult())
         .WithName("AdminReplaceProjectTechStacks")
+        .WithSummary("Replace a project's tech stacks")
+        .WithDescription("Replaces the entire set of tech stacks with the provided stack ids. All ids must exist. An empty array clears the stacks.")
         .RequireAuthorization("Admin")
         .Produces<ProjectDto>(StatusCodes.Status200OK)
         .ProducesProblem(StatusCodes.Status400BadRequest)
@@ -130,6 +144,8 @@ public static class ProjectEndpoints
                 CancellationToken cancellationToken) =>
             (await handler.HandleAsync(id, cancellationToken)).ToNoContentHttpResult())
         .WithName("AdminDeleteProject")
+        .WithSummary("Delete a project")
+        .WithDescription("Deletes the project and its tech stack links.")
         .RequireAuthorization("Admin")
         .Produces(StatusCodes.Status204NoContent)
         .ProducesProblem(StatusCodes.Status400BadRequest)

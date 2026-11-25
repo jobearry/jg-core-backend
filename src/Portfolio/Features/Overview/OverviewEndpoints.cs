@@ -12,6 +12,8 @@ public static class OverviewEndpoints
                 CancellationToken cancellationToken) =>
             (await handler.HandleAsync(cancellationToken)).ToHttpResult())
         .WithName("GetPortfolioOverview")
+        .WithSummary("Get the portfolio overview")
+        .WithDescription("Returns a summary of all portfolio sections with counts.")
         .WithTags("Portfolio - Read")
         .AllowAnonymous()
         .Produces<List<OverviewItemDto>>(StatusCodes.Status200OK)

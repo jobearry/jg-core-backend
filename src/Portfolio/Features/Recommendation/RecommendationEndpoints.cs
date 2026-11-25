@@ -16,6 +16,8 @@ public static class RecommendationEndpoints
                 CancellationToken cancellationToken) =>
             (await handler.HandleAsync(cancellationToken)).ToHttpResult())
         .WithName("GetPortfolioRecommendations")
+        .WithSummary("Get all recommendations")
+        .WithDescription("Returns all recommendations ordered by id ascending.")
         .WithTags("Portfolio - Read")
         .AllowAnonymous()
         .Produces<List<RecommendationDto>>(StatusCodes.Status200OK)
@@ -27,6 +29,8 @@ public static class RecommendationEndpoints
                 CancellationToken cancellationToken) =>
             (await handler.HandleAsync(id, cancellationToken)).ToHttpResult())
         .WithName("GetPortfolioRecommendationById")
+        .WithSummary("Get a recommendation by id")
+        .WithDescription("Returns a single recommendation.")
         .WithTags("Portfolio - Read")
         .AllowAnonymous()
         .Produces<RecommendationDto>(StatusCodes.Status200OK)
@@ -56,6 +60,8 @@ public static class RecommendationEndpoints
                         ?? throw new InvalidOperationException(
                             "The recommendation detail route is not registered.")))
         .WithName("AdminCreateRecommendation")
+        .WithSummary("Create a recommendation")
+        .WithDescription("Creates a new testimonial with person name, description and optional career position.")
         .RequireAuthorization("Admin")
         .Produces<RecommendationDto>(StatusCodes.Status201Created)
         .ProducesProblem(StatusCodes.Status400BadRequest)
@@ -69,6 +75,8 @@ public static class RecommendationEndpoints
                 CancellationToken cancellationToken) =>
             (await handler.HandleAsync(id, request, cancellationToken)).ToHttpResult())
         .WithName("AdminUpdateRecommendation")
+        .WithSummary("Update a recommendation")
+        .WithDescription("Replaces the recommendation's fields.")
         .RequireAuthorization("Admin")
         .Produces<RecommendationDto>(StatusCodes.Status200OK)
         .ProducesProblem(StatusCodes.Status400BadRequest)
@@ -82,6 +90,8 @@ public static class RecommendationEndpoints
                 CancellationToken cancellationToken) =>
             (await handler.HandleAsync(id, cancellationToken)).ToNoContentHttpResult())
         .WithName("AdminDeleteRecommendation")
+        .WithSummary("Delete a recommendation")
+        .WithDescription("Deletes the recommendation.")
         .RequireAuthorization("Admin")
         .Produces(StatusCodes.Status204NoContent)
         .ProducesProblem(StatusCodes.Status400BadRequest)

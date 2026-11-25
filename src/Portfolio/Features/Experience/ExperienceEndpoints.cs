@@ -20,6 +20,8 @@ public static class ExperienceEndpoints
                 bool includeProjects = false) =>
             (await handler.HandleAsync(includeProjects, cancellationToken)).ToHttpResult())
         .WithName("GetPortfolioExperience")
+        .WithSummary("Get all experiences")
+        .WithDescription("Returns all experiences. Optionally include their projects.")
         .WithTags("Portfolio - Read")
         .AllowAnonymous()
         .Produces<List<ExperienceDto>>(StatusCodes.Status200OK)
@@ -31,6 +33,8 @@ public static class ExperienceEndpoints
                 CancellationToken cancellationToken) =>
             (await handler.HandleAsync(id, cancellationToken)).ToHttpResult())
         .WithName("GetPortfolioExperienceById")
+        .WithSummary("Get an experience by id")
+        .WithDescription("Returns a single experience including its projects.")
         .WithTags("Portfolio - Read")
         .AllowAnonymous()
         .Produces<ExperienceDto>(StatusCodes.Status200OK)
@@ -60,6 +64,8 @@ public static class ExperienceEndpoints
                         ?? throw new InvalidOperationException(
                             "The experience detail route is not registered.")))
         .WithName("AdminCreateExperience")
+        .WithSummary("Create an experience")
+        .WithDescription("Creates a new role with company, period, role and optional fields.")
         .RequireAuthorization("Admin")
         .Produces<ExperienceDto>(StatusCodes.Status201Created)
         .ProducesProblem(StatusCodes.Status400BadRequest)
@@ -73,6 +79,8 @@ public static class ExperienceEndpoints
                 CancellationToken cancellationToken) =>
             (await handler.HandleAsync(id, request, cancellationToken)).ToHttpResult())
         .WithName("AdminUpdateExperience")
+        .WithSummary("Update an experience")
+        .WithDescription("Replaces the experience's fields. Projects are not changed.")
         .RequireAuthorization("Admin")
         .Produces<ExperienceDto>(StatusCodes.Status200OK)
         .ProducesProblem(StatusCodes.Status400BadRequest)
@@ -86,6 +94,8 @@ public static class ExperienceEndpoints
                 CancellationToken cancellationToken) =>
             (await handler.HandleAsync(id, cancellationToken)).ToNoContentHttpResult())
         .WithName("AdminDeleteExperience")
+        .WithSummary("Delete an experience")
+        .WithDescription("Deletes the experience. Its projects are detached (ON DELETE SET NULL).")
         .RequireAuthorization("Admin")
         .Produces(StatusCodes.Status204NoContent)
         .ProducesProblem(StatusCodes.Status400BadRequest)

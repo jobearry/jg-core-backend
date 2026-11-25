@@ -18,6 +18,8 @@ public static class SkillEndpoints
                 CancellationToken cancellationToken) =>
             (await handler.HandleAsync(cancellationToken)).ToHttpResult())
         .WithName("GetPortfolioSkills")
+        .WithSummary("Get all tech stacks")
+        .WithDescription("Returns all tech stacks with their category.")
         .WithTags("Portfolio - Read")
         .AllowAnonymous()
         .Produces<List<TechStackDto>>(StatusCodes.Status200OK)
@@ -29,6 +31,8 @@ public static class SkillEndpoints
                 CancellationToken cancellationToken) =>
             (await handler.HandleAsync(id, cancellationToken)).ToHttpResult())
         .WithName("GetPortfolioSkillById")
+        .WithSummary("Get a tech stack by id")
+        .WithDescription("Returns a single tech stack with its category.")
         .WithTags("Portfolio - Read")
         .AllowAnonymous()
         .Produces<TechStackDto>(StatusCodes.Status200OK)
@@ -41,6 +45,8 @@ public static class SkillEndpoints
                 CancellationToken cancellationToken) =>
             (await handler.HandleAsync(cancellationToken)).ToHttpResult())
         .WithName("GetPortfolioSkillCategories")
+        .WithSummary("Get all tech stack categories")
+        .WithDescription("Returns all categories.")
         .WithTags("Portfolio - Read")
         .AllowAnonymous()
         .Produces<List<SkillCategoryDto>>(StatusCodes.Status200OK)
@@ -52,6 +58,8 @@ public static class SkillEndpoints
                 CancellationToken cancellationToken) =>
             (await handler.HandleAsync(id, cancellationToken)).ToHttpResult())
         .WithName("GetPortfolioSkillCategoryById")
+        .WithSummary("Get a tech stack category by id")
+        .WithDescription("Returns a single category.")
         .WithTags("Portfolio - Read")
         .AllowAnonymous()
         .Produces<SkillCategoryDto>(StatusCodes.Status200OK)
@@ -81,6 +89,8 @@ public static class SkillEndpoints
                         ?? throw new InvalidOperationException(
                             "The tech stack detail route is not registered.")))
         .WithName("AdminCreateSkill")
+        .WithSummary("Create a tech stack")
+        .WithDescription("Creates a new tech stack in an existing category. The category is resolved by name.")
         .RequireAuthorization("Admin")
         .Produces<TechStackDto>(StatusCodes.Status201Created)
         .ProducesProblem(StatusCodes.Status400BadRequest)
@@ -94,6 +104,8 @@ public static class SkillEndpoints
                 CancellationToken cancellationToken) =>
             (await handler.HandleAsync(id, request, cancellationToken)).ToHttpResult())
         .WithName("AdminUpdateSkill")
+        .WithSummary("Update a tech stack")
+        .WithDescription("Replaces the stack's name, image and category. The category is resolved by name.")
         .RequireAuthorization("Admin")
         .Produces<TechStackDto>(StatusCodes.Status200OK)
         .ProducesProblem(StatusCodes.Status400BadRequest)
@@ -107,6 +119,8 @@ public static class SkillEndpoints
                 CancellationToken cancellationToken) =>
             (await handler.HandleAsync(id, cancellationToken)).ToNoContentHttpResult())
         .WithName("AdminDeleteSkill")
+        .WithSummary("Delete a tech stack")
+        .WithDescription("Deletes the tech stack. Fails with 409 if projects still reference it.")
         .RequireAuthorization("Admin")
         .Produces(StatusCodes.Status204NoContent)
         .ProducesProblem(StatusCodes.Status400BadRequest)
@@ -126,6 +140,8 @@ public static class SkillEndpoints
                         ?? throw new InvalidOperationException(
                             "The category detail route is not registered.")))
         .WithName("AdminCreateSkillCategory")
+        .WithSummary("Create a tech stack category")
+        .WithDescription("Creates a new category.")
         .RequireAuthorization("Admin")
         .Produces<SkillCategoryDto>(StatusCodes.Status201Created)
         .ProducesProblem(StatusCodes.Status400BadRequest)
@@ -139,6 +155,8 @@ public static class SkillEndpoints
                 CancellationToken cancellationToken) =>
             (await handler.HandleAsync(id, request, cancellationToken)).ToHttpResult())
         .WithName("AdminUpdateSkillCategory")
+        .WithSummary("Update a tech stack category")
+        .WithDescription("Renames the category.")
         .RequireAuthorization("Admin")
         .Produces<SkillCategoryDto>(StatusCodes.Status200OK)
         .ProducesProblem(StatusCodes.Status400BadRequest)
@@ -152,6 +170,8 @@ public static class SkillEndpoints
                 CancellationToken cancellationToken) =>
             (await handler.HandleAsync(id, cancellationToken)).ToNoContentHttpResult())
         .WithName("AdminDeleteSkillCategory")
+        .WithSummary("Delete a tech stack category")
+        .WithDescription("Deletes the category.")
         .RequireAuthorization("Admin")
         .Produces(StatusCodes.Status204NoContent)
         .ProducesProblem(StatusCodes.Status400BadRequest)
