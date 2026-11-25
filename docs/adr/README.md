@@ -11,7 +11,7 @@ without context.
 | [0004](0004-dto-boundary-at-api-edge.md) | DTO boundary at the API edge | Accepted |
 | [0005](0005-page-content-port-and-adapter.md) | Page-content port in Application, adapter in Presentation | Accepted |
 | [0006](0006-single-host-vertical-slices.md) | One host, one class library, vertical slices | Accepted |
-| [0007](0007-admin-authorization-and-writer-role.md) | Admin authorization and least-privilege write credential | Proposed |
+| [0007](0007-admin-authorization-and-writer-role.md) | Admin authorization and least-privilege write credential | Accepted |
 
 ## Statuses
 

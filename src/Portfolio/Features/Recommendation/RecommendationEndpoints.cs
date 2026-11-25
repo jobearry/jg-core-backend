@@ -8,7 +8,8 @@ public static class RecommendationEndpoints
 {
     public static void MapRecommendationEndpoints(
         this IEndpointRouteBuilder routes,
-        string? adminRateLimitPolicy = null)
+        string? adminRateLimitPolicy = null,
+        string? adminCorsPolicy = null)
     {
         routes.MapGet("recommendation", async (
                 GetRecommendationHandler handler,
@@ -34,8 +35,17 @@ public static class RecommendationEndpoints
         .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
 
         var admin = routes.MapGroup("admin").WithTags("Portfolio - Write");
+        if (adminRateLimitPolicy is not null)
+        {
+            admin.RequireRateLimiting(adminRateLimitPolicy);
+        }
 
-        var create = admin.MapPost("recommendation", async (
+        if (adminCorsPolicy is not null)
+        {
+            admin.RequireCors(adminCorsPolicy);
+        }
+
+        admin.MapPost("recommendation", async (
                 CreateRecommendationHandler handler,
                 LinkGenerator links,
                 CreateRecommendationRequest? request,
@@ -52,7 +62,7 @@ public static class RecommendationEndpoints
         .ProducesProblem(StatusCodes.Status401Unauthorized)
         .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
 
-        var update = admin.MapPut("recommendation/{id:int}", async (
+        admin.MapPut("recommendation/{id:int}", async (
                 int id,
                 UpdateRecommendationRequest? request,
                 UpdateRecommendationHandler handler,
@@ -66,7 +76,7 @@ public static class RecommendationEndpoints
         .ProducesProblem(StatusCodes.Status404NotFound)
         .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
 
-        var delete = admin.MapDelete("recommendation/{id:int}", async (
+        admin.MapDelete("recommendation/{id:int}", async (
                 int id,
                 DeleteRecommendationHandler handler,
                 CancellationToken cancellationToken) =>
@@ -78,12 +88,5 @@ public static class RecommendationEndpoints
         .ProducesProblem(StatusCodes.Status401Unauthorized)
         .ProducesProblem(StatusCodes.Status404NotFound)
         .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
-
-        if (adminRateLimitPolicy is not null)
-        {
-            create.RequireRateLimiting(adminRateLimitPolicy);
-            update.RequireRateLimiting(adminRateLimitPolicy);
-            delete.RequireRateLimiting(adminRateLimitPolicy);
-        }
     }
 }

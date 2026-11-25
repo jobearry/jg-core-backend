@@ -58,10 +58,10 @@ public sealed class DefaultRateLimitTests
             .GetRequiredService<EndpointDataSource>()
             .Endpoints
             .OfType<RouteEndpoint>()
-            .Where(endpoint => endpoint.RoutePattern.RawText?.Contains("admin/recommendation") == true)
+            .Where(endpoint => endpoint.RoutePattern.RawText?.Contains("admin/") == true)
             .ToList();
 
-        Assert.Equal(3, adminEndpoints.Count);
+        Assert.Equal(16, adminEndpoints.Count);
         Assert.All(
             adminEndpoints,
             endpoint => Assert.Equal(

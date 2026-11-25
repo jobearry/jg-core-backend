@@ -1,11 +1,18 @@
+using Microsoft.AspNetCore.Cors.Infrastructure;
+
 namespace JGBackend.Configuration;
 
 public static class CorsConfiguration
 {
     /// <summary>
-    /// Policy name shared by registration and the middleware pipeline.
+    /// Default policy for anonymous portfolio reads.
     /// </summary>
     public const string SpaCorsPolicy = "AllowSPA";
+
+    /// <summary>
+    /// Applied only to the admin group so a browser admin app can send writes.
+    /// </summary>
+    public const string AdminCorsPolicy = "AllowAdmin";
 
     public static IServiceCollection AddCorsOrigins(
         this IServiceCollection services,
@@ -23,14 +30,19 @@ public static class CorsConfiguration
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToArray();
 
+        var spaMethods = new[] { "GET", "POST" };
+        var adminMethods = new[] { "GET", "POST", "PUT", "DELETE" };
+
+        void Apply(CorsPolicyBuilder policy, string[] methods) =>
+            policy.WithOrigins(origins)
+                  .WithMethods(methods)
+                  .WithHeaders("Content-Type", "Authorization");
+
         services.AddCors(options =>
         {
-            options.AddPolicy(SpaCorsPolicy, policy =>
-            {
-                policy.WithOrigins(origins)
-                      .WithMethods("GET", "POST")
-                      .WithHeaders("Content-Type", "Authorization");
-            });
+            options.AddDefaultPolicy(policy => Apply(policy, spaMethods));
+            options.AddPolicy(SpaCorsPolicy, policy => Apply(policy, spaMethods));
+            options.AddPolicy(AdminCorsPolicy, policy => Apply(policy, adminMethods));
         });
 
         return services;

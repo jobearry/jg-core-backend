@@ -9,7 +9,7 @@ namespace Portfolio.Api.Tests;
 
 /// <summary>
 /// HTTP contract for Project admin writes. Reads stay anonymous; every write needs
-/// the Admin token. Experience and tech-stack relationships are out of this slice.
+/// the Admin token. Scalar edits and tech-stack replacement are both covered here.
 /// </summary>
 [Collection(JGBackendHostCollection.Name)]
 public class ProjectAdminEndpointsTests : IClassFixture<JGBackendApiFactory>

@@ -577,11 +577,12 @@ A new domain, or a Vercel preview deployment, is an environment variable —
 `Cors__AllowedOrigins__2=https://my-branch-git-team.vercel.app` — not a code edit and a
 redeploy. Adding an origin is still a security change: ask first.
 
-The policy is `GET, POST` and `Content-Type, Authorization`. There is **no
-`AllowCredentials()`**: bearer tokens travel in the `Authorization` header, which CORS
-treats as an ordinary request header, and nothing in this API sets a cookie. If the
-frontend ever moves to cookie auth or calls with `withCredentials: true`, that flag has
-to come back in the same change.
+The SPA policy is `GET, POST`; `/api/v1/admin` uses a separate policy with
+`GET, POST, PUT, DELETE`. Both use the same origin allow-list and the headers
+`Content-Type, Authorization`. There is **no `AllowCredentials()`**: bearer tokens
+travel in the `Authorization` header, which CORS treats as an ordinary request header,
+and nothing in this API sets a cookie. If the frontend ever moves to cookie auth or
+calls with `withCredentials: true`, that flag has to come back in the same change.
 
 Allowing localhost only in Development is deliberate: otherwise any page served from a
 local port could read the deployed API. The tests in `CorsPolicyTests` pin both that and

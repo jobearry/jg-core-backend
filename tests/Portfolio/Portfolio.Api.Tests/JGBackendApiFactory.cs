@@ -39,8 +39,8 @@ public class JGBackendApiFactory : WebApplicationFactory<Program>
 {
     public const string SigningKey = "host-tests-signing-key-that-is-long-enough";
 
-    private const string JwtIssuer = "host-composition-tests";
-    private const string JwtAudience = "host-composition-tests";
+    public const string JwtIssuer = "host-composition-tests";
+    public const string JwtAudience = "host-composition-tests";
     private const int JwtExpirationInMinutes = 60;
 
     private static readonly Dictionary<string, string> Settings = new()

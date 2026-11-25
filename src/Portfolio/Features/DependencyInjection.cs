@@ -105,16 +105,17 @@ public static class DependencyInjection
     }
 
     /// <summary>
-    /// Maps the portfolio slices. The policy names are optional so a host without a
-    /// rate-limiter middleware can leave them unset; the composed JGBackend host
-    /// supplies the passthrough, default and admin-write policies.
+    /// Maps the portfolio slices. The policy names are optional so a host without the
+    /// matching middleware can leave them unset; the composed JGBackend host supplies
+    /// the rate-limit policies and the CORS policy for admin writes.
     /// </summary>
     public static IEndpointRouteBuilder MapPortfolioFeatures(
         this IEndpointRouteBuilder endpoints,
         string? notionRateLimitPolicy = null,
         string? githubRateLimitPolicy = null,
         string? defaultRateLimitPolicy = null,
-        string? adminRateLimitPolicy = null)
+        string? adminRateLimitPolicy = null,
+        string? adminCorsPolicy = null)
     {
         var group = endpoints.MapGroup("");
         if (defaultRateLimitPolicy is not null)
@@ -124,10 +125,10 @@ public static class DependencyInjection
 
         group.MapNotionEndpoints(notionRateLimitPolicy);
         group.MapGithubEndpoints(githubRateLimitPolicy);
-        group.MapExperienceEndpoints(adminRateLimitPolicy);
-        group.MapProjectEndpoints(adminRateLimitPolicy);
-        group.MapRecommendationEndpoints(adminRateLimitPolicy);
-        group.MapSkillEndpoints(adminRateLimitPolicy);
+        group.MapExperienceEndpoints(adminRateLimitPolicy, adminCorsPolicy);
+        group.MapProjectEndpoints(adminRateLimitPolicy, adminCorsPolicy);
+        group.MapRecommendationEndpoints(adminRateLimitPolicy, adminCorsPolicy);
+        group.MapSkillEndpoints(adminRateLimitPolicy, adminCorsPolicy);
         group.MapOverviewEndpoints();
 
         return endpoints;

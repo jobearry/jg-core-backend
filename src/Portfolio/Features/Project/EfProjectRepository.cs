@@ -16,10 +16,17 @@ public sealed class EfProjectRepository
     : BasePortfolioRepository<DomainProject, ProjectEntity>, IProjectRepository
 {
     private readonly PortfolioWriteContext _writeContext;
+    private readonly TimeProvider _timeProvider;
 
-    public EfProjectRepository(PortfolioContext context, PortfolioWriteContext writeContext)
-        : base(context, ProjectMapper.ToDomain) =>
+    public EfProjectRepository(
+        PortfolioContext context,
+        PortfolioWriteContext writeContext,
+        TimeProvider timeProvider)
+        : base(context, ProjectMapper.ToDomain)
+    {
         _writeContext = writeContext;
+        _timeProvider = timeProvider;
+    }
 
     public async Task<List<DomainProject>> GetAllWithTechStacksAsync(CancellationToken cancellationToken)
     {
@@ -67,6 +74,7 @@ public sealed class EfProjectRepository
         // does not own.
         _writeContext.Projects.Attach(entity);
         _writeContext.Entry(entity).State = EntityState.Modified;
+        StampUpdatedAt(entity);
         await _writeContext.SaveChangesAsync(cancellationToken);
 
         return ProjectMapper.ToDomain(entity);
@@ -85,6 +93,7 @@ public sealed class EfProjectRepository
             entity.ProjectTechStacks.Add(join);
         }
 
+        StampUpdatedAt(entity);
         await _writeContext.SaveChangesAsync(cancellationToken);
 
         // The tracked joins have no TechStack navigation, so the returned DTO is
@@ -93,6 +102,9 @@ public sealed class EfProjectRepository
             ?? throw new InvalidOperationException(
                 $"Project {project.Id} disappeared after its tech stacks were saved.");
     }
+
+    private void StampUpdatedAt(ProjectEntity entity) =>
+        entity.UpdatedAt = _timeProvider.GetUtcNow().UtcDateTime;
 
     public async Task DeleteAsync(
         DomainProject project, CancellationToken cancellationToken)

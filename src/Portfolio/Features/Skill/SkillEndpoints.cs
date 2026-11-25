@@ -7,7 +7,9 @@ namespace Portfolio.Features.Skill;
 public static class SkillEndpoints
 {
     public static void MapSkillEndpoints(
-        this IEndpointRouteBuilder routes, string? adminRateLimitPolicy = null)
+        this IEndpointRouteBuilder routes,
+        string? adminRateLimitPolicy = null,
+        string? adminCorsPolicy = null)
     {
         // This endpoint used to ignore IsSuccess and return 200 with a null body on
         // failure, which a client could not distinguish from "no skills exist".
@@ -61,6 +63,11 @@ public static class SkillEndpoints
         if (adminRateLimitPolicy is not null)
         {
             admin.RequireRateLimiting(adminRateLimitPolicy);
+        }
+
+        if (adminCorsPolicy is not null)
+        {
+            admin.RequireCors(adminCorsPolicy);
         }
 
         admin.MapPost("skill", async (

@@ -1,6 +1,6 @@
 # ADR-0007 — Admin authorization and least-privilege write credential
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-11-22
 - **Deciders:** jthan-dev (repository owner)
 - **Related:** [ADR-0003](0003-aggregate-boundary.md), [ADR-0006](0006-single-host-vertical-slices.md), [`../../rules/api.md`](../../rules/api.md), [`../known-issues.md`](../known-issues.md) (KI-010), [`../operations.md`](../operations.md)
@@ -49,8 +49,9 @@ add a separate DML-only database role for writes.**
 - Write endpoints live under `/api/v1/admin/...` and carry explicit
   `.RequireAuthorization("Admin")`, an `AdminWrite` rate limit, and an admin CORS
   policy in addition to the fallback.
-- No audit table or audit columns are introduced. Write actions are recorded in
-  application logs only.
+- No audit table is introduced. The existing `project.updated_at` column is stamped
+  on admin edits; the other write tables have no edit timestamp yet (KI-052).
+  Failures are logged; successful writes are not.
 
 This ADR supersedes ADR-0006 only where it recorded the service-token claim shape
 as unchanged. The rest of ADR-0006 remains in force.

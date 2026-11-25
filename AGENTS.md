@@ -62,12 +62,13 @@ docker compose --project-directory . -f docker/compose.yaml up --build
 
 ## Current state
 
-Phases 1–3 are complete. `src/JGBackend` is the sole composition root and
-deployable. It composes `Core` (auth, health, cross-cutting infrastructure) and
-`Portfolio` (read-only vertical slices in a class library). Configuration, the
-JWT lifetime, and rate-limit policies are unified on the host; there is one
-deploy workflow and one Docker image. Portfolio hosts no HTTP pipeline of its
-own.
+Phases 1–3 are complete, and admin-only write slices now sit alongside the public
+reads. `src/JGBackend` is the sole composition root and deployable. It composes
+`Core` (auth, health, cross-cutting infrastructure) and `Portfolio` (vertical slices
+in a class library). Public reads stay anonymous; non-GET `/api/v1/admin/...` routes
+require the `role=Admin` service token. Configuration, the JWT lifetime, and
+rate-limit policies are unified on the host; there is one deploy workflow and one
+Docker image. Portfolio hosts no HTTP pipeline of its own.
 
 ## Non-negotiables
 

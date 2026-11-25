@@ -8,7 +8,9 @@ namespace Portfolio.Features.Experience;
 public static class ExperienceEndpoints
 {
     public static void MapExperienceEndpoints(
-        this IEndpointRouteBuilder routes, string? adminRateLimitPolicy = null)
+        this IEndpointRouteBuilder routes,
+        string? adminRateLimitPolicy = null,
+        string? adminCorsPolicy = null)
     {
         // The token is bound to RequestAborted. Passing it all the way down means a
         // client that navigates away stops the query instead of holding a connection.
@@ -40,6 +42,11 @@ public static class ExperienceEndpoints
         if (adminRateLimitPolicy is not null)
         {
             admin.RequireRateLimiting(adminRateLimitPolicy);
+        }
+
+        if (adminCorsPolicy is not null)
+        {
+            admin.RequireCors(adminCorsPolicy);
         }
 
         admin.MapPost("experience", async (

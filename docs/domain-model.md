@@ -132,24 +132,25 @@ differently.
 
 **One consequence to know about.** `Period` refuses a start date in the future
 (compared by date, so time of day never decides). The mapping constructs a `Period`
-for every row, so a future-dated row in the database now throws inside AutoMapper and
-returns `500` for the whole collection rather than rendering a nonsense duration. That
-is deliberate — a typo such as `2062` should be loud — but it means the invariant is
-enforced on the read path until a write path exists to validate it earlier.
+for every row, so a future-dated row in the database throws while reading and returns
+`500` for the whole collection rather than rendering a nonsense duration. That is
+deliberate — a typo such as `2062` should be loud. Admin input is checked by
+`ExperienceRequestValidator` before the value object is built, so a bad write gets
+`400` instead.
 
 ## 6. Enforced invariants
 
 | Invariant | Enforcement |
 |---|---|---|
-| `Project.ProjectName` is non-blank | `Project` constructor |
+| `Project.ProjectName` is non-blank | `Project` constructor and `Project.UpdateDetails` |
 | A project is linked to at most one experience | `Project.AttachToExperience`; the link is optional |
-| `TechStack.StackName` and `TechStackCategory.Category` are non-blank | Entity constructors |
+| `TechStack.StackName` and `TechStackCategory.Category` are non-blank | Entity constructors, `TechStack.UpdateDetails` and `TechStackCategory.Rename` |
 | `TechStack.Category` is non-blank when present | `TechStack.SetCategory`; `null` is allowed |
-| `Recommendation.PersonName` and `Description` are non-blank | `Recommendation` constructor |
-| `Period.FinishedAt` is not before `StartedAt` | `Period` constructor |
-| `Role` is non-empty and at most 50 characters | `Role` constructor |
-| `Company` is non-empty and at most 255 characters | `Company` constructor; the database also has `NOT NULL` and a non-blank `CHECK` |
-| A role cannot start in the future | `Period` constructor |
+| `Recommendation.PersonName` and `Description` are non-blank | `Recommendation` constructor and `Recommendation.ChangeDetails` |
+| `Period.FinishedAt` is not before `StartedAt` | `Period` constructor, used by `Experience.UpdateDetails` |
+| `Role` is non-empty and at most 50 characters | `Role` constructor, used by `Experience.UpdateDetails` |
+| `Company` is non-empty and at most 255 characters | `Company` constructor, used by `Experience.UpdateDetails`; the database also has `NOT NULL` and a non-blank `CHECK` |
+| A role cannot start in the future | `Period` constructor, used by `Experience.UpdateDetails` |
 | Persistence audit fields are absent from domain entities | Domain model shape |
 
 ## 7. Types in their owning layer

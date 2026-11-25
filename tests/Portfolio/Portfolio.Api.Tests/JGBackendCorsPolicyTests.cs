@@ -45,6 +45,21 @@ public sealed class JGBackendCorsPolicyTests
     }
 
     [Fact]
+    public async Task AdminPolicy_AllowsWriteMethodsAndSharesOrigins()
+    {
+        var spa = await PolicyFor("Production");
+        var admin = await PolicyFor("Production", policyName: CorsConfiguration.AdminCorsPolicy);
+
+        Assert.Equal(spa.Origins, admin.Origins);
+        Assert.Equal(spa.Headers, admin.Headers);
+        Assert.Equal(new[] { "GET", "POST", "PUT", "DELETE" }, admin.Methods);
+        Assert.False(admin.SupportsCredentials);
+        Assert.False(admin.AllowAnyOrigin);
+        Assert.False(admin.AllowAnyMethod);
+        Assert.False(admin.AllowAnyHeader);
+    }
+
+    [Fact]
     public async Task AConfiguredOrigin_IsTrimmedOfTrailingWhitespaceAndSlash()
     {
         // The browser's Origin header never ends in a slash, so a value pasted from an
@@ -56,7 +71,8 @@ public sealed class JGBackendCorsPolicyTests
 
     private static async Task<CorsPolicy> PolicyFor(
         string environmentName,
-        string allowedOrigin = "https://jgolimlim-portfolio.vercel.app")
+        string allowedOrigin = "https://jgolimlim-portfolio.vercel.app",
+        string policyName = "AllowSPA")
     {
         var configuration = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
@@ -74,7 +90,7 @@ public sealed class JGBackendCorsPolicyTests
         var policyProvider = services.BuildServiceProvider()
             .GetRequiredService<ICorsPolicyProvider>();
 
-        return (await policyProvider.GetPolicyAsync(new DefaultHttpContext(), "AllowSPA"))!;
+        return (await policyProvider.GetPolicyAsync(new DefaultHttpContext(), policyName))!;
     }
 
     private sealed class FakeEnvironment(string environmentName) : IWebHostEnvironment

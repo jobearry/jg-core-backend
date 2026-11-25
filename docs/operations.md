@@ -78,7 +78,9 @@ See [ADR-0007](adr/0007-admin-authorization-and-writer-role.md).
 
 Admin write routes live under `/api/v1/admin` and require the `role=Admin` token
 from `/api/v1/auth/login`. They are capped at 30 requests/minute per IP by the
-`admin-write` policy. The first slice is `recommendation`; the request/response
+`admin-write` policy and use a CORS policy that permits `PUT` and `DELETE` from the
+configured origins. CRUD is available for experience, project, recommendation,
+skill and skill-category, plus project tech-stack replacement; the request/response
 contract and status codes are in [`api-reference.md`](api-reference.md) §3.
 Public reads do not present a token and never reach `PortfolioWriteContext`.
 
@@ -251,7 +253,7 @@ The composed host reads only the keys in §3. On `jdbweb`, use this list;
 | Setting | Action | Why |
 |---|---|---|
 | `ConnectionStrings__JDBConnection` | keep | runtime read connection (`portfolio_app`, `SELECT` only); the workflow's migration step uses the separate `PRODUCTION_CONNECTION_STRING` secret (§5) |
-| `ConnectionStrings__JDBConnectionWrite` | keep | runtime write connection (`portfolio_writer`, DML only); the same value as the read connection is acceptable only outside production |
+| `ConnectionStrings__JDBConnectionWrite` | add/verify | required runtime write connection (`portfolio_writer`, DML only); GitHub Actions does not set it, and the same value as the read connection is acceptable only outside production |
 | `Jwt__Key`, `Jwt__Issuer`, `Jwt__Audience` | keep | issuer and audience are validated on every request (`AuthenticationConfiguration.cs:47-52`); changing them invalidates existing tokens |
 | `Jwt__ExpirationInMinutes` | keep or unset | defaults to 60 |
 | `Jwt__Expires` | remove | old Generic-host key; the app reads `Jwt:ExpirationInMinutes` (KI-031) |

@@ -7,7 +7,9 @@ namespace Portfolio.Features.Project;
 public static class ProjectEndpoints
 {
     public static void MapProjectEndpoints(
-        this IEndpointRouteBuilder routes, string? adminRateLimitPolicy = null)
+        this IEndpointRouteBuilder routes,
+        string? adminRateLimitPolicy = null,
+        string? adminCorsPolicy = null)
     {
         routes.MapGet("project", async (
                 GetProjectHandler handler,
@@ -37,6 +39,11 @@ public static class ProjectEndpoints
         if (adminRateLimitPolicy is not null)
         {
             admin.RequireRateLimiting(adminRateLimitPolicy);
+        }
+
+        if (adminCorsPolicy is not null)
+        {
+            admin.RequireCors(adminCorsPolicy);
         }
 
         admin.MapPost("project", async (

@@ -56,7 +56,7 @@ if (app.Environment.IsDevelopment() || app.Configuration.GetValue("Swagger:Enabl
     });
 }
 
-app.UseCors(CorsConfiguration.SpaCorsPolicy);
+app.UseCors();
 app.UseHttpsRedirection();
 app.UseRateLimiter();
 app.UseAuthentication();
@@ -67,12 +67,13 @@ app.MapFeatures(RateLimitPolicies.Default);
 
 // Portfolio endpoints declare only the segment below the version prefix. Core
 // endpoints still carry their own /api/v1 group until the auth merge removes it.
-// Only the composed host runs a rate limiter, so it supplies the policy names.
+// Only the composed host owns the middleware, so it supplies the policy names.
 app.MapGroup("api/v1").MapPortfolioFeatures(
     RateLimitPolicies.NotionPassthrough,
     RateLimitPolicies.GithubPassthrough,
     RateLimitPolicies.Default,
-    RateLimitPolicies.AdminWrite);
+    RateLimitPolicies.AdminWrite,
+    CorsConfiguration.AdminCorsPolicy);
 
 // The admin fallback would otherwise challenge unmatched routes, turning a 404
 // into a 401. The explicit catch-all also matches dotted paths such as
