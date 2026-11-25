@@ -81,9 +81,10 @@ task/<short-topic>         task/phase-3-incremental-tech-stack
 **Branch strategy:**
 
 - **One `feature/<topic>` branch per feature** — the integration branch that accumulates completed phases.
-- **Each phase gets a `task/<phase-name>` branch** cut from the feature branch. Implement the phase on the task branch, verify, then merge back to the feature branch (fast-forward or merge commit). The feature branch is what eventually goes to PR/main.
+- **Each phase gets a `task/<phase-name>` branch** cut from the feature branch. Implement the phase on the task branch, verify, then open a PR **to the feature branch**. The feature branch receives these phase PRs.
 - Do not chain task branches (task-2 cut from task-1); always cut from the current tip of the feature branch so phases integrate cleanly.
-- Task branches are short-lived and deleted after merge. They are not separate PRs unless explicitly discussed.
+- Task branches are short-lived and deleted after their PR is merged to the feature branch.
+- **Only the `feature/<topic>` branch is PR'd to `main`/`master`.** Task branches never target main directly.
 
 Commit messages follow Conventional Commits:
 
