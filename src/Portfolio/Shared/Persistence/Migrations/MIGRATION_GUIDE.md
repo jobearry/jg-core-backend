@@ -18,6 +18,11 @@ dotnet tool update --global dotnet-ef
 
 ---
 
+> Every command below passes `--context PortfolioContext`. The solution also
+> contains `PortfolioWriteContext`; without the flag, EF Core cannot choose a
+> context and fails with "More than one DbContext was found". Only
+> `PortfolioContext` owns migrations.
+
 ## Creating a New Migration
 
 When you make changes to your Entity Framework models, you need to create a new migration to capture those changes.
@@ -25,13 +30,13 @@ When you make changes to your Entity Framework models, you need to create a new 
 ### Command
 
 ```powershell
-dotnet ef migrations add <MigrationName> --project src/Portfolio/Portfolio.csproj --startup-project src/JGBackend/JGBackend.csproj
+dotnet ef migrations add <MigrationName> --context PortfolioContext --project src/Portfolio/Portfolio.csproj --startup-project src/JGBackend/JGBackend.csproj
 ```
 
 ### Example
 
 ```powershell
-dotnet ef migrations add AddUserTable --project src/Portfolio/Portfolio.csproj --startup-project src/JGBackend/JGBackend.csproj
+dotnet ef migrations add AddUserTable --context PortfolioContext --project src/Portfolio/Portfolio.csproj --startup-project src/JGBackend/JGBackend.csproj
 ```
 
 This command will:
@@ -54,7 +59,7 @@ Apply pending migrations to your database.
 ### Command
 
 ```powershell
-dotnet ef database update --project src/Portfolio/Portfolio.csproj --startup-project src/JGBackend/JGBackend.csproj
+dotnet ef database update --context PortfolioContext --project src/Portfolio/Portfolio.csproj --startup-project src/JGBackend/JGBackend.csproj
 ```
 
 This command will:
@@ -71,19 +76,19 @@ If you need to roll back to a specific migration (useful if something goes wrong
 ### Command
 
 ```powershell
-dotnet ef database update <TargetMigrationName> --project src/Portfolio/Portfolio.csproj --startup-project src/JGBackend/JGBackend.csproj
+dotnet ef database update <TargetMigrationName> --context PortfolioContext --project src/Portfolio/Portfolio.csproj --startup-project src/JGBackend/JGBackend.csproj
 ```
 
 ### Example
 
 ```powershell
-dotnet ef database update 20260808053318_InitialCreate --project src/Portfolio/Portfolio.csproj --startup-project src/JGBackend/JGBackend.csproj
+dotnet ef database update 20260808053318_InitialCreate --context PortfolioContext --project src/Portfolio/Portfolio.csproj --startup-project src/JGBackend/JGBackend.csproj
 ```
 
 ### To Remove the Latest Migration
 
 ```powershell
-dotnet ef migrations remove --project src/Portfolio/Portfolio.csproj --startup-project src/JGBackend/JGBackend.csproj
+dotnet ef migrations remove --context PortfolioContext --project src/Portfolio/Portfolio.csproj --startup-project src/JGBackend/JGBackend.csproj
 ```
 
 ---
@@ -95,7 +100,7 @@ View all applied migrations in the database.
 ### Command
 
 ```powershell
-dotnet ef migrations list --project src/Portfolio/Portfolio.csproj --startup-project src/JGBackend/JGBackend.csproj
+dotnet ef migrations list --context PortfolioContext --project src/Portfolio/Portfolio.csproj --startup-project src/JGBackend/JGBackend.csproj
 ```
 
 This will display:
@@ -111,12 +116,12 @@ This will display:
 1. Add the property to your Entity class
 2. Create a migration:
    ```powershell
-   dotnet ef migrations add AddPropertyNameToEntityName --project src/Portfolio/Portfolio.csproj --startup-project src/JGBackend/JGBackend.csproj
+   dotnet ef migrations add AddPropertyNameToEntityName --context PortfolioContext --project src/Portfolio/Portfolio.csproj --startup-project src/JGBackend/JGBackend.csproj
    ```
 3. Review the generated migration file
 4. Update the database:
    ```powershell
-   dotnet ef database update --project src/Portfolio/Portfolio.csproj --startup-project src/JGBackend/JGBackend.csproj
+   dotnet ef database update --context PortfolioContext --project src/Portfolio/Portfolio.csproj --startup-project src/JGBackend/JGBackend.csproj
    ```
 
 ### Scenario 2: Changed a Property Type
@@ -124,12 +129,12 @@ This will display:
 1. Update the property type in your Entity class
 2. Create a migration:
    ```powershell
-   dotnet ef migrations add ChangePropertyTypeInEntity --project src/Portfolio/Portfolio.csproj --startup-project src/JGBackend/JGBackend.csproj
+   dotnet ef migrations add ChangePropertyTypeInEntity --context PortfolioContext --project src/Portfolio/Portfolio.csproj --startup-project src/JGBackend/JGBackend.csproj
    ```
 3. Review and adjust the migration if needed (some type changes may require manual data conversion)
 4. Update the database:
    ```powershell
-   dotnet ef database update --project src/Portfolio/Portfolio.csproj --startup-project src/JGBackend/JGBackend.csproj
+   dotnet ef database update --context PortfolioContext --project src/Portfolio/Portfolio.csproj --startup-project src/JGBackend/JGBackend.csproj
    ```
 
 ### Scenario 3: Removed a Property
@@ -137,11 +142,11 @@ This will display:
 1. Remove the property from your Entity class
 2. Create a migration:
    ```powershell
-   dotnet ef migrations add RemovePropertyFromEntity --project src/Portfolio/Portfolio.csproj --startup-project src/JGBackend/JGBackend.csproj
+   dotnet ef migrations add RemovePropertyFromEntity --context PortfolioContext --project src/Portfolio/Portfolio.csproj --startup-project src/JGBackend/JGBackend.csproj
    ```
 3. Update the database:
    ```powershell
-   dotnet ef database update --project src/Portfolio/Portfolio.csproj --startup-project src/JGBackend/JGBackend.csproj
+   dotnet ef database update --context PortfolioContext --project src/Portfolio/Portfolio.csproj --startup-project src/JGBackend/JGBackend.csproj
    ```
 
 ---

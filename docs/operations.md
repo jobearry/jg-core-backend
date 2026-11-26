@@ -32,6 +32,7 @@ dotnet user-secrets set "Github:Token"  "<GitHub personal access token>" --proje
 
 # 3. apply migrations
 dotnet ef database update \
+  --context PortfolioContext \
   --project src/Portfolio/Portfolio.csproj \
   --startup-project src/JGBackend/JGBackend.csproj
 
@@ -45,8 +46,8 @@ dotnet run --project src/JGBackend/JGBackend.csproj
 | `https` | https://localhost:7054 / http://localhost:5031 |
 | Swagger | http://localhost:5031/swagger |
 
-Migrations are applied with `dotnet ef database update` using the host as the
-startup project. `JGBackend` also applies them at startup when
+Migrations are applied with `dotnet ef database update --context PortfolioContext`
+using the host as the startup project. `JGBackend` also applies them at startup when
 `Database:AutoMigrate` is enabled (default `true`); production sets it to `false`
 because the deploy workflow owns migrations there (see §5).
 
@@ -246,6 +247,7 @@ for a smoke test and off again.
 | Deploy fails at "Apply database migrations" | migration could not run: dirty data, unreachable DB, or a missing/wrong `PRODUCTION_CONNECTION_STRING` | read the step log; the old app is still live. Fix the data or secret and re-run |
 | `docker compose up` fails with "required variable ConnectionStrings__JDBConnection is missing" | `.env` is missing, or Compose is using `docker/` as the project directory | from the repo root, run `cp .env.example .env`, fill it in, then `docker compose --project-directory . -f docker/compose.yaml up --build`; `-f docker/compose.yaml` alone still makes `docker/` the project directory |
 | `dotnet ef` says "command not found" | the tool manifest was not restored | `dotnet tool restore` (from the repo root) |
+| `dotnet ef` says "More than one DbContext was found" | both `PortfolioContext` and `PortfolioWriteContext` are discoverable | pass `--context PortfolioContext`; only that context owns migrations |
 | `dotnet ef` sees a null connection string | no `JDBConnection` value was found in the host project's User Secrets, `appsettings.Development.json`, or environment | confirm the secret key is `ConnectionStrings:JDBConnection`, or set `ConnectionStrings__JDBConnection` |
 | `/auth/login` returns 401 with the right key | whitespace, or the key was rotated | re-read `Jwt:Key` |
 | `/auth/login` returns 500 `server_misconfigured` | `Jwt:Key` is shorter than 32 bytes | HS256 needs a 256-bit key |

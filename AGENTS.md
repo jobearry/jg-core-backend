@@ -36,6 +36,7 @@ and migrations, the host is the startup project):
 
 ```sh
 dotnet ef migrations add <Name> \
+  --context PortfolioContext \
   --project src/Portfolio/Portfolio.csproj \
   --startup-project src/JGBackend/JGBackend.csproj
 ```

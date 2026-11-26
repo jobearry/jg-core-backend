@@ -46,6 +46,7 @@ are shared; do not rename them as part of a file move.
 ```sh
 dotnet test JGBackend.sln
 dotnet ef migrations add <Name> \
+  --context PortfolioContext \
   --project src/Portfolio/Portfolio.csproj \
   --startup-project src/JGBackend/JGBackend.csproj
 ```
