@@ -20,4 +20,14 @@ internal static class MappingHelpers
 
     internal static string? ToCategoryName(TechStackCategoryEntity? category) =>
         category is null ? null : category.Category;
+
+    /// <summary>
+    /// The date columns are timestamp without time zone. Npgsql rejects Kind=Utc,
+    /// so an instant from the wire or domain clock is normalised at the edge.
+    /// </summary>
+    internal static DateTime ToUnspecified(DateTime value) =>
+        DateTime.SpecifyKind(value, DateTimeKind.Unspecified);
+
+    internal static DateTime? ToUnspecified(DateTime? value) =>
+        value.HasValue ? ToUnspecified(value.Value) : null;
 }

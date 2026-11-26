@@ -27,8 +27,8 @@ public static class ExperienceMapper
         {
             Id = source.Id,
             CompanyName = source.Company.Name,
-            StartedAt = source.Duration.StartedAt,
-            FinishedAt = source.Duration.FinishedAt,
+            StartedAt = MappingHelpers.ToUnspecified(source.Duration.StartedAt),
+            FinishedAt = MappingHelpers.ToUnspecified(source.Duration.FinishedAt),
             Description = source.Description,
             Role = MappingHelpers.ToStoredRole(source.Role),
             Responsibility = source.Responsibility,

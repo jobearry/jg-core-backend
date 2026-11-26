@@ -148,6 +148,23 @@ public class ExperienceMapperTests
     }
 
     [Fact]
+    public void Map_Experience_To_ExperienceEntity_WithUtcTimestamps_NormalizesKindToUnspecified()
+    {
+        var experience = new Experience(
+            3,
+            new Company("Acme Corp"),
+            new Period(StartedAt, FinishedAt),
+            new Role("Senior Developer"));
+
+        var entity = ExperienceMapper.ToEntity(experience);
+
+        Assert.Equal(DateTimeKind.Unspecified, entity.StartedAt?.Kind);
+        Assert.Equal(DateTimeKind.Unspecified, entity.FinishedAt?.Kind);
+        Assert.Equal(StartedAt, entity.StartedAt);
+        Assert.Equal(FinishedAt, entity.FinishedAt);
+    }
+
+    [Fact]
     public void Map_Experience_To_ExperienceEntity_WithNoRole_WritesEmptyString()
     {
         var experience = new Experience(3, new Company("Acme"), new Period(StartedAt), null);

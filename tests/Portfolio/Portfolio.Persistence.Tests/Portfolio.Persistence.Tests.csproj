@@ -24,6 +24,7 @@
     <Compile Include="..\Features\Project\ProjectMapperTests.cs" Link="Features\Project\ProjectMapperTests.cs" />
     <Compile Include="..\Features\Project\ProjectWriteTimestampTests.cs" Link="Features\Project\ProjectWriteTimestampTests.cs" />
     <Compile Include="..\Features\Recommendation\RecommendationMapperTests.cs" Link="Features\Recommendation\RecommendationMapperTests.cs" />
+    <Compile Include="..\Features\Skill\SkillWriteAuditTests.cs" Link="Features\Skill\SkillWriteAuditTests.cs" />
     <Compile Include="..\Shared\Persistence\DatabaseConnectionRegistrationTests.cs" Link="Shared\Persistence\DatabaseConnectionRegistrationTests.cs" />
     <Compile Include="..\Shared\Persistence\MappingConfigurationTests.cs" Link="Shared\Persistence\MappingConfigurationTests.cs" />
     <Compile Include="..\Shared\Persistence\NpgsqlFailureTypeTests.cs" Link="Shared\Persistence\NpgsqlFailureTypeTests.cs" />
