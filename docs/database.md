@@ -184,18 +184,20 @@ and ends in exactly the same state as one that applied the squash.
 ```bash
 # add
 dotnet ef migrations add AddFinishedAtToExperience \
+  --context PortfolioContext \
   --project src/Portfolio/Portfolio.csproj \
   --startup-project src/JGBackend/JGBackend.csproj
 
 # review the generated Up/Down, then apply
 dotnet ef database update \
+  --context PortfolioContext \
   --project src/Portfolio/Portfolio.csproj \
   --startup-project src/JGBackend/JGBackend.csproj
 
 # list / rollback / remove (unapplied only)
-dotnet ef migrations list   --project … --startup-project …
-dotnet ef database update <PreviousMigration> --project … --startup-project …
-dotnet ef migrations remove --project … --startup-project …
+dotnet ef migrations list   --context PortfolioContext --project … --startup-project …
+dotnet ef database update <PreviousMigration> --context PortfolioContext --project … --startup-project …
+dotnet ef migrations remove --context PortfolioContext --project … --startup-project …
 ```
 
 Full guide: `src/Portfolio/Shared/Persistence/Migrations/MIGRATION_GUIDE.md`.

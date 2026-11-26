@@ -59,16 +59,20 @@ the solution.
 
 ```bash
 dotnet ef migrations add <DescriptiveName> \
+  --context PortfolioContext \
   --project src/Portfolio/Portfolio.csproj \
   --startup-project src/JGBackend/JGBackend.csproj
 
 dotnet ef database update \
+  --context PortfolioContext \
   --project src/Portfolio/Portfolio.csproj \
   --startup-project src/JGBackend/JGBackend.csproj
 ```
 
 Rules:
 
+- Always pass `--context PortfolioContext`. `PortfolioWriteContext` is also
+  discoverable but owns no migrations.
 - **Never edit an applied migration.** Add a new one. (The one exception:
   migrations not yet merged to `main`.)
 - One logical change per migration. Name it for the change, not the date:

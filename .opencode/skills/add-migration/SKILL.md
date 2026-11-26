@@ -26,9 +26,13 @@ that exists only for persistence does not belong in the domain model.
 
 ```bash
 dotnet ef migrations add <DescriptiveName> \
+  --context PortfolioContext \
   --project src/Portfolio/Portfolio.csproj \
   --startup-project src/JGBackend/JGBackend.csproj
 ```
+
+Always pass `--context PortfolioContext`. `PortfolioWriteContext` is also
+discoverable but owns no migrations.
 
 Name it for the change: `AddFinishedAtToExperience`, not `UpdateSchema`.
 
@@ -51,6 +55,7 @@ migration instead.
 
 ```bash
 dotnet ef database update \
+  --context PortfolioContext \
   --project src/Portfolio/Portfolio.csproj \
   --startup-project src/JGBackend/JGBackend.csproj
 ```
@@ -64,7 +69,7 @@ dotnet ef database update \
 ## Verification
 
 ```bash
-dotnet ef migrations list --project src/Portfolio/Portfolio.csproj --startup-project src/JGBackend/JGBackend.csproj
+dotnet ef migrations list --context PortfolioContext --project src/Portfolio/Portfolio.csproj --startup-project src/JGBackend/JGBackend.csproj
 dotnet build JGBackend.sln
 ```
 

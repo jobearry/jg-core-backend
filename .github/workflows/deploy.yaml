@@ -47,6 +47,7 @@ jobs:
           ConnectionStrings__JDBConnection: "Host=unused;Database=unused;Username=unused;Password=unused"
         run: >
           dotnet ef migrations has-pending-model-changes
+          --context PortfolioContext
           --project src/Portfolio/Portfolio.csproj
           --startup-project src/JGBackend/JGBackend.csproj
 
@@ -67,6 +68,7 @@ jobs:
             exit 1
           fi
           dotnet ef database update \
+            --context PortfolioContext \
             --project src/Portfolio/Portfolio.csproj \
             --startup-project src/JGBackend/JGBackend.csproj
 

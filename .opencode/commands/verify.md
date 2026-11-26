@@ -8,7 +8,7 @@ Run the full verification suite:
 
 !`dotnet test JGBackend.sln --configuration Release --no-build`
 
-!`ConnectionStrings__JDBConnection="Host=unused;Database=unused;Username=unused;Password=unused" dotnet ef migrations has-pending-model-changes --project src/Portfolio/Portfolio.csproj --startup-project src/JGBackend/JGBackend.csproj`
+!`ConnectionStrings__JDBConnection="Host=unused;Database=unused;Username=unused;Password=unused" dotnet ef migrations has-pending-model-changes --context PortfolioContext --project src/Portfolio/Portfolio.csproj --startup-project src/JGBackend/JGBackend.csproj`
 
 Summarize the result. If any step failed, identify the first failure and the file
 that caused it.
