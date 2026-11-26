@@ -60,12 +60,40 @@ public class RecommendationTests
     }
 
     [Fact]
-    public void ChangeCareerPosition_CanClearIt()
+    public void ChangeDetails_UpdatesEveryEditableField()
+    {
+        var recommendation = CreateRecommendation();
+        var postedAt = recommendation.PostedAt;
+
+        recommendation.ChangeDetails("New Name", "New description", new Role("Manager"));
+
+        Assert.Equal("New Name", recommendation.PersonName);
+        Assert.Equal("New description", recommendation.Description);
+        Assert.Equal(new Role("Manager"), recommendation.CareerPosition);
+        Assert.Equal(postedAt, recommendation.PostedAt);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void ChangeDetails_WithBlankPersonName_Throws(string? personName)
     {
         var recommendation = CreateRecommendation();
 
-        recommendation.ChangeCareerPosition(null);
+        Assert.Throws<ArgumentException>(() =>
+            recommendation.ChangeDetails(personName!, "Still valid", null));
+    }
 
-        Assert.Null(recommendation.CareerPosition);
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void ChangeDetails_WithBlankDescription_Throws(string? description)
+    {
+        var recommendation = CreateRecommendation();
+
+        Assert.Throws<ArgumentException>(() =>
+            recommendation.ChangeDetails("Still valid", description!, null));
     }
 }

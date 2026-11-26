@@ -1,4 +1,4 @@
-using System.Data.Common;
+using Portfolio.Api.Tests.Fakes;
 using Portfolio.Application.Common;
 
 namespace Portfolio.Application.Tests;
@@ -14,6 +14,17 @@ public class ResultErrorsTests
     public void From_WithADatabaseFailure_IsInfrastructure()
     {
         var error = ResultErrors.From(new FakeDbException("timeout"), "load the data");
+
+        Assert.Equal(ErrorKind.Infrastructure, error.Kind);
+        Assert.Equal("database_unavailable", error.Code);
+    }
+
+    [Fact]
+    public void From_WithAWrappedDatabaseFailure_IsInfrastructure()
+    {
+        var wrapped = new InvalidOperationException("SaveChanges failed", new FakeDbException("timeout"));
+
+        var error = ResultErrors.From(wrapped, "load the data");
 
         Assert.Equal(ErrorKind.Infrastructure, error.Kind);
         Assert.Equal("database_unavailable", error.Code);
@@ -66,15 +77,9 @@ public class ResultErrorsTests
     public void From_NeverPutsTheExceptionMessageOnTheWire()
     {
         var error = ResultErrors.From(
-            new FakeDbException("Host=db.internal;Database=portfolio;Username=jg;Password=hunter2"),
+            new FakeDbException("secret-value-that-must-not-be-logged"),
             "load the data");
 
-        Assert.DoesNotContain("db.internal", error.Message);
-        Assert.DoesNotContain("hunter2", error.Message);
-    }
-
-    private sealed class FakeDbException : DbException
-    {
-        public FakeDbException(string message) : base(message) { }
+        Assert.DoesNotContain("secret-value-that-must-not-be-logged", error.Message);
     }
 }

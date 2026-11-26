@@ -36,6 +36,27 @@ public class RecommendationEndpointsTests : IClassFixture<JGBackendApiFactory>
         Assert.Equal(JsonValueKind.Null, undeclared.GetProperty("careerPosition").ValueKind);
     }
 
+    [Fact]
+    public async Task GetRecommendationById_WhenFound_ReturnsTheDto()
+    {
+        var response = await _client.GetAsync("/api/v1/recommendation/1");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        var json = await response.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal(1, json.GetProperty("id").GetInt32());
+        Assert.Equal("Atsushi Deguchi", json.GetProperty("personName").GetString());
+        Assert.Equal("Engineer", json.GetProperty("careerPosition").GetString());
+    }
+
+    [Fact]
+    public async Task GetRecommendationById_WhenMissing_Returns404()
+    {
+        var response = await _client.GetAsync("/api/v1/recommendation/99");
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
     private static JsonElement FindById(JsonElement array, int id) =>
         array.EnumerateArray().Single(item => item.GetProperty("id").GetInt32() == id);
 

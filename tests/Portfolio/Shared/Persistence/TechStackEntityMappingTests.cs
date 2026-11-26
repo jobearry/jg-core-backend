@@ -1,25 +1,48 @@
 using Portfolio.Domain.Entities;
 using Portfolio.Persistence.Entities;
+using Portfolio.Persistence.Mappers;
 
 namespace Portfolio.Persistence.Tests;
 
-public class TechStackEntityMappingTests : MappingTestBase
+public class TechStackEntityMappingTests
 {
     /// <summary>
-    /// Regression guard for plan 001 item 1.2. The reverse mapping assigned the
-    /// domain's <c>Category</c> (a string) to the entity's
-    /// <c>TechStackCategoryId</c> (an int). It compiled, and it threw the first
-    /// time anything tried to write. The category id is resolved by a lookup at
-    /// write time instead, so it is not mapped from a name here.
+    /// Regression guard for plan 001 item 1.2: the domain's <c>Category</c> is a name,
+    /// while the entity's <c>TechStackCategoryId</c> is an int. The id must come from
+    /// the caller's int argument, never from the name string.
     /// </summary>
     [Fact]
-    public void Map_TechStack_To_TechStackEntity_LeavesTheCategoryIdUnset()
+    public void Map_TechStack_To_TechStackEntity_UsesTheGivenCategoryId()
     {
         var stack = new TechStack(1, "Angular", "angular.png", "Frontend");
 
-        var entity = Mapper.Map<TechStackEntity>(stack);
+        var entity = TechStackMapper.ToEntity(stack, 42);
 
-        Assert.Equal(0, entity.TechStackCategoryId);
+        Assert.Equal(42, entity.TechStackCategoryId);
+        Assert.Equal("Angular", entity.StackName);
+        Assert.Equal("angular.png", entity.ImgSrc);
+    }
+
+    [Fact]
+    public void Map_TechStackCategory_To_TechStackCategoryEntity_PreservesTheName()
+    {
+        var category = new TechStackCategory(2, "Frontend");
+
+        var entity = TechStackCategoryMapper.ToEntity(category);
+
+        Assert.Equal(2, entity.Id);
+        Assert.Equal("Frontend", entity.Category);
+    }
+
+    [Fact]
+    public void Map_TechStackCategoryEntity_To_TechStackCategory_PreservesTheName()
+    {
+        var entity = new TechStackCategoryEntity { Id = 2, Category = "Frontend" };
+
+        var category = TechStackCategoryMapper.ToDomain(entity);
+
+        Assert.Equal(2, category.Id);
+        Assert.Equal("Frontend", category.Category);
     }
 
     [Fact]
@@ -34,7 +57,7 @@ public class TechStackEntityMappingTests : MappingTestBase
             TechStackCategory = new TechStackCategoryEntity { Id = 2, Category = "Frontend" }
         };
 
-        var stack = Mapper.Map<TechStack>(entity);
+        var stack = TechStackMapper.ToDomain(entity);
 
         Assert.Equal("Frontend", stack.Category);
         Assert.Equal("Angular", stack.StackName);

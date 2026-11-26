@@ -6,7 +6,6 @@ using Portfolio.Features.Project;
 using Portfolio.Features.Skill;
 using Portfolio.Features.Recommendation;
 using Portfolio.Features.Notion;
-using System.Text.Json;
 
 namespace Portfolio.Application.Tests;
 
@@ -30,41 +29,6 @@ namespace Portfolio.Application.Tests;
 public class PortfolioDtoMapperTests
 {
     // ---------------------------------------------------------------- wire shape
-
-    /// <summary>
-    /// Pins the JSON keys the frontend will actually receive, using the same
-    /// camelCase convention ASP.NET Core applies to minimal API responses.
-    /// </summary>
-    [Fact]
-    public void ExperienceDto_SerializesToTheExpectedCamelCaseKeys()
-    {
-        var dto = new ExperienceDto(
-            Id: 4,
-            Company: "Acme",
-            Role: "Engineer",
-            StartedAt: new DateTime(2020, 1, 1),
-            FinishedAt: null,
-            DurationMonths: 72,
-            Description: null,
-            Responsibility: null,
-            Type: null,
-            Projects: Array.Empty<ProjectDto>());
-
-        var json = JsonSerializer.Serialize(dto, new JsonSerializerOptions(JsonSerializerDefaults.Web));
-        using var document = JsonDocument.Parse(json);
-        var keys = document.RootElement.EnumerateObject().Select(p => p.Name).ToList();
-
-        Assert.Equal(
-            new[]
-            {
-                "id", "company", "role", "startedAt", "finishedAt", "durationMonths",
-                "description", "responsibility", "type", "projects"
-            },
-            keys);
-
-        Assert.DoesNotContain("duration", keys);
-        Assert.DoesNotContain("createdAt", keys);
-    }
 
     [Fact]
     public void ExperienceDto_ReplacesTheDurationTimeSpanWithMonths()

@@ -1,9 +1,11 @@
 using Portfolio.Domain.Entities;
+using Portfolio.Domain.ValueObjects;
 using Portfolio.Persistence.Entities;
+using Portfolio.Persistence.Mappers;
 
 namespace Portfolio.Persistence.Tests;
 
-public class ExperienceMapperTests : MappingTestBase
+public class ExperienceMapperTests
 {
     private static readonly DateTime StartedAt = new(2020, 1, 1, 0, 0, 0, DateTimeKind.Utc);
     private static readonly DateTime FinishedAt = new(2021, 6, 30, 0, 0, 0, DateTimeKind.Utc);
@@ -19,7 +21,7 @@ public class ExperienceMapperTests : MappingTestBase
             Role = "Senior Developer"
         };
 
-        var experience = Mapper.Map<Experience>(entity);
+        var experience = ExperienceMapper.ToDomain(entity);
 
         Assert.Equal(3, experience.Id);
         Assert.Equal("Acme Corp", experience.Company?.Name);
@@ -46,7 +48,7 @@ public class ExperienceMapperTests : MappingTestBase
             Type = "Full time"
         };
 
-        var experience = Mapper.Map<Experience>(entity);
+        var experience = ExperienceMapper.ToDomain(entity);
 
         Assert.Equal("Built things", experience.Description);
         Assert.Equal("Owned the platform", experience.Responsibility);
@@ -64,7 +66,7 @@ public class ExperienceMapperTests : MappingTestBase
             Role = "Senior Developer"
         };
 
-        var experience = Mapper.Map<Experience>(entity);
+        var experience = ExperienceMapper.ToDomain(entity);
 
         Assert.Null(experience.Duration.FinishedAt);
     }
@@ -86,7 +88,7 @@ public class ExperienceMapperTests : MappingTestBase
             Role = "Senior Developer"
         };
 
-        var experience = Mapper.Map<Experience>(entity);
+        var experience = ExperienceMapper.ToDomain(entity);
 
         Assert.Equal(FinishedAt, experience.Duration.FinishedAt);
     }
@@ -107,11 +109,69 @@ public class ExperienceMapperTests : MappingTestBase
             Role = "Senior Developer"
         };
 
-        var experience = Mapper.Map<Experience>(entity);
+        var experience = ExperienceMapper.ToDomain(entity);
 
         // Note the double "Duration": Experience.Duration is the Period value object,
         // and Period.Duration is the TimeSpan it computes. The DTO layer flattens
         // this in plan 001 item 2.1.
         Assert.Equal(FinishedAt - StartedAt, experience.Duration.Duration!.Value);
+    }
+
+    /// <summary>
+    /// The write direction is new. It must publish every editable field and must not
+    /// write the Projects projection: projects own their own experience_id (ADR-0003).
+    /// </summary>
+    [Fact]
+    public void Map_Experience_To_ExperienceEntity_PreservesAllFieldsAndLeavesProjectsAlone()
+    {
+        var experience = new Experience(
+            3,
+            new Company("Acme Corp"),
+            new Period(StartedAt, FinishedAt),
+            new Role("Senior Developer"));
+        experience.UpdateDescription("Built things");
+        experience.UpdateResponsibility("Owned the platform");
+        experience.UpdateType("Full time");
+        experience.ReplaceProjects([new Project(7, "Portfolio API")]);
+
+        var entity = ExperienceMapper.ToEntity(experience);
+
+        Assert.Equal(3, entity.Id);
+        Assert.Equal("Acme Corp", entity.CompanyName);
+        Assert.Equal(StartedAt, entity.StartedAt);
+        Assert.Equal(FinishedAt, entity.FinishedAt);
+        Assert.Equal("Senior Developer", entity.Role);
+        Assert.Equal("Built things", entity.Description);
+        Assert.Equal("Owned the platform", entity.Responsibility);
+        Assert.Equal("Full time", entity.Type);
+        Assert.Empty(entity.Projects);
+    }
+
+    [Fact]
+    public void Map_Experience_To_ExperienceEntity_WithUtcTimestamps_NormalizesKindToUnspecified()
+    {
+        var experience = new Experience(
+            3,
+            new Company("Acme Corp"),
+            new Period(StartedAt, FinishedAt),
+            new Role("Senior Developer"));
+
+        var entity = ExperienceMapper.ToEntity(experience);
+
+        Assert.Equal(DateTimeKind.Unspecified, entity.StartedAt?.Kind);
+        Assert.Equal(DateTimeKind.Unspecified, entity.FinishedAt?.Kind);
+        Assert.Equal(StartedAt, entity.StartedAt);
+        Assert.Equal(FinishedAt, entity.FinishedAt);
+    }
+
+    [Fact]
+    public void Map_Experience_To_ExperienceEntity_WithNoRole_WritesEmptyString()
+    {
+        var experience = new Experience(3, new Company("Acme"), new Period(StartedAt), null);
+
+        var entity = ExperienceMapper.ToEntity(experience);
+
+        // The role column is NOT NULL; an undeclared role is stored as "".
+        Assert.Equal(string.Empty, entity.Role);
     }
 }

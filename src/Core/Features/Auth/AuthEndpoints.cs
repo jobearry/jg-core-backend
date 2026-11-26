@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using Core.Infrastructure;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
@@ -51,6 +52,7 @@ public static class AuthEndpoints
                 };
             })
             .RequireRateLimiting(RateLimitPolicies.AuthLogin)
+            .AllowAnonymous()
             .WithName("Login")
             .WithSummary("Exchange the shared key for a JWT")
             .Produces<AuthTokenDto>(StatusCodes.Status200OK)

@@ -9,8 +9,10 @@ namespace Portfolio.Api.Tests;
 /// The host applies a named 120/min per-IP policy to every mapped endpoint;
 /// stricter endpoint policies override it. Health probes are exempt so a monitor
 /// never sees 429 and mistakes it for an outage.
+///
+/// Each test builds its own host so one limiter's window cannot affect another.
 /// </summary>
-[Collection(JGBackendHostCollection.Name)]
+[Collection(RateLimitedHostCollection.RateLimitedHostCollectionName)]
 public sealed class DefaultRateLimitTests
 {
     private const int DefaultPermitLimit = 120;
@@ -18,22 +20,18 @@ public sealed class DefaultRateLimitTests
     [Fact]
     public async Task PortfolioReadEndpoint_Returns429AfterTheDefaultPermitLimit()
     {
-        using var factory = new JGBackendApiFactory();
-        var client = factory.CreateClient();
+        using var factory = new RateLimitedApiFactory();
+        using var client = factory.CreateClient();
 
-        for (var i = 0; i < DefaultPermitLimit; i++)
-        {
-            var allowed = await client.GetAsync("/api/v1/skill");
-            Assert.Equal(HttpStatusCode.OK, allowed.StatusCode);
-        }
-
-        var rejected = await client.GetAsync("/api/v1/skill");
-        Assert.Equal(HttpStatusCode.TooManyRequests, rejected.StatusCode);
+        await RateLimitAssertions.SendUntilRejectedAsync(
+            () => client.GetAsync("/api/v1/skill"),
+            DefaultPermitLimit);
     }
 
     [Fact]
     public void EveryMappedEndpoint_HasRateLimitMetadataOrIsAHealthProbe()
     {
+        // Use base factory for metadata tests (rate limiting disabled)
         using var factory = new JGBackendApiFactory();
         using var scope = factory.Services.CreateScope();
         var endpoints = scope.ServiceProvider
@@ -54,11 +52,33 @@ public sealed class DefaultRateLimitTests
         }
     }
 
+    [Fact]
+    public void AdminWriteEndpoints_UseTheAdminWritePolicy()
+    {
+        // Use base factory for metadata tests
+        using var factory = new JGBackendApiFactory();
+        using var scope = factory.Services.CreateScope();
+        var adminEndpoints = scope.ServiceProvider
+            .GetRequiredService<EndpointDataSource>()
+            .Endpoints
+            .OfType<RouteEndpoint>()
+            .Where(endpoint => endpoint.RoutePattern.RawText?.Contains("admin/") == true)
+            .ToList();
+
+        Assert.Equal(20, adminEndpoints.Count);
+        Assert.All(
+            adminEndpoints,
+            endpoint => Assert.Equal(
+                "admin-write",
+                endpoint.Metadata.GetMetadata<EnableRateLimitingAttribute>()?.PolicyName));
+    }
+
     [Theory]
     [InlineData("/healthz")]
     [InlineData("/api/v1/health")]
     public async Task HealthEndpoints_AreNotRateLimited(string path)
     {
+        // Use base factory since health endpoints are exempt anyway
         using var factory = new JGBackendApiFactory();
         var client = factory.CreateClient();
 

@@ -10,7 +10,8 @@ namespace Portfolio.Application.Common;
 /// <see cref="DbException"/> is the only database type used here, and it lives in
 /// <c>System.Data.Common</c> — the BCL, not EF Core or Npgsql. Application therefore
 /// stays free of infrastructure packages while still recognising a database outage.
-/// Npgsql's exception derives from it.
+/// Npgsql's exception derives from it; EF's <c>DbUpdateException</c> is recognised by
+/// its inner <see cref="DbException"/> instead of by type name.
 /// </para>
 ///
 /// <para>
@@ -27,7 +28,10 @@ public static class ResultErrors
     /// </summary>
     public static Error From(Exception exception, string operation) => exception switch
     {
-        DbException => Error.Infrastructure(
+        // EF wraps the provider exception in DbUpdateException. Matching the inner
+        // DbException here keeps the status mapping in one place without adding an
+        // EF dependency to Application.
+        DbException or Exception { InnerException: DbException } => Error.Infrastructure(
             $"Failed to {operation}. Please try again later.", "database_unavailable"),
 
         HttpRequestException => Error.Upstream(

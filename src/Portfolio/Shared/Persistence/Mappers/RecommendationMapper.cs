@@ -20,6 +20,8 @@ public static class RecommendationMapper
             PersonName = source.PersonName,
             Description = source.Description,
             CareerPosition = MappingHelpers.ToStoredRole(source.CareerPosition),
-            PostedAt = source.PostedAt
+
+            // posted_at is timestamp without time zone; the shared helper normalises Kind.
+            PostedAt = MappingHelpers.ToUnspecified(source.PostedAt)
         };
 }

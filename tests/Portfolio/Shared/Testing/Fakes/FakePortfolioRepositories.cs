@@ -5,8 +5,6 @@ using Portfolio.Domain.ValueObjects;
 using Portfolio.Features.Experience;
 using Portfolio.Features.Project;
 using Portfolio.Features.Skill;
-using Portfolio.Features.Recommendation;
-using System.Threading;
 
 namespace Portfolio.Api.Tests.Fakes;
 
@@ -31,6 +29,68 @@ public sealed class FakeExperienceRepository : IExperienceRepository
     public Task<List<Experience>> GetAllWithProjectsAsync(CancellationToken cancellationToken) =>
         Respond(cancellationToken);
 
+    public Task<Experience?> GetByIdAsync(int id, CancellationToken cancellationToken)
+    {
+        LastCancellationToken = cancellationToken;
+
+        return Failure is not null
+            ? Task.FromException<Experience?>(Failure)
+            : Task.FromResult(Experiences.FirstOrDefault(experience => experience.Id == id));
+    }
+
+    public Task<Experience> AddAsync(Experience experience, CancellationToken cancellationToken)
+    {
+        LastCancellationToken = cancellationToken;
+        if (Failure is not null)
+        {
+            return Task.FromException<Experience>(Failure);
+        }
+
+        var created = WithId(
+            Experiences.Count == 0 ? 1 : Experiences.Max(item => item.Id) + 1, experience);
+        Experiences.Add(created);
+        return Task.FromResult(created);
+    }
+
+    public Task<Experience> UpdateAsync(Experience experience, CancellationToken cancellationToken)
+    {
+        LastCancellationToken = cancellationToken;
+        if (Failure is not null)
+        {
+            return Task.FromException<Experience>(Failure);
+        }
+
+        var index = Experiences.FindIndex(item => item.Id == experience.Id);
+        if (index >= 0)
+        {
+            Experiences[index] = WithId(experience.Id, experience);
+        }
+
+        return Task.FromResult(experience);
+    }
+
+    public Task DeleteAsync(Experience experience, CancellationToken cancellationToken)
+    {
+        LastCancellationToken = cancellationToken;
+        if (Failure is not null)
+        {
+            return Task.FromException(Failure);
+        }
+
+        Experiences.RemoveAll(item => item.Id == experience.Id);
+        return Task.CompletedTask;
+    }
+
+    private static Experience WithId(int id, Experience source)
+    {
+        var copy = new Experience(id, source.Company, source.Duration, source.Role);
+        copy.UpdateDescription(source.Description);
+        copy.UpdateResponsibility(source.Responsibility);
+        copy.UpdateType(source.Type);
+        copy.ReplaceProjects(source.Projects);
+        return copy;
+    }
+
     private Task<List<Experience>> Respond(CancellationToken cancellationToken)
     {
         LastCancellationToken = cancellationToken;
@@ -41,25 +101,165 @@ public sealed class FakeExperienceRepository : IExperienceRepository
     }
 }
 
-/// <summary>
-/// Simulates a database failure. <see cref="System.Data.Common.DbException"/> has
-/// protected constructors, so subclassing is the only way to create one without taking
-/// a dependency on Npgsql in the test project.
-/// </summary>
-public sealed class FakeDbException : System.Data.Common.DbException
-{
-    public FakeDbException(string message) : base(message) { }
-}
-
 public sealed class FakeProjectRepository : IProjectRepository
 {
     public List<Project> Projects { get; } = new();
 
-    public Task<List<Project>> GetAllAsync(CancellationToken cancellationToken) =>
-        Task.FromResult(Projects);
+    public Exception? Failure { get; set; }
+
+    /// <summary>The token the last call received, so a test can assert it flowed.</summary>
+    public CancellationToken? LastCancellationToken { get; private set; }
+
+    public Task<List<Project>> GetAllAsync(CancellationToken cancellationToken) => Respond();
 
     public Task<List<Project>> GetAllWithTechStacksAsync(CancellationToken cancellationToken) =>
-        Task.FromResult(Projects);
+        Respond();
+
+    public Task<Project?> GetByIdAsync(int id, CancellationToken cancellationToken)
+    {
+        LastCancellationToken = cancellationToken;
+        if (Failure is not null)
+        {
+            return Task.FromException<Project?>(Failure);
+        }
+
+        return Task.FromResult(Projects.FirstOrDefault(project => project.Id == id));
+    }
+
+    public Task<Project> AddAsync(Project project, CancellationToken cancellationToken)
+    {
+        if (Failure is not null)
+        {
+            return Task.FromException<Project>(Failure);
+        }
+
+        var created = new Project(
+            Projects.Count == 0 ? 1 : Projects.Max(item => item.Id) + 1,
+            project.ExperienceId,
+            project.ProjectName,
+            project.Description,
+            project.Contribution,
+            project.TechStacks);
+        Projects.Add(created);
+        return Task.FromResult(created);
+    }
+
+    public Task<Project> UpdateAsync(Project project, CancellationToken cancellationToken)
+    {
+        if (Failure is not null)
+        {
+            return Task.FromException<Project>(Failure);
+        }
+
+        var index = Projects.FindIndex(item => item.Id == project.Id);
+        if (index >= 0)
+        {
+            Projects[index] = project;
+        }
+
+        return Task.FromResult(project);
+    }
+
+    public Task<Project> ReplaceTechStacksAsync(
+        Project project, CancellationToken cancellationToken)
+    {
+        LastCancellationToken = cancellationToken;
+        if (Failure is not null)
+        {
+            return Task.FromException<Project>(Failure);
+        }
+
+        var index = Projects.FindIndex(item => item.Id == project.Id);
+        if (index < 0)
+        {
+            return Task.FromException<Project>(
+                new InvalidOperationException($"Project {project.Id} does not exist."));
+        }
+
+        var updated = new Project(
+            project.Id,
+            Projects[index].ExperienceId,
+            Projects[index].ProjectName,
+            Projects[index].Description,
+            Projects[index].Contribution,
+            project.TechStacks);
+        Projects[index] = updated;
+        return Task.FromResult(updated);
+    }
+
+    public Task DeleteAsync(Project project, CancellationToken cancellationToken)
+    {
+        if (Failure is not null)
+        {
+            return Task.FromException(Failure);
+        }
+
+        Projects.RemoveAll(item => item.Id == project.Id);
+        return Task.CompletedTask;
+    }
+
+    public Task<Project> AddTechStackAsync(
+        Project project, TechStackRef techStackRef, CancellationToken cancellationToken)
+    {
+        LastCancellationToken = cancellationToken;
+        if (Failure is not null)
+        {
+            return Task.FromException<Project>(Failure);
+        }
+
+        var index = Projects.FindIndex(item => item.Id == project.Id);
+        if (index < 0)
+        {
+            return Task.FromException<Project>(
+                new InvalidOperationException($"Project {project.Id} does not exist."));
+        }
+
+        // The handler already did the duplicate check and mutated the project.
+        // Just persist the updated project.
+        var updated = new Project(
+            project.Id,
+            project.ExperienceId,
+            project.ProjectName,
+            project.Description,
+            project.Contribution,
+            project.TechStacks);
+        Projects[index] = updated;
+        return Task.FromResult(updated);
+    }
+
+    public Task<Project> RemoveTechStackAsync(
+        Project project, int techStackId, CancellationToken cancellationToken)
+    {
+        LastCancellationToken = cancellationToken;
+        if (Failure is not null)
+        {
+            return Task.FromException<Project>(Failure);
+        }
+
+        var index = Projects.FindIndex(item => item.Id == project.Id);
+        if (index < 0)
+        {
+            return Task.FromException<Project>(
+                new InvalidOperationException($"Project {project.Id} does not exist."));
+        }
+
+        // The handler already did the existence check and mutated the project.
+        // Just persist the updated project.
+        var updated = new Project(
+            project.Id,
+            project.ExperienceId,
+            project.ProjectName,
+            project.Description,
+            project.Contribution,
+            project.TechStacks);
+        Projects[index] = updated;
+        return Task.FromResult(updated);
+    }
+
+    private Task<List<Project>> Respond() =>
+        Failure is null
+            ? Task.FromResult(Projects)
+            : Task.FromException<List<Project>>(Failure);
 }
 
 public sealed class FakeTechStackRepository : ISkillRepository
@@ -68,7 +268,73 @@ public sealed class FakeTechStackRepository : ISkillRepository
 
     public Exception? Failure { get; set; }
 
+    public bool IsUsedByProjects { get; set; }
+
+    /// <summary>The token the last call received, so a test can assert it flowed.</summary>
+    public CancellationToken? LastCancellationToken { get; private set; }
+
     public Task<List<TechStack>> GetAllAsync(CancellationToken cancellationToken) => Respond();
+
+    public Task<TechStack?> GetByIdAsync(int id, CancellationToken cancellationToken)
+    {
+        LastCancellationToken = cancellationToken;
+        if (Failure is not null)
+        {
+            return Task.FromException<TechStack?>(Failure);
+        }
+
+        return Task.FromResult(TechStacks.FirstOrDefault(stack => stack.Id == id));
+    }
+
+    public Task<TechStack> AddAsync(
+        TechStack stack, int categoryId, CancellationToken cancellationToken)
+    {
+        if (Failure is not null)
+        {
+            return Task.FromException<TechStack>(Failure);
+        }
+
+        var created = new TechStack(
+            TechStacks.Count == 0 ? 1 : TechStacks.Max(item => item.Id) + 1,
+            stack.StackName,
+            stack.ImgSrc,
+            stack.Category);
+        TechStacks.Add(created);
+        return Task.FromResult(created);
+    }
+
+    public Task<TechStack> UpdateAsync(
+        TechStack stack, int categoryId, CancellationToken cancellationToken)
+    {
+        if (Failure is not null)
+        {
+            return Task.FromException<TechStack>(Failure);
+        }
+
+        var index = TechStacks.FindIndex(item => item.Id == stack.Id);
+        if (index >= 0)
+        {
+            TechStacks[index] = stack;
+        }
+
+        return Task.FromResult(stack);
+    }
+
+    public Task<bool> IsUsedByProjectsAsync(int stackId, CancellationToken cancellationToken) =>
+        Failure is null
+            ? Task.FromResult(IsUsedByProjects)
+            : Task.FromException<bool>(Failure);
+
+    public Task DeleteAsync(TechStack stack, CancellationToken cancellationToken)
+    {
+        if (Failure is not null)
+        {
+            return Task.FromException(Failure);
+        }
+
+        TechStacks.RemoveAll(item => item.Id == stack.Id);
+        return Task.CompletedTask;
+    }
 
     private Task<List<TechStack>> Respond() =>
         Failure is null
@@ -76,13 +342,87 @@ public sealed class FakeTechStackRepository : ISkillRepository
             : Task.FromException<List<TechStack>>(Failure);
 }
 
-public sealed class FakeRecommendationRepository : IRecommendationRepository
+public sealed class FakeTechStackCategoryRepository : ITechStackCategoryRepository
 {
-    public List<Recommendation> Recommendations { get; } = new();
+    public List<TechStackCategory> Categories { get; } = new();
 
-    public Task<List<Recommendation>> GetAllAsync(CancellationToken cancellationToken) =>
-        Task.FromResult(Recommendations);
+    public Exception? Failure { get; set; }
 
+    public bool HasStacks { get; set; }
+
+    public Task<List<TechStackCategory>> GetAllAsync(CancellationToken cancellationToken) =>
+        Failure is null
+            ? Task.FromResult(Categories)
+            : Task.FromException<List<TechStackCategory>>(Failure);
+
+    public Task<TechStackCategory?> GetByIdAsync(int id, CancellationToken cancellationToken)
+    {
+        if (Failure is not null)
+        {
+            return Task.FromException<TechStackCategory?>(Failure);
+        }
+
+        return Task.FromResult(Categories.FirstOrDefault(category => category.Id == id));
+    }
+
+    public Task<TechStackCategory?> GetByNameAsync(
+        string category, CancellationToken cancellationToken)
+    {
+        if (Failure is not null)
+        {
+            return Task.FromException<TechStackCategory?>(Failure);
+        }
+
+        return Task.FromResult(Categories.FirstOrDefault(item => item.Category == category));
+    }
+
+    public Task<TechStackCategory> AddAsync(
+        TechStackCategory category, CancellationToken cancellationToken)
+    {
+        if (Failure is not null)
+        {
+            return Task.FromException<TechStackCategory>(Failure);
+        }
+
+        var created = new TechStackCategory(
+            Categories.Count == 0 ? 1 : Categories.Max(item => item.Id) + 1,
+            category.Category);
+        Categories.Add(created);
+        return Task.FromResult(created);
+    }
+
+    public Task<TechStackCategory> UpdateAsync(
+        TechStackCategory category, CancellationToken cancellationToken)
+    {
+        if (Failure is not null)
+        {
+            return Task.FromException<TechStackCategory>(Failure);
+        }
+
+        var index = Categories.FindIndex(item => item.Id == category.Id);
+        if (index >= 0)
+        {
+            Categories[index] = category;
+        }
+
+        return Task.FromResult(category);
+    }
+
+    public Task<bool> HasStacksAsync(int categoryId, CancellationToken cancellationToken) =>
+        Failure is null
+            ? Task.FromResult(HasStacks)
+            : Task.FromException<bool>(Failure);
+
+    public Task DeleteAsync(TechStackCategory category, CancellationToken cancellationToken)
+    {
+        if (Failure is not null)
+        {
+            return Task.FromException(Failure);
+        }
+
+        Categories.RemoveAll(item => item.Id == category.Id);
+        return Task.CompletedTask;
+    }
 }
 
 /// <summary>

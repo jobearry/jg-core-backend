@@ -1,4 +1,5 @@
 using System.IdentityModel.Tokens.Jwt;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Core.Infrastructure.Options;
@@ -30,8 +31,18 @@ public static class AuthenticationConfiguration
                 "Set a longer key via Jwt__Key. See .env.example.");
         }
 
-        // register authorization
-        services.AddAuthorization();
+        // Register the admin policy and make it the fallback: a new endpoint is
+        // protected unless it explicitly opts out with AllowAnonymous.
+        services.AddAuthorization(options =>
+        {
+            var adminPolicy = new AuthorizationPolicyBuilder()
+                .RequireAuthenticatedUser()
+                .RequireClaim("role", "Admin")
+                .Build();
+
+            options.AddPolicy("Admin", adminPolicy);
+            options.FallbackPolicy = adminPolicy;
+        });
         services.AddAuthentication(options =>
         {
             options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;

@@ -87,6 +87,14 @@ public sealed class AuthEndpointsTests : IClassFixture<JGBackendApiFactory>
 
         var roleProperty = claims.EnumerateObject()
             .FirstOrDefault(property => property.Name.Contains("role", StringComparison.OrdinalIgnoreCase));
-        Assert.Equal("User", roleProperty.Value[0].GetString());
+        Assert.Equal("Admin", roleProperty.Value[0].GetString());
+    }
+
+    [Fact]
+    public async Task PublicRead_WithoutAToken_Returns200()
+    {
+        var response = await _client.GetAsync("/api/v1/experience?includeProjects=false");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
 }

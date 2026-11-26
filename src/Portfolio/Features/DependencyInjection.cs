@@ -27,18 +27,54 @@ public static class DependencyInjection
         services.AddDbContext<PortfolioContext>(options =>
             options.UseNpgsql(configuration.GetConnectionString("JDBConnection")));
 
+        // Admin writes use a separate DML-only credential. Local development may set
+        // both connection strings to the same value; production must not.
+        services.AddDbContext<PortfolioWriteContext>(options =>
+            options.UseNpgsql(configuration.GetConnectionString("JDBConnectionWrite")));
+
         services.AddScoped<IExperienceRepository, EfExperienceRepository>();
         services.AddScoped<IProjectRepository, EfProjectRepository>();
         services.AddScoped<ISkillRepository, EfSkillRepository>();
+        services.AddScoped<ITechStackCategoryRepository, EfTechStackCategoryRepository>();
         services.AddScoped<IRecommendationRepository, EfRecommendationRepository>();
 
         services.AddScoped<GetExperienceHandler>();
+        services.AddScoped<GetExperienceByIdHandler>();
+        services.AddScoped<CreateExperienceHandler>();
+        services.AddScoped<UpdateExperienceHandler>();
+        services.AddScoped<DeleteExperienceHandler>();
         services.AddScoped<GetProjectHandler>();
+        services.AddScoped<GetProjectByIdHandler>();
+        services.AddScoped<CreateProjectHandler>();
+        services.AddScoped<CreateProjectForExperienceHandler>();
+        services.AddScoped<UpdateProjectExperienceHandler>();
+        services.AddScoped<AddProjectTechStackHandler>();
+        services.AddScoped<RemoveProjectTechStackHandler>();
+        services.AddScoped<UpdateProjectHandler>();
+        services.AddScoped<ReplaceProjectTechStacksHandler>();
+        services.AddScoped<DeleteProjectHandler>();
         services.AddScoped<GetSkillHandler>();
+        services.AddScoped<GetSkillByIdHandler>();
+        services.AddScoped<GetSkillCategoriesHandler>();
+        services.AddScoped<CreateSkillHandler>();
+        services.AddScoped<UpdateSkillHandler>();
+        services.AddScoped<DeleteSkillHandler>();
+        services.AddScoped<GetSkillCategoryByIdHandler>();
+        services.AddScoped<CreateSkillCategoryHandler>();
+        services.AddScoped<UpdateSkillCategoryHandler>();
+        services.AddScoped<DeleteSkillCategoryHandler>();
         services.AddScoped<GetRecommendationHandler>();
         services.AddScoped<GetOverviewHandler>();
         services.AddScoped<GetNotionPageHandler>();
         services.AddScoped<GithubHandler>();
+        services.AddScoped<GetRecommendationByIdHandler>();
+        services.AddScoped<CreateRecommendationHandler>();
+        services.AddScoped<UpdateRecommendationHandler>();
+        services.AddScoped<DeleteRecommendationHandler>();
+
+        // Server-supplied timestamps go through TimeProvider so the create handler's
+        // clock can be replaced in tests.
+        services.AddSingleton(TimeProvider.System);
 
         services.AddScoped<IPageContentReader, NotionPageContentReader>();
         services.AddScoped<IGithubRepositoryReader, GithubRepositoryReader>();
@@ -73,15 +109,17 @@ public static class DependencyInjection
     }
 
     /// <summary>
-    /// Maps the portfolio slices. The policy names are optional so a host without a
-    /// rate-limiter middleware can leave them unset; the composed JGBackend host
-    /// supplies the passthrough policies and the default backstop.
+    /// Maps the portfolio slices. The policy names are optional so a host without the
+    /// matching middleware can leave them unset; the composed JGBackend host supplies
+    /// the rate-limit policies and the CORS policy for admin writes.
     /// </summary>
     public static IEndpointRouteBuilder MapPortfolioFeatures(
         this IEndpointRouteBuilder endpoints,
         string? notionRateLimitPolicy = null,
         string? githubRateLimitPolicy = null,
-        string? defaultRateLimitPolicy = null)
+        string? defaultRateLimitPolicy = null,
+        string? adminRateLimitPolicy = null,
+        string? adminCorsPolicy = null)
     {
         var group = endpoints.MapGroup("");
         if (defaultRateLimitPolicy is not null)
@@ -91,10 +129,10 @@ public static class DependencyInjection
 
         group.MapNotionEndpoints(notionRateLimitPolicy);
         group.MapGithubEndpoints(githubRateLimitPolicy);
-        group.MapExperienceEndpoints();
-        group.MapProjectEndpoints();
-        group.MapRecommendationEndpoints();
-        group.MapSkillEndpoints();
+        group.MapExperienceEndpoints(adminRateLimitPolicy, adminCorsPolicy);
+        group.MapProjectEndpoints(adminRateLimitPolicy, adminCorsPolicy);
+        group.MapRecommendationEndpoints(adminRateLimitPolicy, adminCorsPolicy);
+        group.MapSkillEndpoints(adminRateLimitPolicy, adminCorsPolicy);
         group.MapOverviewEndpoints();
 
         return endpoints;

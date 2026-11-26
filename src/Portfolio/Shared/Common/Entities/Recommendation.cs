@@ -36,11 +36,7 @@ public class Recommendation
         Role? careerPosition,
         DateTime postedAt)
     {
-        if (string.IsNullOrWhiteSpace(personName))
-            throw new ArgumentException("Person name cannot be empty.", nameof(personName));
-
-        if (string.IsNullOrWhiteSpace(description))
-            throw new ArgumentException("Recommendation description cannot be empty.", nameof(description));
+        EnsureDetailsAreValid(personName, description);
 
         Id = id;
         PersonName = personName;
@@ -49,5 +45,25 @@ public class Recommendation
         PostedAt = postedAt;
     }
 
-    public void ChangeCareerPosition(Role? careerPosition) => CareerPosition = careerPosition;
+    /// <summary>
+    /// Applies an admin edit. <see cref="PostedAt"/> is deliberately not editable:
+    /// it records when the testimonial was first published.
+    /// </summary>
+    public void ChangeDetails(string personName, string description, Role? careerPosition)
+    {
+        EnsureDetailsAreValid(personName, description);
+
+        PersonName = personName;
+        Description = description;
+        CareerPosition = careerPosition;
+    }
+
+    private static void EnsureDetailsAreValid(string personName, string description)
+    {
+        if (string.IsNullOrWhiteSpace(personName))
+            throw new ArgumentException("Person name cannot be empty.", nameof(personName));
+
+        if (string.IsNullOrWhiteSpace(description))
+            throw new ArgumentException("Recommendation description cannot be empty.", nameof(description));
+    }
 }

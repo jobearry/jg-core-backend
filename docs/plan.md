@@ -1,4 +1,9 @@
-# Optional authenticated GitHub visibility
+# Shared plans
+
+This file holds plans the owner has explicitly asked to discuss or defer. It is the
+only plan location; the existence of a plan is not authorization to execute it.
+
+## A. Optional authenticated GitHub visibility
 
 **Status:** Deferred proposal. Current GitHub endpoints remain anonymous and
 public-only. Do not implement or modify this plan unless the user explicitly
@@ -78,3 +83,84 @@ unless this plan is explicitly authorized and implemented.
 2. Inspect generated Swagger metadata for the three GitHub routes.
 3. Run `dotnet test JGBackend.sln`.
 4. Run `dotnet build JGBackend.sln` and confirm zero warnings.
+
+## B. Relationship endpoints
+
+**Status:** Phases 1, 2, and 3 are implemented. The remaining decisions (admin list, category reassignment) stay open and no further phase is authorized.
+
+### Scope
+
+Relationship writes only. No schema change, no new package and no public write.
+Routes stay under `/api/v1/admin`, require the `role=Admin` token, use the
+`admin-write` limiter and the admin CORS policy. A write goes through the owning
+aggregate's port; a cross-aggregate existence check uses the other slice's
+repository port.
+
+### Current coverage
+
+| Relationship | Covered today | Gap |
+|---|---|---|
+| `experience` → `project` | `POST /admin/experience/{experienceId}/project` creates and attaches; `PUT /admin/project/{id}/experience` attaches, moves or detaches | Role-scoped list remains open |
+| `project` → `tech_stack` | `PUT /admin/project/{id}/tech-stacks` replaces the whole set; `POST`/`DELETE /admin/project/{id}/tech-stack/{stackId}` for incremental links | — |
+| `tech_stack` → `tech_stack_category` | Set by name in `POST`/`PUT /admin/skill`, resolved to an id | Standalone reassignment (probably not needed) |
+
+### Implemented endpoint — phase 2
+
+`PUT /api/v1/admin/project/{id}/experience` updates **only** an existing project's
+`experience_id`. It does not create a project, edit the experience, change the
+project's name/description/contribution, or touch its tech stacks.
+
+- `{ "experienceId": 4 }` attaches the project to experience `4`, or moves it
+  there if it already has a parent.
+- `{ "experienceId": null }` detaches the project while keeping the experience;
+  it matches the schema's `ON DELETE SET NULL` behaviour without deleting the role.
+- The project must already exist. When `experienceId` is non-null, that experience
+  must exist.
+- Success is `200` + `ProjectDto`. `ProjectDto` does not expose `ExperienceId`, so
+  the effect is visible through `GET /api/v1/experience?includeProjects=true`.
+  Malformed or non-positive ids are `400`, missing rows `404`, outages `503`.
+
+### Implemented endpoints — phase 3
+
+Incremental tech-stack links as an alternative to replace-all:
+
+- `POST /api/v1/admin/project/{id}/tech-stack` — adds a single link. Body:
+  `{ "techStackId": 5 }`. The stack must exist and not already be linked.
+  Returns `200` + `ProjectDto`.
+- `DELETE /api/v1/admin/project/{id}/tech-stack/{techStackId}` — removes a
+  single link. The stack must currently be linked. Returns `200` + `ProjectDto`.
+
+Both use the Skill read port to validate existence, and the Project aggregate's
+`ReplaceTechStacks` internally. The replace-all route remains available for
+deterministic full-set updates.
+
+### Decisions
+
+| Decision | Options | Recommendation | Status |
+|---|---|---|---|
+| Attach, detach or move an existing project | A single `PUT /admin/project/{id}/experience`, or paired `POST`/`DELETE` under `/admin/experience/{experienceId}/project/{projectId}` | The single project-side route above: `Project` owns `experience_id`, and one contract covers attach, move and detach | Implemented |
+| Admin list of projects for a role | Reuse `GET /api/v1/experience?includeProjects=true`, or add `GET /admin/experience/{experienceId}/project` | Reuse the public projection until the admin app proves it needs a separate raw list | Open |
+| Incremental tech-stack links | Add `POST`/`DELETE /admin/project/{id}/tech-stack/{stackId}`, or keep replace-all | Both available: replace-all for determinism, incremental for convenience | Implemented |
+| Standalone category reassignment | Add `PUT /admin/skill/{id}/category`, or keep the existing skill update | Keep the existing update; the category is already resolved by name there | Open |
+| Failure semantics | `404` for an absent parent/child, `400` for a malformed or non-positive id | Use that split consistently; database outages stay `503` | Open |
+
+### Phasing
+
+1. **Done — phase 1:** create a project under an existing experience with
+   `Project.AttachToExperience` (ADR-0003).
+2. **Done — phase 2:** implement the project-side `PUT .../experience` route.
+   Tests cover invalid ids, missing parent/child, a failed lookup and the three
+   success outcomes.
+3. **Done — phase 3:** implement incremental tech-stack add/remove routes.
+   Tests cover all success and failure branches.
+
+Out of scope: schema changes, public writes, category reassignment and any change
+to the anonymous read contract.
+
+### Cheapest-first verification
+
+1. Handler tests with hand-written fakes for every branch.
+2. HTTP contract tests for status codes, `Location`, error codes, auth and Swagger tags.
+3. Assert the admin rate-limit metadata and CORS preflight still cover every new route.
+4. Run `dotnet build JGBackend.sln`, `dotnet test JGBackend.sln`,
+   `dotnet format JGBackend.sln --verify-no-changes --no-restore` and `git diff --check`.

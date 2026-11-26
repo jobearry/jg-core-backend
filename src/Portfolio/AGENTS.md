@@ -1,9 +1,9 @@
 # Portfolio — module guidance
 
-`src/Portfolio` is the read-only portfolio API: experiences, projects, tech
-stacks, recommendations, an overview, Notion page content, and public GitHub
-repository data. It is a **class library** composed by `src/JGBackend`; it owns no
-host pipeline or auth.
+`src/Portfolio` is the portfolio API: anonymous public reads for experiences,
+projects, tech stacks, recommendations, an overview, Notion page content and public
+GitHub repository data, plus admin-only writes under `/api/v1/admin`. It is a
+**class library** composed by `src/JGBackend`; it owns no host pipeline or auth.
 
 ## Layout
 

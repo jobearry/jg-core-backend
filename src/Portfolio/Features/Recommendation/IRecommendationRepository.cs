@@ -4,7 +4,21 @@ using DomainRecommendation = Portfolio.Domain.Entities.Recommendation;
 namespace Portfolio.Features.Recommendation;
 
 /// <summary>
-/// The Recommendation slice's port. As with Skill, the old interface only
-/// restated <see cref="IRepository{T}.GetAllAsync"/>, so the slice uses that.
+/// The Recommendation aggregate's repository port. Reads use the read-only context;
+/// the write methods use the separate DML credential inside the EF adapter, so the
+/// public read path never needs write rights.
 /// </summary>
-public interface IRecommendationRepository : IRepository<DomainRecommendation>;
+public interface IRecommendationRepository : IRepository<DomainRecommendation>
+{
+    Task<DomainRecommendation?> GetByIdAsync(int id, CancellationToken cancellationToken);
+
+    Task<DomainRecommendation> AddAsync(
+        DomainRecommendation recommendation,
+        CancellationToken cancellationToken);
+
+    Task<DomainRecommendation> UpdateAsync(
+        DomainRecommendation recommendation,
+        CancellationToken cancellationToken);
+
+    Task DeleteAsync(DomainRecommendation recommendation, CancellationToken cancellationToken);
+}

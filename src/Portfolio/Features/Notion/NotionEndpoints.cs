@@ -1,4 +1,5 @@
-﻿using Portfolio.Endpoints;
+﻿using Microsoft.AspNetCore.Authorization;
+using Portfolio.Endpoints;
 using Portfolio.Features.Overview;
 
 namespace Portfolio.Features.Notion;
@@ -15,7 +16,10 @@ public static class NotionEndpoints
                 CancellationToken cancellationToken) =>
             (await handler.HandleAsync(pageId, cancellationToken)).ToHttpResult())
             .WithName("GetNotionPage")
+            .WithSummary("Get a Notion page")
+            .WithDescription("Returns the content of a Notion page by its page id.")
             .WithTags("ExternalServices - Notion")
+            .AllowAnonymous()
             .Produces<List<NotionPageDto>>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status429TooManyRequests)
             .ProducesProblem(StatusCodes.Status502BadGateway);
@@ -33,7 +37,10 @@ public static class NotionEndpoints
                 return Results.Ok(new OverviewItemDto("notionPages", result.Value!.Count));
             })
             .WithName("GetNotionPageCount")
+            .WithSummary("Get a Notion page block count")
+            .WithDescription("Returns the number of blocks in a Notion page.")
             .WithTags("ExternalServices - Notion")
+            .AllowAnonymous()
             .Produces<OverviewItemDto>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status429TooManyRequests)
             .ProducesProblem(StatusCodes.Status502BadGateway);

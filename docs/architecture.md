@@ -122,11 +122,57 @@ Notion and GitHub slices call their clients from a handler, parse or project the
 vendor response, and return the same DTO + `Result<T>` shape. Their read endpoints
 are anonymous by design.
 
-### Write (not built)
+### Admin writes
 
-There is no write path. `IRepository<T>` exposes only reads. Revisit a unit-of-work
-abstraction only when writes are introduced; `Project` is the aggregate root
-(ADR-0003).
+Started with the `recommendation` slice and rolled out slice by slice. The flow is
+the read flow in reverse:
+
+```
+Client → Admin endpoint → Create/Update/Delete handler → IRecommendationRepository
+       → PortfolioWriteContext → RecommendationEntity → SaveChangesAsync(ct)
+       → domain → RecommendationDto → Result<T> → ApiResult
+```
+
+`EfRecommendationRepository` is the single port for the aggregate. Its inherited
+`GetAllAsync`, `GetByIdAsync` (including the anonymous detail GET and the
+pre-write lookup) use `PortfolioContext` (read-only credential); `AddAsync`,
+`UpdateAsync` and `DeleteAsync` use `PortfolioWriteContext` (DML credential).
+That keeps every public read off the writer connection without splitting one
+aggregate into two repository abstractions.
+
+A write command calls `SaveChangesAsync` once, so it saves one aggregate per
+transaction (ADR-0003). There is still no `IUnitOfWork`. `postedAt` is set from an
+injected `TimeProvider`, never from request JSON; update goes through
+`Recommendation.ChangeDetails(...)`, so the domain invariant runs on edits as well
+as construction. No audit table is written (ADR-0007).
+
+The `skill` slice follows the same pattern with two ports: `ISkillRepository`
+for the stack aggregate and `ITechStackCategoryRepository` for the shared
+category reference data. A stack write resolves the category by name through the
+read credential, then writes the stack with the category id through the writer.
+`TechStack.UpdateDetails` and `TechStackCategory.Rename` keep the invariants on
+edits. Deletes guard the join-table foreign keys with `409 + conflict`, and the
+anonymous detail GETs make the `201` `Location` followable without a token.
+
+The `project` slice keeps `IProjectRepository` as its single write entry point
+(ADR-0003). Its scalar write methods cover `ProjectName`, `Description` and
+`Contribution`; `ExperienceId` stays out. The adapter marks only the root row
+modified on update, so a project edit cannot rewrite the many-to-many rows.
+The join table has one explicit `ReplaceTechStacksAsync`: it loads the tracked
+join rows, swaps the collection and saves once. Only the two foreign keys are
+written — names, images and categories stay on the shared TechStack row. Its
+admin route resolves the body's stack ids through `ISkillRepository` before
+calling the domain method, so the project aggregate never accepts client-built
+refs.
+
+The `experience` slice writes every scalar field — company, dates, role,
+description, responsibility and type — through `IExperienceRepository`. Its
+edit method rebuilds `Company`, `Period` and `Role` so their invariants run on
+edits, and builds all three before assigning anything so a rejected value leaves
+the aggregate unchanged. `Experience.Projects` is a read-only projection of rows
+owned by the Project slice (ADR-0003): the adapter marks only the root row
+modified, and deleting an experience leaves its projects as standalone rows via
+`ON DELETE SET NULL`.
 
 ## 5. Composition root
 
@@ -135,8 +181,8 @@ abstraction only when writes are introduced; `Project` is the aggregate root
 ```
 builder.Services
   .AddSwaggerConfig() / .AddCorsOrigins() / .AddInfrastructure() / .AddFeatures()
-  .AddPortfolioFeatures(configuration)   → DbContext, repositories, handlers,
-                                           Notion, GitHub
+  .AddPortfolioFeatures(configuration)   → read + write DbContexts, repositories,
+                                           handlers, Notion, GitHub
   .AddAuthentication() / .AddRateLimitingConfig() / .AddForwardedHeadersConfig()
 
 app
@@ -147,7 +193,8 @@ app
 ```
 
 The host assembles the Portfolio feature graph with `AddPortfolioFeatures()` and
-maps its routes under `/api/v1`, passing the passthrough rate-limit policy names.
+maps its routes under `/api/v1`, passing the passthrough, default and
+admin-write rate-limit policy names.
 Its appsettings and User Secrets are the canonical source for DB, GitHub, Notion,
 CORS, and Swagger settings; EF commands use it as `--startup-project`.
 
@@ -164,19 +211,22 @@ Current behavior of the host:
 |---|---|---|
 | Error handling | typed `Result<T>` → one `ApiResult` mapper → `503`/`502`/`500`; `GlobalExceptionHandler` for escapes | — |
 | Logging | `ILogger` in handlers and repositories; warning for a dependency failure, error for a bug | no structured sink or correlation id beyond `traceId` |
-| Validation | explicit `AuthDto` guard in `AuthEndpoints` → `400 + validation_failed` | no other endpoint takes input |
-| Cancellation | `CancellationToken` from endpoint → handler → repository → `ToListAsync(ct)` / `GetAsync(ct)` | — |
-| Mapping | hand-written mappers for entity ↔ domain; `PortfolioDtoMapper` for domain → DTO (ADR-0004) | reverse mappings are unused until a write path exists |
-| Auth | JWT **service token** (`sub=portfolio-api`) owned by `Core` and mapped by `JGBackend`; lifetime from `Jwt:ExpirationInMinutes`; only `/auth/me` requires it; portfolio, Notion, and GitHub reads are anonymous on purpose | — |
-| Observability | `/healthz` liveness and `/api/v1/health` diagnostics (version, environment, uptime) | no PostgreSQL readiness probe, no metrics, no tracing |
-| Resilience | Notion client: 15s timeout, one retry on 429/5xx; per-IP fixed-window policies applied as endpoint metadata by the host — 120/min `default`, 5/min login, 30/min per passthrough; health probes are exempt | no circuit breaker; limits are per instance |
+| Validation | explicit guards in `AuthEndpoints` and admin write handlers → `400 + validation_failed` | — |
+| Cancellation | `CancellationToken` from endpoint → handler → repository → `ToListAsync(ct)` / `SaveChangesAsync(ct)` / `GetAsync(ct)` | — |
+| Mapping | hand-written mappers for entity ↔ domain in both directions (the write path uses domain → entity); `PortfolioDtoMapper` for domain → DTO (ADR-0004) | — |
+| Auth | JWT **service token** (`sub=portfolio-api`, `role=Admin`) owned by `Core` and mapped by `JGBackend`; lifetime from `Jwt:ExpirationInMinutes`; `Admin` is the fallback policy, so new endpoints fail closed; public reads opt out with `.AllowAnonymous()`; admin writes live under `/api/v1/admin` and opt in explicitly (ADR-0007) | — |
+| Observability | `/healthz` liveness and `/api/v1/health` diagnostics (version, environment, uptime) | admin writes are logged, not audited to a table |
+| Resilience | Notion client: 15s timeout, one retry on 429/5xx; per-IP fixed-window policies applied as endpoint metadata by the host — 120/min `default`, 5/min login, 30/min per passthrough, 30/min `admin-write`; health probes are exempt | no circuit breaker; limits are per instance |
 
 ## 7. Deployment topology
 
 - **CI:** GitHub Actions on every push and pull request — restore, build
   Release, `dotnet test`. One path-filtered deploy workflow ships the app.
 - **Host:** one Azure Web App (`jdbweb`) running the composed host.
-- **Database:** PostgreSQL, connection via `ConnectionStrings__JDBConnection`.
+- **Database:** PostgreSQL. Reads and migrations use `ConnectionStrings__JDBConnection`
+  (`PortfolioContext`); admin writes use `ConnectionStrings__JDBConnectionWrite`
+  (`PortfolioWriteContext`, DML-only credential). Migrations always use the read
+  context and the CI-owned owner connection (ADR-0007).
 - **Docker:** one multi-stage image; `docker/compose.yaml` runs the API only and
   expects an external PostgreSQL supplied through `.env`.
 

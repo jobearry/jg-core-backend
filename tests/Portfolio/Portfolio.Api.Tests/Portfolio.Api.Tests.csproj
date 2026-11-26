@@ -20,9 +20,13 @@
 
   <ItemGroup>
     <Compile Include="..\Features\Experience\ExperienceEndpointsTests.cs" Link="Features\Experience\ExperienceEndpointsTests.cs" />
+    <Compile Include="..\Features\Experience\ExperienceAdminEndpointsTests.cs" Link="Features\Experience\ExperienceAdminEndpointsTests.cs" />
     <Compile Include="..\Features\Project\ProjectEndpointsTests.cs" Link="Features\Project\ProjectEndpointsTests.cs" />
+    <Compile Include="..\Features\Project\ProjectAdminEndpointsTests.cs" Link="Features\Project\ProjectAdminEndpointsTests.cs" />
     <Compile Include="..\Features\Skill\SkillEndpointsTests.cs" Link="Features\Skill\SkillEndpointsTests.cs" />
+    <Compile Include="..\Features\Skill\SkillAdminEndpointsTests.cs" Link="Features\Skill\SkillAdminEndpointsTests.cs" />
     <Compile Include="..\Features\Recommendation\RecommendationEndpointsTests.cs" Link="Features\Recommendation\RecommendationEndpointsTests.cs" />
+    <Compile Include="..\Features\Recommendation\RecommendationAdminEndpointsTests.cs" Link="Features\Recommendation\RecommendationAdminEndpointsTests.cs" />
     <Compile Include="..\Features\Overview\OverviewEndpointsTests.cs" Link="Features\Overview\OverviewEndpointsTests.cs" />
     <Compile Include="..\Features\Notion\NotionEndpointsTests.cs" Link="Features\Notion\NotionEndpointsTests.cs" />
     <Compile Include="..\Features\Notion\NotionClientServiceTests.cs" Link="Features\Notion\NotionClientServiceTests.cs" />
@@ -34,9 +38,14 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Compile Include="..\Shared\Testing\Fakes\FakeDbException.cs" Link="Shared\Testing\Fakes\FakeDbException.cs" />
     <Compile Include="..\Shared\Testing\Fakes\FakeGithubRepositoryReader.cs" Link="Shared\Testing\Fakes\FakeGithubRepositoryReader.cs" />
     <Compile Include="..\Shared\Testing\Fakes\FakePortfolioRepositories.cs" Link="Shared\Testing\Fakes\FakePortfolioRepositories.cs" />
+    <Compile Include="..\Shared\Testing\Fakes\FakeRecommendationRepository.cs" Link="Shared\Testing\Fakes\FakeRecommendationRepository.cs" />
+    <Compile Include="..\Shared\Testing\Fakes\QueuedHttpMessageHandler.cs" Link="Shared\Testing\Fakes\QueuedHttpMessageHandler.cs" />
     <Compile Include="..\Shared\Testing\Fakes\RecordingLogger.cs" Link="Shared\Testing\Fakes\RecordingLogger.cs" />
+    <Compile Include="..\Shared\Testing\NotionTestPayloads.cs" Link="Shared\Testing\NotionTestPayloads.cs" />
+    <Compile Include="..\Shared\Testing\RateLimitAssertions.cs" Link="Shared\Testing\RateLimitAssertions.cs" />
   </ItemGroup>
 
   <ItemGroup>

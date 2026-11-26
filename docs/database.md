@@ -208,7 +208,9 @@ Full guide: `src/Portfolio/Shared/Persistence/Migrations/MIGRATION_GUIDE.md`.
 `PortfolioContextFactory` builds a context for `dotnet ef`. It reads
 `appsettings.Development.json` (optional), the JGBackend project's User Secrets
 store, then the `ConnectionStrings__JDBConnection` environment variable. The
-environment variable takes precedence over both configuration files.
+environment variable takes precedence over both configuration files. The factory
+pins `PortfolioContext`, so the separate `PortfolioWriteContext` used by admin
+writes never participates in migrations or snapshot generation.
 
 ```bash
 export ConnectionStrings__JDBConnection="Host=…;Database=…;Username=…;Password=…"

@@ -1,5 +1,5 @@
 using System.Net;
-using System.Text;
+using Portfolio.Api.Tests.Fakes;
 using Portfolio.Features.Github;
 
 namespace Portfolio.Api.Tests;
@@ -12,7 +12,7 @@ public class GithubRepositoryReaderTests
         const string responseBody =
             """[{"id":123,"name":"hello-world","full_name":"octocat/hello-world","private":false,"owner":{"login":"octocat","id":1},"html_url":"https://github.com/octocat/hello-world","description":"Example","language":"C#","topics":["api"]}]""";
         var client = new GithubClientService(
-            new HttpClient(new StubHandler(responseBody)),
+            new HttpClient(new QueuedHttpMessageHandler((HttpStatusCode.OK, responseBody))),
             new GithubAPISettings { BaseUrl = "https://api.github.test/" });
         IGithubRepositoryReader reader = new GithubRepositoryReader(client);
 
@@ -29,14 +29,4 @@ public class GithubRepositoryReaderTests
         Assert.Equal(["api"], repository.Topics);
     }
 
-    private sealed class StubHandler(string responseBody) : HttpMessageHandler
-    {
-        protected override Task<HttpResponseMessage> SendAsync(
-            HttpRequestMessage request,
-            CancellationToken cancellationToken) =>
-            Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
-            {
-                Content = new StringContent(responseBody, Encoding.UTF8, "application/json")
-            });
-    }
 }

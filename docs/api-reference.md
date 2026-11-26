@@ -12,9 +12,33 @@ OpenAPI: `/swagger` (Development only, or `Swagger:Enabled=true`) · Document: `
 | `GET` | `/healthz` | none | — | liveness probe (`200` when alive) |
 | `GET` | `/api/v1/health` | none | — | `status`, `version`, `environment`, `timestamp`, `uptimeSeconds` |
 | `GET` | `/api/v1/experience` | none* | `includeProjects` (bool, default `false`) | `ExperienceDto[]` |
+| `GET` | `/api/v1/experience/{id}` | none* | path `id` | `ExperienceDto` |
+| `POST` | `/api/v1/admin/experience` | **Admin** | body `CreateExperienceRequest` | `201` + `ExperienceDto` + `Location` |
+| `PUT` | `/api/v1/admin/experience/{id}` | **Admin** | path `id`, body `UpdateExperienceRequest` | `200` + `ExperienceDto` |
+| `DELETE` | `/api/v1/admin/experience/{id}` | **Admin** | path `id` | `204` |
 | `GET` | `/api/v1/project` | none* | `includeTools` (bool, default `false`) | `ProjectDto[]` |
+| `GET` | `/api/v1/project/{id}` | none* | path `id` | `ProjectDto` |
+| `POST` | `/api/v1/admin/project` | **Admin** | body `CreateProjectRequest` | `201` + `ProjectDto` + `Location` |
+| `POST` | `/api/v1/admin/experience/{experienceId}/project` | **Admin** | path `experienceId`, body `CreateProjectRequest` | `201` + `ProjectDto` + `Location` |
+| `PUT` | `/api/v1/admin/project/{id}/experience` | **Admin** | path `id`, body `{ "experienceId": 4 | null }` | `200` + `ProjectDto` |
+| `PUT` | `/api/v1/admin/project/{id}` | **Admin** | path `id`, body `UpdateProjectRequest` | `200` + `ProjectDto` |
+| `PUT` | `/api/v1/admin/project/{id}/tech-stacks` | **Admin** | path `id`, body `{ "techStackIds": [...] }` | `200` + `ProjectDto` |
+| `DELETE` | `/api/v1/admin/project/{id}` | **Admin** | path `id` | `204` |
 | `GET` | `/api/v1/recommendation` | none* | — | `RecommendationDto[]` |
+| `GET` | `/api/v1/recommendation/{id}` | none* | path `id` | `RecommendationDto` |
+| `POST` | `/api/v1/admin/recommendation` | **Admin** | body `CreateRecommendationRequest` | `201` + `RecommendationDto` + `Location` |
+| `PUT` | `/api/v1/admin/recommendation/{id}` | **Admin** | path `id`, body `UpdateRecommendationRequest` | `200` + `RecommendationDto` |
+| `DELETE` | `/api/v1/admin/recommendation/{id}` | **Admin** | path `id` | `204` |
 | `GET` | `/api/v1/skill` | none* | — | `TechStackDto[]` |
+| `GET` | `/api/v1/skill/{id}` | none* | path `id` | `TechStackDto` |
+| `GET` | `/api/v1/skill-category` | none* | — | `SkillCategoryDto[]` |
+| `GET` | `/api/v1/skill-category/{id}` | none* | path `id` | `SkillCategoryDto` |
+| `POST` | `/api/v1/admin/skill` | **Admin** | body `CreateSkillRequest` | `201` + `TechStackDto` + `Location` |
+| `PUT` | `/api/v1/admin/skill/{id}` | **Admin** | path `id`, body `UpdateSkillRequest` | `200` + `TechStackDto` |
+| `DELETE` | `/api/v1/admin/skill/{id}` | **Admin** | path `id` | `204` |
+| `POST` | `/api/v1/admin/skill-category` | **Admin** | body `SkillCategoryRequest` | `201` + `SkillCategoryDto` + `Location` |
+| `PUT` | `/api/v1/admin/skill-category/{id}` | **Admin** | path `id`, body `SkillCategoryRequest` | `200` + `SkillCategoryDto` |
+| `DELETE` | `/api/v1/admin/skill-category/{id}` | **Admin** | path `id` | `204` |
 | `GET` | `/api/v1/overview` | none* | — | `DashboardItemDto[]` |
 | `GET` | `/api/v1/notion/{pageId}` | none* | path `pageId` | `NotionPageDto[]` |
 | `GET` | `/api/v1/notion/{pageId}/count` | none* | path `pageId` | `OverviewItemDto` |
@@ -38,7 +62,8 @@ so a monitor never receives `429`; see `operations.md` §7.
 
 All other endpoints carry a 120 requests/minute per-IP `default` policy. The
 login and external-service passthroughs override it with their stricter 5/minute
-and 30/minute limits described below.
+and 30/minute limits described below. Admin writes use a dedicated 30/minute
+`admin-write` policy, so a busy reader cannot consume the write quota.
 
 ## 2. Authentication
 
@@ -55,7 +80,11 @@ and a token that says so.
 ### `POST /api/v1/auth/login`
 
 Compares `key` against `Jwt:Key` in constant time. On success returns a JWT with
-`sub=portfolio-api` and `role=User`, valid for `Jwt:ExpirationInMinutes`.
+`sub=portfolio-api` and `role=Admin`, valid for `Jwt:ExpirationInMinutes`.
+
+The `Admin` role is also the fallback authorization policy: an endpoint with no
+explicit rule is admin-only. Public reads opt out with `.AllowAnonymous()`, so they
+stay anonymous. See [ADR-0007](adr/0007-admin-authorization-and-writer-role.md).
 
 ```http
 POST /api/v1/auth/login
@@ -90,7 +119,7 @@ Requires a token. Returns claims from the presented token, grouped by claim type
 ```json
 {
   "sub": ["portfolio-api"],
-  "role": ["User"]
+  "role": ["Admin"]
 }
 ```
 
@@ -159,6 +188,33 @@ Notes:
   end dates backfilled, which is why past roles currently show a growing
   `durationMonths`.
 
+`GET /api/v1/experience/{id}` returns the same shape including nested projects.
+Missing ids are `404`; public reads stay anonymous.
+
+#### Admin writes
+
+Experience writes use the same `role=Admin` token, `admin-write` limiter and
+writer credential as the other slices. See
+[ADR-0007](adr/0007-admin-authorization-and-writer-role.md).
+
+| Method | Path | Body | Success | Failure |
+|---|---|---|---|---|
+| `POST` | `/api/v1/admin/experience` | `{ "company", "role", "startedAt", "finishedAt", "description", "responsibility", "type" }` | `201`, dto + `Location: /api/v1/experience/{id}` | `400`, `401`, `503` |
+| `PUT` | `/api/v1/admin/experience/{id}` | same shape | `200`, dto | `400`, `401`, `404`, `503` |
+| `DELETE` | `/api/v1/admin/experience/{id}` | — | `204`, empty | `400`, `401`, `404`, `503` |
+
+- `company` is required, non-blank and at most 255 characters; `role` is optional
+  and blank input means "undeclared" (`null` on the wire). `type` is at most 20
+  characters. `description` and `responsibility` are unbounded.
+- `startedAt` must not be in the future and `finishedAt` must not be before
+  `startedAt`. All value-object limits are checked before the write, so bad input
+  is `400 + validation_failed`, never `500`.
+- `projects` is a read-only projection (ADR-0003). It is never changed by these
+  routes; deleting an experience leaves its projects as standalone rows via
+  `ON DELETE SET NULL`.
+- `POST` returns a `Location` pointing at the anonymous detail GET. Missing
+  ids are `404 + not_found`; a database outage is `503`.
+
 ### `GET /api/v1/project?includeTools=false`
 
 Returns projects ordered by id ascending. `includeTools=true` loads tech stacks
@@ -175,6 +231,51 @@ Two keys are deliberately absent:
   the role it sits under.
 
 `techStacks[]` items are `{ id, stackName, imgSrc, category }` — no `createdAt`.
+
+`GET /api/v1/project/{id}` returns the same shape including stack refs. Missing
+ids are `404`; public reads stay anonymous.
+
+#### Admin writes
+
+Project writes use the same `role=Admin` token, `admin-write` limiter and writer
+credential as the other slices. See
+[ADR-0007](adr/0007-admin-authorization-and-writer-role.md).
+
+| Method | Path | Body | Success | Failure |
+|---|---|---|---|---|
+| `POST` | `/api/v1/admin/project` | `{ "projectName", "description", "contribution" }` | `201`, dto + `Location: /api/v1/project/{id}` | `400`, `401`, `503` |
+| `POST` | `/api/v1/admin/experience/{experienceId}/project` | same shape | `201`, dto + `Location: /api/v1/project/{id}` | `400`, `401`, `404`, `503` |
+| `PUT` | `/api/v1/admin/project/{id}/experience` | `{ "experienceId": 4 | null }` | `200`, dto | `400`, `401`, `404`, `503` |
+| `PUT` | `/api/v1/admin/project/{id}` | same shape | `200`, dto | `400`, `401`, `404`, `503` |
+| `POST` | `/api/v1/admin/project/{id}/tech-stack` | `{ "techStackId": 5 }` | `200`, dto | `400`, `401`, `404`, `503` |
+| `DELETE` | `/api/v1/admin/project/{id}/tech-stack/{techStackId}` | — | `200`, dto | `400`, `401`, `404`, `503` |
+| `PUT` | `/api/v1/admin/project/{id}/tech-stacks` | `{ "techStackIds": [2, 5] }` | `200`, dto | `400`, `401`, `404`, `503` |
+| `DELETE` | `/api/v1/admin/project/{id}` | — | `204`, empty | `400`, `401`, `404`, `503` |
+
+- `projectName` is required and non-blank; the columns are unbounded `text`, so
+  there is no server-side length cap. `description` and `contribution` are
+  optional and may be `null`.
+- `POST /admin/project` creates a **standalone** project (`ExperienceId` is
+  `null`). Use `POST /admin/experience/{experienceId}/project` to create one under
+  an existing role; a missing role is `404`. Both leave `techStacks[]` empty — the
+  join has its own route below (ADR-0003).
+- `PUT /admin/project/{id}/experience` updates **only** an existing project's
+  `experience_id`: a positive id attaches or moves it; `null` detaches it.
+  The project must exist. The experience must exist when the id is non-null.
+  It does not change the project's name, description, contribution or tech stacks.
+- `POST /admin/project/{id}/tech-stack` adds a single tech stack link. The stack
+  must exist and not already be linked. Returns the updated project.
+- `DELETE /admin/project/{id}/tech-stack/{techStackId}` removes a single tech
+  stack link. The stack must currently be linked. Returns the updated project.
+- Both `POST` routes return a `Location` pointing at the anonymous detail GET.
+- Missing ids are `404 + not_found`; a database outage is `503`.
+
+`PUT /api/v1/admin/project/{id}/tech-stacks` replaces the whole tool set. It
+accepts only an array of existing shared stack ids: names, images and categories
+are resolved through the Skill read port, so a client cannot forge them. Ids
+must be positive and unique; unknown ids are `400 + validation_failed`. An empty
+array clears the project's tools. `Project` owns this join write through
+`IProjectRepository` (ADR-0003) — the scalar routes above never touch it.
 
 ### `GET /api/v1/recommendation`
 
@@ -196,6 +297,44 @@ Returns testimonials ordered by id ascending.
 means the recommender does not want their title published; it is a supported
 state, not missing data.
 
+### `GET /api/v1/recommendation/{id}`
+
+Returns one testimonial with the same shape as the collection. A missing id is
+`404` with `not_found`; `id <= 0` is `400` with `validation_failed`. Like the
+collection, this detail route is anonymous and uses the read-only credential.
+
+#### Admin writes
+
+The three write routes below are the first admin endpoints. They require the
+`role=Admin` service token from `POST /api/v1/auth/login`; an anonymous caller
+gets `401`. They are also the only routes that use the `JDBConnectionWrite`
+credential (`portfolio_writer`, DML only). Public reads still use
+`portfolio_app` and remain anonymous. See
+[ADR-0007](adr/0007-admin-authorization-and-writer-role.md).
+
+| Method | Path | Body | Success | Failure |
+|---|---|---|---|---|
+| `POST` | `/api/v1/admin/recommendation` | `{ "personName", "description", "careerPosition" }` | `201`, dto + `Location: /api/v1/recommendation/{id}` | `400`, `401`, `503` |
+| `PUT` | `/api/v1/admin/recommendation/{id}` | same shape | `200`, dto | `400`, `401`, `404`, `503` |
+| `DELETE` | `/api/v1/admin/recommendation/{id}` | — | `204`, empty | `400`, `401`, `404`, `503` |
+
+- `personName` and `description` are required, non-blank; `personName` is capped
+  at 50 characters by the column. `careerPosition` is optional, but an explicit
+  empty string is invalid — send `null` to hide the title. It is capped at 50
+  characters by the `Role` value object. A null or missing body is also `400`
+  with `validation_failed`.
+- `postedAt` is **not** accepted from the client. Create uses the server clock;
+  update and delete never change it.
+- `POST` returns the generated id in both the body and the `Location` header.
+  The header points at the anonymous `GET /api/v1/recommendation/{id}` detail
+  route, so a client can follow it.
+- A missing row on update/delete is `404` with `not_found`; invalid input is
+  `400` with `validation_failed`; a database outage is `503` with
+  `database_unavailable`.
+- All three use the `admin-write` limiter: 30 requests/minute per client IP.
+- No audit table or audit columns are written. The action is logged with the
+  operation name but no request body or credential.
+
 ### `GET /api/v1/skill`
 
 Returns tech stacks ordered by id ascending, including category name.
@@ -212,6 +351,34 @@ for.
 On failure, this endpoint uses the same typed error mapping as the other
 portfolio endpoints; a database failure returns `503` with
 `database_unavailable`.
+
+`GET /api/v1/skill-category` returns `{ "id", "category" }` items ordered by id.
+The two detail GETs return the same shapes. Missing ids are `404`; all these
+reads stay anonymous.
+
+#### Admin writes
+
+The Skill writes use the same `role=Admin` token, `admin-write` limiter and
+writer credential as the recommendation writes above. See
+[ADR-0007](adr/0007-admin-authorization-and-writer-role.md).
+
+| Method | Path | Body | Success | Failure |
+|---|---|---|---|---|
+| `POST` | `/api/v1/admin/skill` | `{ "stackName", "imgSrc", "category" }` | `201`, dto + `Location: /api/v1/skill/{id}` | `400`, `401`, `503` |
+| `PUT` | `/api/v1/admin/skill/{id}` | same shape | `200`, dto | `400`, `401`, `404`, `503` |
+| `DELETE` | `/api/v1/admin/skill/{id}` | — | `204`, empty | `400`, `401`, `404`, `409`, `503` |
+| `POST` | `/api/v1/admin/skill-category` | `{ "category": "..." }` | `201`, dto + `Location: /api/v1/skill-category/{id}` | `400`, `401`, `503` |
+| `PUT` | `/api/v1/admin/skill-category/{id}` | same shape | `200`, dto | `400`, `401`, `404`, `503` |
+| `DELETE` | `/api/v1/admin/skill-category/{id}` | — | `204`, empty | `400`, `401`, `404`, `409`, `503` |
+
+- `stackName` and `category` are required and non-blank; text fields are capped
+  at 255 characters. `imgSrc` is optional and may be `null`.
+- `category` is the **name** of an existing category, not an id. The handler
+  resolves it to the id the row needs; an unknown name is `400 + validation_failed`.
+- `POST` returns a `Location` pointing at the anonymous detail GET, so a client
+  can follow it without a token.
+- Delete is `409 + conflict` when a stack is cited by a project or a category
+  still has stacks. Missing ids are `404`; a database outage is `503`.
 
 ### `GET /api/v1/overview`
 
@@ -425,11 +592,12 @@ A new domain, or a Vercel preview deployment, is an environment variable —
 `Cors__AllowedOrigins__2=https://my-branch-git-team.vercel.app` — not a code edit and a
 redeploy. Adding an origin is still a security change: ask first.
 
-The policy is `GET, POST` and `Content-Type, Authorization`. There is **no
-`AllowCredentials()`**: bearer tokens travel in the `Authorization` header, which CORS
-treats as an ordinary request header, and nothing in this API sets a cookie. If the
-frontend ever moves to cookie auth or calls with `withCredentials: true`, that flag has
-to come back in the same change.
+The SPA policy is `GET, POST`; `/api/v1/admin` uses a separate policy with
+`GET, POST, PUT, DELETE`. Both use the same origin allow-list and the headers
+`Content-Type, Authorization`. There is **no `AllowCredentials()`**: bearer tokens
+travel in the `Authorization` header, which CORS treats as an ordinary request header,
+and nothing in this API sets a cookie. If the frontend ever moves to cookie auth or
+calls with `withCredentials: true`, that flag has to come back in the same change.
 
 Allowing localhost only in Development is deliberate: otherwise any page served from a
 local port could read the deployed API. The tests in `CorsPolicyTests` pin both that and

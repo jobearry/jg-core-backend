@@ -72,9 +72,34 @@ public class Project
     public void UpdateContribution(string? contribution) => Contribution = contribution;
 
     /// <summary>
+    /// The admin edit path. The name keeps the constructor's invariant; the experience
+    /// link and tech-stack refs stay untouched because they belong to their own
+    /// operations (ADR-0003).
+    /// </summary>
+    public void UpdateDetails(string projectName, string? description, string? contribution)
+    {
+        if (string.IsNullOrWhiteSpace(projectName))
+            throw new ArgumentException("Project name cannot be empty.", nameof(projectName));
+
+        ProjectName = projectName;
+        Description = description;
+        Contribution = contribution;
+    }
+
+    /// <summary>
     /// Replaces the tech stacks. The argument is copied, so a caller that keeps its own
     /// list cannot change this project afterwards.
     /// </summary>
     public void ReplaceTechStacks(IEnumerable<TechStackRef>? techStacks) =>
         TechStacks = techStacks is null ? Array.Empty<TechStackRef>() : techStacks.ToList();
+
+    /// <summary>
+    /// Sentinel returned when a tech stack is already linked and the handler treats it as a conflict.
+    /// </summary>
+    public static readonly Project AlreadyLinked = new(-1, "sentinel-already-linked");
+
+    /// <summary>
+    /// Sentinel returned when a tech stack is not linked and the handler treats it as not found.
+    /// </summary>
+    public static readonly Project NotLinked = new(-2, "sentinel-not-linked");
 }

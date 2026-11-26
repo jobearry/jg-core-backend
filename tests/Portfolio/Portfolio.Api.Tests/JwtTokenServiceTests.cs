@@ -25,7 +25,7 @@ public sealed class JwtTokenServiceTests
         Assert.Equal("portfolio-api", token.Subject);
         Assert.Equal("test-issuer", token.Issuer);
         Assert.Contains("test-audience", token.Audiences);
-        Assert.Contains(token.Claims, claim => claim.Value == "User");
+        Assert.Contains(token.Claims, claim => claim.Type == "role" && claim.Value == "Admin");
     }
 
     [Fact]

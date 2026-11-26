@@ -12,18 +12,34 @@ public static class RateLimitConfiguration
     /// <summary>Shared limit for the two external-service passthroughs.</summary>
     private const int PassthroughPermitLimit = 30;
 
+    /// <summary>Admin writes are authenticated and rate-limited more tightly than reads.</summary>
+    private const int AdminWritePermitLimit = 30;
+
     private static readonly TimeSpan Window = TimeSpan.FromMinutes(1);
 
-    public static IServiceCollection AddRateLimitingConfig(this IServiceCollection services)
+    public static IServiceCollection AddRateLimitingConfig(this IServiceCollection services, IConfiguration configuration)
     {
         services.AddRateLimiter(options =>
         {
             options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
 
+            // Read configuration when the options are created, not during service
+            // registration: WebApplicationFactory adds its in-memory sources later.
+            if (configuration.GetValue("RateLimiting:Disabled", false))
+            {
+                options.AddPolicy<string>(RateLimitPolicies.Default, _ => RateLimitPartition.GetNoLimiter("disabled"));
+                options.AddPolicy<string>(RateLimitPolicies.AdminWrite, _ => RateLimitPartition.GetNoLimiter("disabled"));
+                options.AddPolicy<string>(RateLimitPolicies.NotionPassthrough, _ => RateLimitPartition.GetNoLimiter("disabled"));
+                options.AddPolicy<string>(RateLimitPolicies.GithubPassthrough, _ => RateLimitPartition.GetNoLimiter("disabled"));
+                options.AddPolicy<string>(RateLimitPolicies.AuthLogin, _ => RateLimitPartition.GetNoLimiter("disabled"));
+                return;
+            }
+
             AddFixedWindow(options, RateLimitPolicies.Default, DefaultPermitLimit);
             AddFixedWindow(options, RateLimitPolicies.AuthLogin, 5);
             AddFixedWindow(options, RateLimitPolicies.NotionPassthrough, PassthroughPermitLimit);
             AddFixedWindow(options, RateLimitPolicies.GithubPassthrough, PassthroughPermitLimit);
+            AddFixedWindow(options, RateLimitPolicies.AdminWrite, AdminWritePermitLimit);
         });
 
         return services;

@@ -1,3 +1,7 @@
+# Run from the repository root with --project-directory . :
+#   docker compose --project-directory . -f docker/compose.yaml up --build
+# Without it, Compose uses docker/ as the project directory and cannot find .env.
+#
 # Comments are provided throughout this file to help you get started.
 # If you need more help, visit the Docker Compose reference guide at
 # https://docs.docker.com/go/compose/reference/
@@ -23,6 +27,7 @@ services:
       - Jwt__ExpirationInMinutes=${Jwt__ExpirationInMinutes:-60}
 
       - ConnectionStrings__JDBConnection=${ConnectionStrings__JDBConnection:?}
+      - ConnectionStrings__JDBConnectionWrite=${ConnectionStrings__JDBConnectionWrite:?}
       - Notion__Version=${Notion__Version:-2026-03-11}
       - Notion__Token=${Notion__Token:?}
       - Github__Token=${Github__Token:?}

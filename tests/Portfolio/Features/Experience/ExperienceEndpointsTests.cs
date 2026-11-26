@@ -167,6 +167,29 @@ public class ExperienceEndpointsTests : IClassFixture<JGBackendApiFactory>
         Assert.True(token!.Value.CanBeCanceled);
     }
 
+    [Fact]
+    public async Task GetExperienceById_WhenFound_ReturnsTheDtoWithProjects()
+    {
+        var response = await _client.GetAsync("/api/v1/experience/4");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        var json = await response.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal(4, json.GetProperty("id").GetInt32());
+        Assert.Equal("Applied ICT Inc.", json.GetProperty("company").GetString());
+
+        var project = Assert.Single(json.GetProperty("projects").EnumerateArray());
+        Assert.Equal("Portfolio API", project.GetProperty("projectName").GetString());
+    }
+
+    [Fact]
+    public async Task GetExperienceById_WhenMissing_Returns404()
+    {
+        var response = await _client.GetAsync("/api/v1/experience/99");
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
     private async Task<JsonElement> GetJsonAsync(string url)
     {
         var response = await _client.GetAsync(url);

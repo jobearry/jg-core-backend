@@ -35,6 +35,27 @@ public class ProjectEndpointsTests : IClassFixture<JGBackendApiFactory>
         Assert.False(project.TryGetProperty("period", out _));
     }
 
+    [Fact]
+    public async Task GetProjectById_WhenFound_ReturnsTheDtoWithStacks()
+    {
+        var response = await _client.GetAsync("/api/v1/project/7");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        var json = await response.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal(7, json.GetProperty("id").GetInt32());
+        var stack = Assert.Single(json.GetProperty("techStacks").EnumerateArray());
+        Assert.Equal("C#", stack.GetProperty("stackName").GetString());
+    }
+
+    [Fact]
+    public async Task GetProjectById_WhenMissing_Returns404()
+    {
+        var response = await _client.GetAsync("/api/v1/project/99");
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
     private static void Seed(JGBackendApiFactory factory)
     {
         factory.Projects.Projects.Clear();

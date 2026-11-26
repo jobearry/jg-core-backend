@@ -22,18 +22,19 @@ Rules:
 ## 2. Authentication and authorization
 
 Current design: a **single shared key** exchanged at `/api/v1/auth/login` for a
-JWT carrying `sub=portfolio-api` and one `role=User` claim. There is no user store.
+JWT carrying `sub=portfolio-api` and one `role=Admin` claim. There is no user store.
 
 - Compare secrets with `CryptographicOperations.FixedTimeEquals` (already done).
 - Reject a configured key shorter than 32 bytes (already done, returns 500 —
   correct, since it is a server misconfiguration).
 - Portfolio, Notion, and current GitHub read endpoints are **anonymous by design**.
   GitHub endpoints return public repository data only, even when the server-side
-  GitHub token can access private repositories. Only `/auth/me` requires an API JWT.
-  Do not expose private GitHub metadata unless the user explicitly authorizes
-  implementation of [`docs/plan.md`](../plan.md).
-- A secure-by-default fallback policy is deliberately deferred until a write
-  endpoint exists (KI-010). Do not flip it as a drive-by change.
+  GitHub token can access private repositories. `/auth/me` and every
+  `/api/v1/admin/...` write require the Admin JWT. Do not expose private GitHub
+  metadata unless the user explicitly authorizes implementation of
+  [`docs/plan.md`](../plan.md).
+- The `Admin` policy is the fallback: a new endpoint is protected unless it opts
+  out with `AllowAnonymous()`. Keep the public opt-outs explicit (KI-010).
 - Do not put secrets in query strings — they end up in logs and proxies.
 - When adding authorization, use policies (`RequireClaim`, `RequireRole`), not
   ad-hoc claim checks scattered across endpoints.
@@ -74,7 +75,22 @@ feature/<short-topic>      feature/recommendations
 fix/<short-topic>          fix/compose-db-service
 chore/<short-topic>        chore/agents-docs
 docs/<short-topic>
+task/<short-topic>         task/phase-3-incremental-tech-stack
 ```
+
+**Branch strategy:**
+
+- **One `feature/<topic>` branch per feature** — the integration branch that accumulates completed phases.
+- **Each phase gets a `task/<phase-name>` branch** cut from the feature branch. Implement the phase on the task branch, verify, then open a PR **to the feature branch**. The feature branch receives these phase PRs.
+- Do not chain task branches (task-2 cut from task-1); always cut from the current tip of the feature branch so phases integrate cleanly.
+- Task branches are short-lived and deleted after their PR is merged to the feature branch.
+- **Only the `feature/<topic>` branch is PR'd to `main`/`master`.** Task branches never target main directly.
+
+**Commit and push discipline:**
+
+- **Commit locally by default.** Each logical change gets a commit with a proper Conventional Commit message.
+- **Ask before pushing.** After a phase finishes (or when the user says so), request explicit permission to push the task branch and open its PR to the feature branch. Do not auto-push on every commit.
+- The feature branch is pushed when its PR to main/master is authorized.
 
 Commit messages follow Conventional Commits:
 
@@ -86,8 +102,19 @@ refactor(domain): convert value objects to records
 test(domain): cover Period invariants
 ```
 
-- Subject in imperative mood, ≤ 72 chars, no trailing period.
-- Body explains **why**, not what (the diff shows what).
+Type quick-reference:
+
+| Type | Purpose | Example from this repo |
+|---|---|---|
+| `feat` | New user-facing behaviour | `feat(project): create projects under an experience` |
+| `fix` | Bug fix | `fix(admin): address review findings for write slices` |
+| `docs` | Documentation only | `docs(plan): choose project-side experience route` |
+| `refactor` | Code change, no behaviour change | `refactor(domain): convert value objects to records` |
+| `test` | Adding/updating tests | `test(domain): cover Period invariants` |
+| `chore` | Maintenance, tooling | `chore(ci): bump actions versions` |
+
+- Subject: imperative mood, ≤ 72 chars, no trailing period.
+- Body: explains **why**, not what (the diff shows what). Wrapped at ~72 chars.
 - One logical change per commit. Do not mix formatting with behaviour.
 
 ## 7. Pull requests

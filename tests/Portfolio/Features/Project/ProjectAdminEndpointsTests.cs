@@ -1,0 +1,634 @@
+using System.Net;
+using System.Net.Http.Json;
+using System.Text;
+using System.Text.Json;
+using Portfolio.Domain.Entities;
+using Portfolio.Domain.ValueObjects;
+
+namespace Portfolio.Api.Tests;
+
+/// <summary>
+/// HTTP contract for Project admin writes. Reads stay anonymous; every write needs
+/// the Admin token. Scalar edits and tech-stack replacement are both covered here.
+/// </summary>
+[Collection(JGBackendHostCollection.Name)]
+public class ProjectAdminEndpointsTests : IClassFixture<JGBackendApiFactory>
+{
+    private const string ProjectPath = "/api/v1/admin/project";
+
+    private readonly JGBackendApiFactory _factory;
+
+    public ProjectAdminEndpointsTests(JGBackendApiFactory factory)
+    {
+        _factory = factory;
+        Seed(factory);
+    }
+
+    [Fact]
+    public async Task AdminCreateProject_WithToken_Returns201AndLocation()
+    {
+        using var client = _factory.CreateAdminClient();
+
+        var response = await client.PostAsJsonAsync(ProjectPath, new
+        {
+            projectName = "New project",
+            description = "A description",
+            contribution = "Mine"
+        });
+
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        Assert.Equal("/api/v1/project/8", response.Headers.Location?.OriginalString);
+
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal("New project", body.GetProperty("projectName").GetString());
+        Assert.Empty(body.GetProperty("techStacks").EnumerateArray());
+    }
+
+    [Fact]
+    public async Task AdminCreateProject_WithoutToken_Returns401()
+    {
+        using var client = _factory.CreateClient();
+
+        var response = await client.PostAsJsonAsync(ProjectPath, new
+        {
+            projectName = "New project",
+            description = (string?)null,
+            contribution = (string?)null
+        });
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task AdminCreateProject_WithBlankName_Returns400()
+    {
+        using var client = _factory.CreateAdminClient();
+
+        var response = await client.PostAsJsonAsync(ProjectPath, new
+        {
+            projectName = "  ",
+            description = (string?)null,
+            contribution = (string?)null
+        });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+
+        var problem = await response.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal("validation_failed", problem.GetProperty("code").GetString());
+    }
+
+    [Fact]
+    public async Task AdminCreateProject_WithNullBody_Returns400()
+    {
+        using var client = _factory.CreateAdminClient();
+
+        var response = await client.PostAsync(
+            ProjectPath, new StringContent("null", Encoding.UTF8, "application/json"));
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+
+        var problem = await response.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal("validation_failed", problem.GetProperty("code").GetString());
+    }
+
+    [Fact]
+    public async Task AdminCreateProjectForExperience_WithToken_Returns201AndLinksToTheProject()
+    {
+        using var client = _factory.CreateAdminClient();
+
+        var response = await client.PostAsJsonAsync(
+            "/api/v1/admin/experience/4/project",
+            new
+            {
+                projectName = "Role project",
+                description = "Built during that role",
+                contribution = "Mine"
+            });
+
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        Assert.Equal("/api/v1/project/8", response.Headers.Location?.OriginalString);
+
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal("Role project", body.GetProperty("projectName").GetString());
+        var created = Assert.Single(
+            _factory.Projects.Projects,
+            project => project.ProjectName == "Role project");
+        Assert.Equal(4, created.ExperienceId);
+    }
+
+    [Fact]
+    public async Task AdminCreateProjectForExperience_ForMissingExperience_Returns404()
+    {
+        using var client = _factory.CreateAdminClient();
+
+        var response = await client.PostAsJsonAsync(
+            "/api/v1/admin/experience/99/project",
+            new { projectName = "Orphan", description = (string?)null, contribution = (string?)null });
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        Assert.DoesNotContain(
+            _factory.Projects.Projects, project => project.ProjectName == "Orphan");
+    }
+
+    [Fact]
+    public async Task AdminCreateProjectForExperience_WithoutToken_Returns401()
+    {
+        using var client = _factory.CreateClient();
+
+        var response = await client.PostAsJsonAsync(
+            "/api/v1/admin/experience/4/project",
+            new { projectName = "Role project", description = (string?)null, contribution = (string?)null });
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task AdminCreateProjectForExperience_WithBlankName_Returns400()
+    {
+        using var client = _factory.CreateAdminClient();
+
+        var response = await client.PostAsJsonAsync(
+            "/api/v1/admin/experience/4/project",
+            new { projectName = "  ", description = (string?)null, contribution = (string?)null });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+
+        var problem = await response.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal("validation_failed", problem.GetProperty("code").GetString());
+    }
+
+    [Fact]
+    public async Task AdminUpdateProjectExperience_Attach_WithToken_Returns200AndLinks()
+    {
+        using var client = _factory.CreateAdminClient();
+
+        var response = await client.PutAsJsonAsync(
+            $"{ProjectPath}/7/experience",
+            new { experienceId = 4 });
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal(7, body.GetProperty("id").GetInt32());
+        Assert.Equal(4, Assert.Single(_factory.Projects.Projects, p => p.Id == 7).ExperienceId);
+    }
+
+    [Fact]
+    public async Task AdminUpdateProjectExperience_Move_WithToken_Returns200AndChangesLink()
+    {
+        using var client = _factory.CreateAdminClient();
+        _factory.Projects.Projects.Add(new Project(
+            9, 4, "Move target", "Desc", "Contr", Array.Empty<TechStackRef>()));
+
+        var response = await client.PutAsJsonAsync(
+            $"{ProjectPath}/9/experience",
+            new { experienceId = 5 });
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(5, Assert.Single(_factory.Projects.Projects, p => p.Id == 9).ExperienceId);
+    }
+
+    [Fact]
+    public async Task AdminUpdateProjectExperience_Detach_WithToken_Returns200AndNullsLink()
+    {
+        using var client = _factory.CreateAdminClient();
+
+        var response = await client.PutAsJsonAsync(
+            $"{ProjectPath}/7/experience",
+            new { experienceId = (int?)null });
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Null(Assert.Single(_factory.Projects.Projects, p => p.Id == 7).ExperienceId);
+    }
+
+    [Fact]
+    public async Task AdminUpdateProjectExperience_ForMissingProject_Returns404()
+    {
+        using var client = _factory.CreateAdminClient();
+
+        var response = await client.PutAsJsonAsync(
+            $"{ProjectPath}/99/experience",
+            new { experienceId = 4 });
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task AdminUpdateProjectExperience_ForMissingExperience_Returns404()
+    {
+        using var client = _factory.CreateAdminClient();
+
+        var response = await client.PutAsJsonAsync(
+            $"{ProjectPath}/7/experience",
+            new { experienceId = 99 });
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task AdminUpdateProjectExperience_WithInvalidProjectId_Returns400()
+    {
+        using var client = _factory.CreateAdminClient();
+
+        var response = await client.PutAsJsonAsync(
+            $"{ProjectPath}/0/experience",
+            new { experienceId = 4 });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+
+        var problem = await response.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal("validation_failed", problem.GetProperty("code").GetString());
+    }
+
+    [Fact]
+    public async Task AdminUpdateProjectExperience_WithInvalidExperienceId_Returns400()
+    {
+        using var client = _factory.CreateAdminClient();
+
+        var response = await client.PutAsJsonAsync(
+            $"{ProjectPath}/7/experience",
+            new { experienceId = 0 });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+
+        var problem = await response.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal("validation_failed", problem.GetProperty("code").GetString());
+    }
+
+    [Fact]
+    public async Task AdminUpdateProjectExperience_WithoutToken_Returns401()
+    {
+        using var client = _factory.CreateClient();
+
+        var response = await client.PutAsJsonAsync(
+            $"{ProjectPath}/7/experience",
+            new { experienceId = 4 });
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task AdminUpdateProjectExperience_WithNullBody_Returns400()
+    {
+        using var client = _factory.CreateAdminClient();
+
+        var response = await client.PutAsync(
+            $"{ProjectPath}/7/experience",
+            new StringContent("null", Encoding.UTF8, "application/json"));
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+
+        var problem = await response.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal("validation_failed", problem.GetProperty("code").GetString());
+    }
+
+    [Fact]
+    public async Task AdminUpdateProject_WithToken_Returns200AndKeepsTheId()
+    {
+        using var client = _factory.CreateAdminClient();
+
+        var response = await client.PutAsJsonAsync($"{ProjectPath}/7", new
+        {
+            projectName = "Portfolio API v2",
+            description = "New description",
+            contribution = "New contribution"
+        });
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal(7, body.GetProperty("id").GetInt32());
+        Assert.Equal("Portfolio API v2", body.GetProperty("projectName").GetString());
+        Assert.Equal("New description", body.GetProperty("description").GetString());
+    }
+
+    [Fact]
+    public async Task AdminUpdateProject_ForMissingId_Returns404()
+    {
+        using var client = _factory.CreateAdminClient();
+
+        var response = await client.PutAsJsonAsync($"{ProjectPath}/99", new
+        {
+            projectName = "Portfolio API v2",
+            description = (string?)null,
+            contribution = (string?)null
+        });
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task AdminDeleteProject_WithToken_Returns204()
+    {
+        using var client = _factory.CreateAdminClient();
+
+        var response = await client.DeleteAsync($"{ProjectPath}/7");
+
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+        Assert.Empty(_factory.Projects.Projects);
+    }
+
+    [Fact]
+    public async Task AdminDeleteProject_WithoutToken_Returns401()
+    {
+        using var client = _factory.CreateClient();
+
+        var response = await client.DeleteAsync($"{ProjectPath}/7");
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task AdminReplaceProjectTechStacks_WithToken_Returns200AndResolvedSnapshots()
+    {
+        using var client = _factory.CreateAdminClient();
+
+        var response = await client.PutAsJsonAsync(
+            $"{ProjectPath}/7/tech-stacks", new { techStackIds = new[] { 2, 5 } });
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal(7, body.GetProperty("id").GetInt32());
+
+        var stacks = body.GetProperty("techStacks").EnumerateArray().ToList();
+        Assert.Equal(2, stacks.Count);
+        Assert.Equal("C#", stacks[0].GetProperty("stackName").GetString());
+        Assert.Equal("https://example.test/csharp.svg", stacks[0].GetProperty("imgSrc").GetString());
+        Assert.Equal("Backend", stacks[0].GetProperty("category").GetString());
+        Assert.Equal("SQL", stacks[1].GetProperty("stackName").GetString());
+    }
+
+    [Fact]
+    public async Task AdminReplaceProjectTechStacks_WithEmptyList_ClearsTheStacks()
+    {
+        using var client = _factory.CreateAdminClient();
+
+        var response = await client.PutAsJsonAsync(
+            $"{ProjectPath}/7/tech-stacks", new { techStackIds = Array.Empty<int>() });
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Empty(body.GetProperty("techStacks").EnumerateArray());
+        Assert.Empty(Assert.Single(_factory.Projects.Projects).TechStacks);
+    }
+
+    [Fact]
+    public async Task AdminReplaceProjectTechStacks_WithoutToken_Returns401()
+    {
+        using var client = _factory.CreateClient();
+
+        var response = await client.PutAsJsonAsync(
+            $"{ProjectPath}/7/tech-stacks", new { techStackIds = new[] { 2 } });
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task AdminReplaceProjectTechStacks_WithUnknownStackId_Returns400()
+    {
+        using var client = _factory.CreateAdminClient();
+
+        var response = await client.PutAsJsonAsync(
+            $"{ProjectPath}/7/tech-stacks", new { techStackIds = new[] { 2, 99 } });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+
+        var problem = await response.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal("validation_failed", problem.GetProperty("code").GetString());
+    }
+
+    [Fact]
+    public async Task AdminReplaceProjectTechStacks_WithDuplicateIds_Returns400()
+    {
+        using var client = _factory.CreateAdminClient();
+
+        var response = await client.PutAsJsonAsync(
+            $"{ProjectPath}/7/tech-stacks", new { techStackIds = new[] { 2, 2 } });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task AdminReplaceProjectTechStacks_ForMissingProject_Returns404()
+    {
+        using var client = _factory.CreateAdminClient();
+
+        var response = await client.PutAsJsonAsync(
+            $"{ProjectPath}/99/tech-stacks", new { techStackIds = new[] { 2 } });
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task AdminAddProjectTechStack_WithToken_Returns200AndAddsLink()
+    {
+        using var client = _factory.CreateAdminClient();
+
+        var response = await client.PostAsJsonAsync(
+            $"{ProjectPath}/7/tech-stack", new { techStackId = 5 });
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal(7, body.GetProperty("id").GetInt32());
+        Assert.Equal(2, body.GetProperty("techStacks").GetArrayLength());
+        Assert.Contains(body.GetProperty("techStacks").EnumerateArray(), s => s.GetProperty("id").GetInt32() == 5);
+    }
+
+    [Fact]
+    public async Task AdminAddProjectTechStack_AlreadyLinked_Returns400()
+    {
+        using var client = _factory.CreateAdminClient();
+
+        var response = await client.PostAsJsonAsync(
+            $"{ProjectPath}/7/tech-stack", new { techStackId = 2 });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+
+        var problem = await response.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal("validation_failed", problem.GetProperty("code").GetString());
+    }
+
+    [Fact]
+    public async Task AdminAddProjectTechStack_UnknownStack_Returns404()
+    {
+        using var client = _factory.CreateAdminClient();
+
+        var response = await client.PostAsJsonAsync(
+            $"{ProjectPath}/7/tech-stack", new { techStackId = 99 });
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    public async Task AdminAddProjectTechStack_WithInvalidStackId_Returns400(int stackId)
+    {
+        using var client = _factory.CreateAdminClient();
+
+        var response = await client.PostAsJsonAsync(
+            $"{ProjectPath}/7/tech-stack", new { techStackId = stackId });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+
+        var problem = await response.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal("validation_failed", problem.GetProperty("code").GetString());
+    }
+
+    [Fact]
+    public async Task AdminAddProjectTechStack_WithInvalidProjectId_Returns400()
+    {
+        using var client = _factory.CreateAdminClient();
+
+        var response = await client.PostAsJsonAsync(
+            $"{ProjectPath}/0/tech-stack", new { techStackId = 2 });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+
+        var problem = await response.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal("validation_failed", problem.GetProperty("code").GetString());
+    }
+
+    [Fact]
+    public async Task AdminAddProjectTechStack_ForMissingProject_Returns404()
+    {
+        using var client = _factory.CreateAdminClient();
+
+        var response = await client.PostAsJsonAsync(
+            $"{ProjectPath}/99/tech-stack", new { techStackId = 2 });
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task AdminAddProjectTechStack_WithoutToken_Returns401()
+    {
+        using var client = _factory.CreateClient();
+
+        var response = await client.PostAsJsonAsync(
+            $"{ProjectPath}/7/tech-stack", new { techStackId = 2 });
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task AdminAddProjectTechStack_WithNullBody_Returns400()
+    {
+        using var client = _factory.CreateAdminClient();
+
+        var response = await client.PostAsync(
+            $"{ProjectPath}/7/tech-stack", new StringContent("null", Encoding.UTF8, "application/json"));
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+
+        var problem = await response.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal("validation_failed", problem.GetProperty("code").GetString());
+    }
+
+    [Fact]
+    public async Task AdminRemoveProjectTechStack_WithToken_Returns200AndRemovesLink()
+    {
+        using var client = _factory.CreateAdminClient();
+
+        var response = await client.DeleteAsync($"{ProjectPath}/7/tech-stack/2");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal(7, body.GetProperty("id").GetInt32());
+        Assert.Empty(body.GetProperty("techStacks").EnumerateArray());
+    }
+
+    [Fact]
+    public async Task AdminRemoveProjectTechStack_NotLinked_Returns404()
+    {
+        using var client = _factory.CreateAdminClient();
+
+        var response = await client.DeleteAsync($"{ProjectPath}/7/tech-stack/5");
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    public async Task AdminRemoveProjectTechStack_WithInvalidStackId_Returns400(int stackId)
+    {
+        using var client = _factory.CreateAdminClient();
+
+        var response = await client.DeleteAsync($"{ProjectPath}/7/tech-stack/{stackId}");
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+
+        var problem = await response.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal("validation_failed", problem.GetProperty("code").GetString());
+    }
+
+    [Fact]
+    public async Task AdminRemoveProjectTechStack_WithInvalidProjectId_Returns400()
+    {
+        using var client = _factory.CreateAdminClient();
+
+        var response = await client.DeleteAsync($"{ProjectPath}/0/tech-stack/2");
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+
+        var problem = await response.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal("validation_failed", problem.GetProperty("code").GetString());
+    }
+
+    [Fact]
+    public async Task AdminRemoveProjectTechStack_ForMissingProject_Returns404()
+    {
+        using var client = _factory.CreateAdminClient();
+
+        var response = await client.DeleteAsync($"{ProjectPath}/99/tech-stack/2");
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task AdminRemoveProjectTechStack_WithoutToken_Returns401()
+    {
+        using var client = _factory.CreateClient();
+
+        var response = await client.DeleteAsync($"{ProjectPath}/7/tech-stack/2");
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    private static void Seed(JGBackendApiFactory factory)
+    {
+        factory.Projects.Failure = null;
+        factory.Projects.Projects.Clear();
+        factory.Projects.Projects.Add(new Project(
+            7,
+            null,
+            "Portfolio API",
+            "The API behind the site",
+            "Everything",
+            new[] { new TechStackRef(2, "C#", null, "Backend") }));
+
+        factory.Experience.Failure = null;
+        factory.Experience.Experiences.Clear();
+        factory.Experience.Experiences.Add(new Experience(
+            4,
+            new Company("Applied ICT Inc."),
+            new Period(new DateTime(2020, 1, 1), null),
+            new Role("Software Engineer")));
+        factory.Experience.Experiences.Add(new Experience(
+            5,
+            new Company("Another Co."),
+            new Period(new DateTime(2021, 1, 1), null),
+            new Role("Senior Engineer")));
+
+        factory.TechStacks.Failure = null;
+        factory.TechStacks.TechStacks.Clear();
+        factory.TechStacks.TechStacks.Add(new TechStack(
+            2, "C#", "https://example.test/csharp.svg", "Backend"));
+        factory.TechStacks.TechStacks.Add(new TechStack(5, "SQL", null, "Data"));
+    }
+}

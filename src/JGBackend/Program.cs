@@ -2,6 +2,7 @@ using System.Reflection;
 using JGBackend.Configuration;
 using Core.Features;
 using Core.Infrastructure;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
@@ -9,7 +10,13 @@ using Portfolio.Features;
 using Portfolio.Persistence.Contexts;
 
 var builder = WebApplication.CreateBuilder(args);
-builder.Configuration.AddUserSecrets(Assembly.GetExecutingAssembly());
+
+// User Secrets are a local development mechanism. Production and test hosts read
+// configuration from environment variables; loading secrets there would shadow them.
+if (builder.Environment.IsDevelopment())
+{
+    builder.Configuration.AddUserSecrets(Assembly.GetExecutingAssembly());
+}
 
 // Add services to the container.
 builder.Services.AddEndpointsApiExplorer();
@@ -21,7 +28,7 @@ builder.Services.AddAuthentication(builder.Configuration);
 builder.Services.AddCorsOrigins(builder.Configuration, builder.Environment);
 builder.Services.AddHealthChecks();
 builder.Services.AddForwardedHeadersConfig();
-builder.Services.AddRateLimitingConfig();
+builder.Services.AddRateLimitingConfig(builder.Configuration);
 
 var app = builder.Build();
 
@@ -49,22 +56,31 @@ if (app.Environment.IsDevelopment() || app.Configuration.GetValue("Swagger:Enabl
     });
 }
 
-app.UseCors(CorsConfiguration.SpaCorsPolicy);
+app.UseCors();
 app.UseHttpsRedirection();
 app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
 
-app.MapHealthChecks("/healthz").DisableRateLimiting();
+app.MapHealthChecks("/healthz").DisableRateLimiting().AllowAnonymous();
 app.MapFeatures(RateLimitPolicies.Default);
 
 // Portfolio endpoints declare only the segment below the version prefix. Core
 // endpoints still carry their own /api/v1 group until the auth merge removes it.
-// Only the composed host runs a rate limiter, so it supplies the policy names.
+// Only the composed host owns the middleware, so it supplies the policy names.
 app.MapGroup("api/v1").MapPortfolioFeatures(
     RateLimitPolicies.NotionPassthrough,
     RateLimitPolicies.GithubPassthrough,
-    RateLimitPolicies.Default);
+    RateLimitPolicies.Default,
+    RateLimitPolicies.AdminWrite,
+    CorsConfiguration.AdminCorsPolicy);
+
+// The admin fallback would otherwise challenge unmatched routes, turning a 404
+// into a 401. The explicit catch-all also matches dotted paths such as
+// /swagger/v1/swagger.json when Swagger is disabled.
+app.MapFallback("{*path}", () => Results.NotFound())
+    .AllowAnonymous()
+    .RequireRateLimiting(RateLimitPolicies.Default);
 
 app.Run();
 

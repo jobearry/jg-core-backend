@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Portfolio.Endpoints;
 
 namespace Portfolio.Features.Overview;
@@ -11,7 +12,10 @@ public static class OverviewEndpoints
                 CancellationToken cancellationToken) =>
             (await handler.HandleAsync(cancellationToken)).ToHttpResult())
         .WithName("GetPortfolioOverview")
-        .WithTags("Portfolio")
+        .WithSummary("Get the portfolio overview")
+        .WithDescription("Returns a summary of all portfolio sections with counts.")
+        .WithTags("Portfolio - Read")
+        .AllowAnonymous()
         .Produces<List<OverviewItemDto>>(StatusCodes.Status200OK)
         .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
     }

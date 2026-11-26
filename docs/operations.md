@@ -21,6 +21,9 @@ dotnet build   JGBackend.sln
 # 2. configure secrets (user-secrets, host project)
 dotnet user-secrets init --project src/JGBackend/JGBackend.csproj
 dotnet user-secrets set "ConnectionStrings:JDBConnection" "Host=localhost;Port=5432;Database=jdb_portfolio;Username=postgres;Password=…" --project src/JGBackend/JGBackend.csproj
+# Local writes use the same connection/user as reads. Production uses a separate
+# DML-only writer credential in the JDBConnectionWrite App Service setting.
+dotnet user-secrets set "ConnectionStrings:JDBConnectionWrite" "Host=localhost;Port=5432;Database=jdb_portfolio;Username=postgres;Password=…" --project src/JGBackend/JGBackend.csproj
 dotnet user-secrets set "Jwt:Key"       "<at least 32 bytes>" --project src/JGBackend/JGBackend.csproj
 dotnet user-secrets set "Jwt:Issuer"    "jdb_api"            --project src/JGBackend/JGBackend.csproj
 dotnet user-secrets set "Jwt:Audience"  "PortfolioApiUsers"  --project src/JGBackend/JGBackend.csproj
@@ -51,7 +54,8 @@ because the deploy workflow owns migrations there (see §5).
 
 | Key | Local | Docker | Azure |
 |---|---|---|---|
-| `ConnectionStrings:JDBConnection` | user-secrets | `ConnectionStrings__JDBConnection` in `.env` | App Service setting |
+| `ConnectionStrings:JDBConnection` | user-secrets | `ConnectionStrings__JDBConnection` in `.env` | App Service setting (`portfolio_app`, `SELECT` only) |
+| `ConnectionStrings:JDBConnectionWrite` | user-secrets, same value as `JDBConnection` | `ConnectionStrings__JDBConnectionWrite` in `.env`, same value as the read connection | App Service setting (`portfolio_writer`, DML only) |
 | `Jwt:Key` | user-secrets | `Jwt__Key` | App Service setting |
 | `Jwt:Issuer` | user-secrets | `Jwt__Issuer` | App Service setting |
 | `Jwt:Audience` | user-secrets | `Jwt__Audience` | App Service setting |
@@ -63,6 +67,51 @@ because the deploy workflow owns migrations there (see §5).
 | `Cors:AllowedOrigins` | `appsettings.json` | `Cors__AllowedOrigins__0`, `__1`, … | App Service setting |
 | `Cors:DevelopmentOrigins` | `appsettings.json` | applied only when `ASPNETCORE_ENVIRONMENT=Development` | ignored |
 | `Swagger:Enabled` | `appsettings.json` (`false`) | `Swagger__Enabled` | optional; `true` exposes `/swagger` |
+
+`JDBConnection` feeds `PortfolioContext` (reads and migrations); `JDBConnectionWrite`
+feeds `PortfolioWriteContext` (admin writes). Locally and in Docker both settings may
+hold the same connection string, provided that user can write. In production they must
+differ: `portfolio_app` is `SELECT`-only and `portfolio_writer` has `INSERT`, `UPDATE`
+and `DELETE` on the portfolio tables but no DDL. The GitHub Actions migration secret
+`PRODUCTION_CONNECTION_STRING` is unchanged and remains the only owner connection.
+See [ADR-0007](adr/0007-admin-authorization-and-writer-role.md).
+
+The production `portfolio_writer` role is provisioned out of band. Run this once
+as a migration-owner role, and re-run the table/sequence grants after any
+migration that adds a table. Do not use `ALTER DEFAULT PRIVILEGES`: future tables
+must not inherit write rights automatically.
+
+```sql
+GRANT USAGE ON SCHEMA public TO portfolio_writer;
+
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE
+    public.experience,
+    public.project,
+    public.project_tech_stack,
+    public.recommendation,
+    public.tech_stack,
+    public.tech_stack_category
+TO portfolio_writer;
+
+GRANT USAGE, SELECT ON SEQUENCE
+    public.experience_id_seq,
+    public.project_id_seq,
+    public.recommendation_id_seq,
+    public.tech_stack_id_seq,
+    public.tech_stack_category_id_seq
+TO portfolio_writer;
+```
+
+This grants no DDL, `TRUNCATE`, or access to `__EFMigrationsHistory`.
+
+Admin write routes live under `/api/v1/admin` and require the `role=Admin` token
+from `/api/v1/auth/login`. They are capped at 30 requests/minute per IP by the
+`admin-write` policy and use a CORS policy that permits `PUT` and `DELETE` from the
+configured origins. CRUD is available for experience, project, recommendation,
+skill and skill-category, plus creating a project under an experience and replacing
+project tech stacks; the request/response contract and status codes are in
+[`api-reference.md`](api-reference.md) §3.
+Public reads do not present a token and never reach `PortfolioWriteContext`.
 
 Origins are configuration so that a new domain or a Vercel preview deployment
 (`https://demo-git-my-branch-team.vercel.app`) is an added setting rather than a code
@@ -86,8 +135,8 @@ One image (`docker/JGBackend.Dockerfile`) serves both modules from the single
 host. `docker/compose.yaml` runs the **API only**; PostgreSQL is external.
 
 ```bash
-cp .env.example .env   # then set ConnectionStrings__JDBConnection
-docker compose -f docker/compose.yaml up --build
+cp .env.example .env   # then set both JDBConnection and JDBConnectionWrite
+docker compose --project-directory . -f docker/compose.yaml up --build
 ```
 
 The connection string is supplied whole, with no `Host=db` shortcut, because
@@ -111,6 +160,7 @@ docker build -f docker/JGBackend.Dockerfile -t jg-backend .
 docker run --rm -p 8080:8080 \
   -e ASPNETCORE_ENVIRONMENT=Development \
   -e "ConnectionStrings__JDBConnection=Host=<host>;Port=5432;Database=jdb_portfolio;Username=…;Password=…" \
+  -e "ConnectionStrings__JDBConnectionWrite=Host=<host>;Port=5432;Database=jdb_portfolio;Username=…;Password=…" \
   -e "Jwt__Key=<32+ bytes>" -e "Jwt__Issuer=jdb_api" -e "Jwt__Audience=PortfolioApiUsers" \
   -e "Notion__Token=secret_…" \
   jg-backend
@@ -176,6 +226,14 @@ both modules and the composed host). CI runs them with `dotnet test
 JGBackend.sln`; the deploy workflow does not, because CI already gates the
 branch.
 
+`JGBackendApiFactory` disables rate limiting through an in-memory
+`RateLimiting:Disabled=true` source so a class with many admin-write assertions
+does not trip the 30/min production policy. `RateLimitConfiguration` reads that
+setting when `RateLimiterOptions` are created, after the test host has attached
+its sources. The 429 contract tests use `RateLimitedApiFactory`, which sets the
+value to `false`, and build a fresh factory per test so limiter windows do not
+bleed between tests (KI-053).
+
 Swagger is enabled when `ASPNETCORE_ENVIRONMENT=Development` or when the
 `Swagger:Enabled` setting is `true`. Production leaves it unset (off); turn it on
 for a smoke test and off again.
@@ -186,7 +244,7 @@ for a smoke test and off again.
 |---|---|---|
 | App fails at startup with an Npgsql connection error | `Migrate()` ran with a bad/missing connection string | check `ConnectionStrings__JDBConnection` |
 | Deploy fails at "Apply database migrations" | migration could not run: dirty data, unreachable DB, or a missing/wrong `PRODUCTION_CONNECTION_STRING` | read the step log; the old app is still live. Fix the data or secret and re-run |
-| `docker compose up` fails with "required variable ConnectionStrings__JDBConnection is missing" | `.env` not created | `cp .env.example .env` and fill it in |
+| `docker compose up` fails with "required variable ConnectionStrings__JDBConnection is missing" | `.env` is missing, or Compose is using `docker/` as the project directory | from the repo root, run `cp .env.example .env`, fill it in, then `docker compose --project-directory . -f docker/compose.yaml up --build`; `-f docker/compose.yaml` alone still makes `docker/` the project directory |
 | `dotnet ef` says "command not found" | the tool manifest was not restored | `dotnet tool restore` (from the repo root) |
 | `dotnet ef` sees a null connection string | no `JDBConnection` value was found in the host project's User Secrets, `appsettings.Development.json`, or environment | confirm the secret key is `ConnectionStrings:JDBConnection`, or set `ConnectionStrings__JDBConnection` |
 | `/auth/login` returns 401 with the right key | whitespace, or the key was rotated | re-read `Jwt:Key` |
@@ -231,7 +289,8 @@ The composed host reads only the keys in §3. On `jdbweb`, use this list;
 
 | Setting | Action | Why |
 |---|---|---|
-| `ConnectionStrings__JDBConnection` | keep | runtime database connection; the workflow's migration step uses the separate `PRODUCTION_CONNECTION_STRING` secret (§5) |
+| `ConnectionStrings__JDBConnection` | keep | runtime read connection (`portfolio_app`, `SELECT` only); the workflow's migration step uses the separate `PRODUCTION_CONNECTION_STRING` secret (§5) |
+| `ConnectionStrings__JDBConnectionWrite` | add/verify | required runtime write connection (`portfolio_writer`, DML only); apply the grant SQL in §3 first, verify the App Service setting, and note that GitHub Actions does not set it. The same value as the read connection is acceptable only outside production |
 | `Jwt__Key`, `Jwt__Issuer`, `Jwt__Audience` | keep | issuer and audience are validated on every request (`AuthenticationConfiguration.cs:47-52`); changing them invalidates existing tokens |
 | `Jwt__ExpirationInMinutes` | keep or unset | defaults to 60 |
 | `Jwt__Expires` | remove | old Generic-host key; the app reads `Jwt:ExpirationInMinutes` (KI-031) |

@@ -15,10 +15,19 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Compile Include="..\Features\Experience\ExperienceCommandHandlerTests.cs" Link="Features\Experience\ExperienceCommandHandlerTests.cs" />
     <Compile Include="..\Features\Experience\FakeExperienceRepository.cs" Link="Features\Experience\FakeExperienceRepository.cs" />
     <Compile Include="..\Features\Experience\GetExperienceHandlerTests.cs" Link="Features\Experience\GetExperienceHandlerTests.cs" />
     <Compile Include="..\Features\Github\GithubHandlerTests.cs" Link="Features\Github\GithubHandlerTests.cs" />
+    <Compile Include="..\Features\Project\ProjectCommandHandlerTests.cs" Link="Features\Project\ProjectCommandHandlerTests.cs" />
+    <Compile Include="..\Features\Project\ProjectTechStackHandlerTests.cs" Link="Features\Project\ProjectTechStackHandlerTests.cs" />
+    <Compile Include="..\Features\Recommendation\RecommendationCommandHandlerTests.cs" Link="Features\Recommendation\RecommendationCommandHandlerTests.cs" />
+    <Compile Include="..\Features\Skill\SkillCommandHandlerTests.cs" Link="Features\Skill\SkillCommandHandlerTests.cs" />
     <Compile Include="..\Shared\Common\ResultErrorsTests.cs" Link="Shared\Common\ResultErrorsTests.cs" />
+    <Compile Include="..\Shared\Testing\Fakes\FakeDbException.cs" Link="Shared\Testing\Fakes\FakeDbException.cs" />
+    <Compile Include="..\Shared\Testing\Fakes\FakePortfolioRepositories.cs" Link="Shared\Testing\Fakes\FakePortfolioRepositories.cs" />
+    <Compile Include="..\Shared\Testing\Fakes\FakeRecommendationRepository.cs" Link="Shared\Testing\Fakes\FakeRecommendationRepository.cs" />
+    <Compile Include="..\Shared\Testing\Fakes\RecordingLogger.cs" Link="Shared\Testing\Fakes\RecordingLogger.cs" />
   </ItemGroup>
 
   <ItemGroup>

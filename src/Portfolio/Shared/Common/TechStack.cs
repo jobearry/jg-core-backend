@@ -21,9 +21,9 @@ public class TechStack
 {
     public int Id { get; }
 
-    public string StackName { get; }
+    public string StackName { get; private set; }
 
-    public string? ImgSrc { get; }
+    public string? ImgSrc { get; private set; }
 
     public string? Category { get; private set; }
 
@@ -36,6 +36,19 @@ public class TechStack
         StackName = stackName;
         ImgSrc = imgSrc;
         SetCategory(category);
+    }
+
+    /// <summary>
+    /// Applies an admin edit. The category is changed separately through
+    /// <see cref="SetCategory"/>, because it is a reference to another aggregate.
+    /// </summary>
+    public void UpdateDetails(string stackName, string? imgSrc)
+    {
+        if (string.IsNullOrWhiteSpace(stackName))
+            throw new ArgumentException("Stack name cannot be empty.", nameof(stackName));
+
+        StackName = stackName;
+        ImgSrc = imgSrc;
     }
 
     public void SetCategory(string? category)

@@ -77,29 +77,32 @@ only thing that owns the relationship: a project may exist with no experience, a
 `Experience.Projects` is a read-only projection of the projects that point at it.
 `TechStack` is shared reference data, so a project cites a `TechStackRef` (id + name +
 image + category) rather than holding the entity — one project cannot mutate a stack
-every other project cites. No write endpoint exists yet, so the rule is currently
-enforced by shape (read-only collections, `AttachToExperience`, no write methods on any
-repository), not by a transaction.
+every other project cites. Admin writes are added slice by slice under ADR-0007;
+`Project` remains the only write entry point for projects.
 
 ## 4. Entities
 
 | Entity | Identity | Constructor | Mutability | Invariants enforced |
 |---|---|---|---|---|
-| `Experience` | `int Id` (DB identity) | `(id, company, period, role)` | `Id`/`Company` get-only; `Duration`/`Role`/`Description`/`Responsibility`/`Type` private set; `Projects` `IReadOnlyList` + `ReplaceProjects` | `Company` is **required** (3.1a); `Role` is **optional** — `null` means the role is deliberately undeclared; `Role`/`Company`/`Period` rules via VOs |
-| `Project` | `int Id` (get-only) | `(id, projectName)` or `(id, experienceId, projectName, description, contribution, techStacks)` | id/name get-only; the rest private set through `Update…`/`AttachToExperience`/`ReplaceTechStacks` | **name non-blank** (3.3); holds `IReadOnlyList<TechStackRef>`, never `TechStack` entities (3.4). `Period` was removed on 2026-10-22: it had no column and no mapping, so it was always `null` |
-| `TechStack` | `int Id` (get-only) | `(id, stackName, imgSrc, category)` | name/img get-only; category private via `SetCategory` | **name non-blank**; **category non-blank when present**, `null` allowed (3.3) |
-| `TechStackCategory` | `int Id` (get-only) | `(id, category)` | both get-only | **name non-blank** (3.3) |
-| `Recommendation` | `int Id` (get-only) | `(id, personName, description, careerPosition, postedAt)` | name/description/postedAt get-only; `CareerPosition` via `ChangeCareerPosition` | `PersonName` and `Description` **non-blank** (3.3, closes KI-041); `CareerPosition` is **optional** — `null` means it is deliberately not shown |
+| `Experience` | `int Id` (DB identity) | `(id, company, period, role)` | `Id` get-only; `Company`/`Duration`/`Role`/`Description`/`Responsibility`/`Type` private set through `UpdateDetails`; `Projects` `IReadOnlyList` + `ReplaceProjects` | `Company` is **required** (3.1a, also enforced on edit by admin CRUD); `Role` is **optional** — `null` means the role is deliberately undeclared (a blank edit input clears it); `Role`/`Company`/`Period` rules via VOs on create and edit |
+| `Project` | `int Id` (get-only) | `(id, projectName)` or `(id, experienceId, projectName, description, contribution, techStacks)` | id get-only; name/description/contribution private set through `UpdateDetails`; experience link and refs private through `AttachToExperience`/`ReplaceTechStacks` | **name non-blank** (3.3, also enforced on edit by admin CRUD); holds `IReadOnlyList<TechStackRef>`, never `TechStack` entities (3.4). `Period` was removed on 2026-10-22: it had no column and no mapping, so it was always `null` |
+| `TechStack` | `int Id` (get-only) | `(id, stackName, imgSrc, category)` | name/img private via `UpdateDetails`; category private via `SetCategory` | **name non-blank**; **category non-blank when present**, `null` allowed (3.3) |
+| `TechStackCategory` | `int Id` (get-only) | `(id, category)` | name private via `Rename` | **name non-blank** (3.3) |
+| `Recommendation` | `int Id` (get-only) | `(id, personName, description, careerPosition, postedAt)` | `Id`/`PostedAt` get-only; name/description/career position private via `ChangeDetails` | `PersonName` and `Description` **non-blank** (3.3, closes KI-041; also enforced on edit by admin CRUD); `CareerPosition` is **optional** — `null` means it is deliberately not shown |
 
 Behaviour that exists:
 
 - `Experience.ChangeRole(Role?)` — sets or clears the role; `null` means "not declared".
+- `Experience.UpdateDetails(company, startedAt, finishedAt, role, description, responsibility, type)` — the admin edit path. It builds every value object before assigning anything, so a rejected company, period or role leaves the aggregate unchanged; the `Projects` projection is never touched.
 - `Experience.UpdateDescription` / `UpdateResponsibility` / `UpdateType` — the last two were added by 3.3; before, the entity could not express its own fields and AutoMapper wrote them by reflection.
 - `Experience.ReplaceProjects(IEnumerable<Project>?)` — copies the argument; `null` means none.
 - `Project.AttachToExperience`, `UpdateDescription`, `UpdateContribution`, `ReplaceTechStacks`.
-- `Recommendation.ChangeCareerPosition(Role?)`.
-- `TechStack.SetCategory(string?)` — rejects blank, allows `null`.
-- Nothing else. `Id`, `ProjectName`, `StackName`, `Category`, `PersonName`, `Description` and `PostedAt` cannot be changed after construction.
+- `Project.UpdateDetails(string, string?, string?)` — the admin edit path; it never touches the experience link or the stack refs.
+- `Project.ReplaceTechStacks(IEnumerable<TechStackRef>?)` — the admin join path. The refs must already be resolved from shared stack rows, so only their ids reach `project_tech_stack`.
+- `Recommendation.ChangeDetails(string, string, Role?)` — the admin edit path; it preserves `PostedAt`.
+- `TechStack.SetCategory(string?)` — rejects blank, allows `null`; `TechStack.UpdateDetails(name, imgSrc)` — rejects a blank name.
+- `TechStackCategory.Rename(string)` — rejects a blank name.
+- Nothing else. `Id` and `PostedAt` are fixed; every editable field moves only through the methods above.
 
 ## 5. Value objects
 
@@ -129,24 +132,25 @@ differently.
 
 **One consequence to know about.** `Period` refuses a start date in the future
 (compared by date, so time of day never decides). The mapping constructs a `Period`
-for every row, so a future-dated row in the database now throws inside AutoMapper and
-returns `500` for the whole collection rather than rendering a nonsense duration. That
-is deliberate — a typo such as `2062` should be loud — but it means the invariant is
-enforced on the read path until a write path exists to validate it earlier.
+for every row, so a future-dated row in the database throws while reading and returns
+`500` for the whole collection rather than rendering a nonsense duration. That is
+deliberate — a typo such as `2062` should be loud. Admin input is checked by
+`ExperienceRequestValidator` before the value object is built, so a bad write gets
+`400` instead.
 
 ## 6. Enforced invariants
 
 | Invariant | Enforcement |
 |---|---|---|
-| `Project.ProjectName` is non-blank | `Project` constructor |
-| A project is linked to at most one experience | `Project.AttachToExperience`; the link is optional |
-| `TechStack.StackName` and `TechStackCategory.Category` are non-blank | Entity constructors |
+| `Project.ProjectName` is non-blank | `Project` constructor and `Project.UpdateDetails` |
+| A project is linked to at most one experience | `Project.AttachToExperience`, used by `POST /api/v1/admin/experience/{experienceId}/project`; the link is optional |
+| `TechStack.StackName` and `TechStackCategory.Category` are non-blank | Entity constructors, `TechStack.UpdateDetails` and `TechStackCategory.Rename` |
 | `TechStack.Category` is non-blank when present | `TechStack.SetCategory`; `null` is allowed |
-| `Recommendation.PersonName` and `Description` are non-blank | `Recommendation` constructor |
-| `Period.FinishedAt` is not before `StartedAt` | `Period` constructor |
-| `Role` is non-empty and at most 50 characters | `Role` constructor |
-| `Company` is non-empty and at most 255 characters | `Company` constructor; the database also has `NOT NULL` and a non-blank `CHECK` |
-| A role cannot start in the future | `Period` constructor |
+| `Recommendation.PersonName` and `Description` are non-blank | `Recommendation` constructor and `Recommendation.ChangeDetails` |
+| `Period.FinishedAt` is not before `StartedAt` | `Period` constructor, used by `Experience.UpdateDetails` |
+| `Role` is non-empty and at most 50 characters | `Role` constructor, used by `Experience.UpdateDetails` |
+| `Company` is non-empty and at most 255 characters | `Company` constructor, used by `Experience.UpdateDetails`; the database also has `NOT NULL` and a non-blank `CHECK` |
+| A role cannot start in the future | `Period` constructor, used by `Experience.UpdateDetails` |
 | Persistence audit fields are absent from domain entities | Domain model shape |
 
 ## 7. Types in their owning layer
