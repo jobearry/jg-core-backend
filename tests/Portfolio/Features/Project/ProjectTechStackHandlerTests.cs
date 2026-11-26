@@ -194,6 +194,215 @@ public class ProjectTechStackHandlerTests
         Assert.Equal(source.Token, stacks.LastCancellationToken);
     }
 
+    // Incremental add/remove
+
+    [Fact]
+    public async Task AddTechStack_WithValidId_AddsLink()
+    {
+        var (projects, stacks) = Seeded();
+        var handler = new AddProjectTechStackHandler(
+            projects, stacks, NullLogger<AddProjectTechStackHandler>.Instance);
+
+        var result = await handler.HandleAsync(
+            7, new AddProjectTechStackRequest(5), CancellationToken.None);
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(2, result.Value!.TechStacks.Count);
+        var stored = Assert.Single(projects.Projects);
+        Assert.Contains(5, stored.TechStacks.Select(r => r.Id));
+    }
+
+    [Fact]
+    public async Task AddTechStack_AlreadyLinked_ReturnsValidationError()
+    {
+        var (projects, stacks) = Seeded();
+        var handler = new AddProjectTechStackHandler(
+            projects, stacks, NullLogger<AddProjectTechStackHandler>.Instance);
+
+        var result = await handler.HandleAsync(
+            7, new AddProjectTechStackRequest(2), CancellationToken.None);
+
+        AssertFailure(result, ErrorKind.Validation, "validation_failed");
+        Assert.True(projects.Projects.Single().TechStacks.Count == 1);
+    }
+
+    [Fact]
+    public async Task AddTechStack_UnknownStack_ReturnsNotFound()
+    {
+        var (projects, stacks) = Seeded();
+        var handler = new AddProjectTechStackHandler(
+            projects, stacks, NullLogger<AddProjectTechStackHandler>.Instance);
+
+        var result = await handler.HandleAsync(
+            7, new AddProjectTechStackRequest(99), CancellationToken.None);
+
+        AssertFailure(result, ErrorKind.NotFound, "not_found");
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    public async Task AddTechStack_WithNonPositiveStackId_ReturnsValidationError(int stackId)
+    {
+        var (projects, stacks) = Seeded();
+        var handler = new AddProjectTechStackHandler(
+            projects, stacks, NullLogger<AddProjectTechStackHandler>.Instance);
+
+        var result = await handler.HandleAsync(
+            7, new AddProjectTechStackRequest(stackId), CancellationToken.None);
+
+        AssertFailure(result, ErrorKind.Validation, "validation_failed");
+    }
+
+    [Fact]
+    public async Task AddTechStack_WithInvalidProjectId_ReturnsValidationError()
+    {
+        var handler = new AddProjectTechStackHandler(
+            new FakeProjectRepository(), new FakeTechStackRepository(),
+            NullLogger<AddProjectTechStackHandler>.Instance);
+
+        var result = await handler.HandleAsync(
+            0, new AddProjectTechStackRequest(2), CancellationToken.None);
+
+        AssertFailure(result, ErrorKind.Validation, "validation_failed");
+    }
+
+    [Fact]
+    public async Task AddTechStack_ForMissingProject_ReturnsNotFound()
+    {
+        var (_, stacks) = Seeded();
+        var handler = new AddProjectTechStackHandler(
+            new FakeProjectRepository(), stacks, NullLogger<AddProjectTechStackHandler>.Instance);
+
+        var result = await handler.HandleAsync(
+            99, new AddProjectTechStackRequest(2), CancellationToken.None);
+
+        AssertFailure(result, ErrorKind.NotFound, "not_found");
+    }
+
+    [Fact]
+    public async Task AddTechStack_WhenProjectReadFails_ReturnsInfrastructureError()
+    {
+        var (projects, stacks) = Seeded();
+        projects.Failure = new FakeDbException("could not connect");
+        var handler = new AddProjectTechStackHandler(
+            projects, stacks, NullLogger<AddProjectTechStackHandler>.Instance);
+
+        var result = await handler.HandleAsync(
+            7, new AddProjectTechStackRequest(2), CancellationToken.None);
+
+        AssertFailure(result, ErrorKind.Infrastructure, "database_unavailable");
+    }
+
+    [Fact]
+    public async Task AddTechStack_WhenSkillReadFails_ReturnsInfrastructureError()
+    {
+        var (projects, stacks) = Seeded();
+        stacks.Failure = new FakeDbException("could not connect");
+        var handler = new AddProjectTechStackHandler(
+            projects, stacks, NullLogger<AddProjectTechStackHandler>.Instance);
+
+        var result = await handler.HandleAsync(
+            7, new AddProjectTechStackRequest(2), CancellationToken.None);
+
+        AssertFailure(result, ErrorKind.Infrastructure, "database_unavailable");
+    }
+
+    [Fact]
+    public async Task RemoveTechStack_WithValidId_RemovesLink()
+    {
+        var (projects, stacks) = Seeded();
+        var handler = new RemoveProjectTechStackHandler(
+            projects, NullLogger<RemoveProjectTechStackHandler>.Instance);
+
+        var result = await handler.HandleAsync(
+            7, new RemoveProjectTechStackRequest(2), CancellationToken.None);
+
+        Assert.True(result.IsSuccess);
+        Assert.Empty(result.Value!.TechStacks);
+        Assert.Empty(Assert.Single(projects.Projects).TechStacks);
+    }
+
+    [Fact]
+    public async Task RemoveTechStack_NotLinked_ReturnsNotFound()
+    {
+        var (projects, stacks) = Seeded();
+        var handler = new RemoveProjectTechStackHandler(
+            projects, NullLogger<RemoveProjectTechStackHandler>.Instance);
+
+        var result = await handler.HandleAsync(
+            7, new RemoveProjectTechStackRequest(5), CancellationToken.None);
+
+        AssertFailure(result, ErrorKind.NotFound, "not_found");
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    public async Task RemoveTechStack_WithNonPositiveStackId_ReturnsValidationError(int stackId)
+    {
+        var (projects, stacks) = Seeded();
+        var handler = new RemoveProjectTechStackHandler(
+            projects, NullLogger<RemoveProjectTechStackHandler>.Instance);
+
+        var result = await handler.HandleAsync(
+            7, new RemoveProjectTechStackRequest(stackId), CancellationToken.None);
+
+        AssertFailure(result, ErrorKind.Validation, "validation_failed");
+    }
+
+    [Fact]
+    public async Task RemoveTechStack_WithInvalidProjectId_ReturnsValidationError()
+    {
+        var handler = new RemoveProjectTechStackHandler(
+            new FakeProjectRepository(), NullLogger<RemoveProjectTechStackHandler>.Instance);
+
+        var result = await handler.HandleAsync(
+            0, new RemoveProjectTechStackRequest(2), CancellationToken.None);
+
+        AssertFailure(result, ErrorKind.Validation, "validation_failed");
+    }
+
+    [Fact]
+    public async Task RemoveTechStack_ForMissingProject_ReturnsNotFound()
+    {
+        var handler = new RemoveProjectTechStackHandler(
+            new FakeProjectRepository(), NullLogger<RemoveProjectTechStackHandler>.Instance);
+
+        var result = await handler.HandleAsync(
+            99, new RemoveProjectTechStackRequest(2), CancellationToken.None);
+
+        AssertFailure(result, ErrorKind.NotFound, "not_found");
+    }
+
+    [Fact]
+    public async Task RemoveTechStack_WhenProjectReadFails_ReturnsInfrastructureError()
+    {
+        var (projects, stacks) = Seeded();
+        projects.Failure = new FakeDbException("could not connect");
+        var handler = new RemoveProjectTechStackHandler(
+            projects, NullLogger<RemoveProjectTechStackHandler>.Instance);
+
+        var result = await handler.HandleAsync(
+            7, new RemoveProjectTechStackRequest(2), CancellationToken.None);
+
+        AssertFailure(result, ErrorKind.Infrastructure, "database_unavailable");
+    }
+
+    [Fact]
+    public async Task RemoveTechStack_WhenProjectWriteFails_ReturnsInfrastructureError()
+    {
+        var (projects, stacks) = Seeded();
+        projects.Failure = new FakeDbException("could not connect");
+        var handler = new RemoveProjectTechStackHandler(
+            projects, NullLogger<RemoveProjectTechStackHandler>.Instance);
+
+        var result = await handler.HandleAsync(
+            7, new RemoveProjectTechStackRequest(2), CancellationToken.None);
+
+        AssertFailure(result, ErrorKind.Infrastructure, "database_unavailable");
+    }
+
     private static (FakeProjectRepository Projects, FakeTechStackRepository Stacks) Seeded()
     {
         var projects = new FakeProjectRepository();

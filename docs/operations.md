@@ -198,6 +198,14 @@ both modules and the composed host). CI runs them with `dotnet test
 JGBackend.sln`; the deploy workflow does not, because CI already gates the
 branch.
 
+`JGBackendApiFactory` disables rate limiting through an in-memory
+`RateLimiting:Disabled=true` source so a class with many admin-write assertions
+does not trip the 30/min production policy. `RateLimitConfiguration` reads that
+setting when `RateLimiterOptions` are created, after the test host has attached
+its sources. The 429 contract tests use `RateLimitedApiFactory`, which sets the
+value to `false`, and build a fresh factory per test so limiter windows do not
+bleed between tests (KI-053).
+
 Swagger is enabled when `ASPNETCORE_ENVIRONMENT=Development` or when the
 `Swagger:Enabled` setting is `true`. Production leaves it unset (off); turn it on
 for a smoke test and off again.

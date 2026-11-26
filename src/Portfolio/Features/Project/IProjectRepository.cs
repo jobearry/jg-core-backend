@@ -1,4 +1,5 @@
 ﻿using Portfolio.Domain.Interfaces;
+using Portfolio.Domain.ValueObjects;
 using DomainProject = Portfolio.Domain.Entities.Project;
 
 namespace Portfolio.Features.Project;
@@ -24,6 +25,18 @@ public interface IProjectRepository : IRepository<DomainProject>
     /// </summary>
     Task<DomainProject> ReplaceTechStacksAsync(
         DomainProject project, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Adds a single tech stack link. The ref must already be resolved.
+    /// </summary>
+    Task<DomainProject> AddTechStackAsync(
+        DomainProject project, TechStackRef techStackRef, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Removes a single tech stack link.
+    /// </summary>
+    Task<DomainProject> RemoveTechStackAsync(
+        DomainProject project, int techStackId, CancellationToken cancellationToken);
 
     Task DeleteAsync(DomainProject project, CancellationToken cancellationToken);
 }

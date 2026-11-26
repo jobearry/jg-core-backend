@@ -3,6 +3,7 @@ using Core.Features.Auth;
 using Core.Infrastructure.Options;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
@@ -23,6 +24,12 @@ public sealed class JGBackendHostCollection
     public const string Name = "JGBackend host";
 }
 
+[CollectionDefinition(RateLimitedHostCollectionName, DisableParallelization = true)]
+public sealed class RateLimitedHostCollection
+{
+    public const string RateLimitedHostCollectionName = "JGBackend rate-limited host";
+}
+
 /// <summary>
 /// Boots the one host in-process and replaces only the repository and reader ports,
 /// so routing, model binding, serialization and endpoint code are the production ones.
@@ -41,9 +48,9 @@ public class JGBackendApiFactory : WebApplicationFactory<Program>
 
     public const string JwtIssuer = "host-composition-tests";
     public const string JwtAudience = "host-composition-tests";
-    private const int JwtExpirationInMinutes = 60;
+    protected const int JwtExpirationInMinutes = 60;
 
-    private static readonly Dictionary<string, string> Settings = new()
+    protected static readonly Dictionary<string, string> Settings = new()
     {
         ["ConnectionStrings__JDBConnection"] =
             "Host=unused;Database=unused;Username=unused;Password=unused",
@@ -58,7 +65,7 @@ public class JGBackendApiFactory : WebApplicationFactory<Program>
         // which turns it on.
         ["Swagger__Enabled"] = "false",
         ["Github__BaseUrl"] = "https://api.github.com",
-        ["Notion__Version"] = "2026-03-11"
+        ["Notion__Version"] = "2026-03-11",
     };
 
     private readonly Dictionary<string, string?> _originals;
@@ -69,6 +76,8 @@ public class JGBackendApiFactory : WebApplicationFactory<Program>
             key => key,
             key => Environment.GetEnvironmentVariable(key));
 
+        // Rate limiting stays out of the environment because each factory needs its
+        // own value; it is supplied through in-memory configuration below.
         foreach (var setting in Settings)
         {
             Environment.SetEnvironmentVariable(setting.Key, setting.Value);
@@ -116,6 +125,16 @@ public class JGBackendApiFactory : WebApplicationFactory<Program>
     {
         builder.UseEnvironment(Environments.Production);
 
+        builder.ConfigureAppConfiguration((context, config) =>
+        {
+            // Disable rate limiting by default for tests so the many admin-write
+            // assertions in a class do not exhaust the production 30/min policy.
+            config.AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["RateLimiting:Disabled"] = "true"
+            });
+        });
+
         builder.ConfigureServices(services =>
         {
             services.RemoveAll<IExperienceRepository>();
@@ -158,4 +177,124 @@ public sealed class SwaggerEnabledApiFactory : JGBackendApiFactory
 {
     public SwaggerEnabledApiFactory() =>
         Environment.SetEnvironmentVariable("Swagger__Enabled", "true");
+}
+
+/// <summary>
+/// Factory with rate limiting ENABLED for testing rate limit behaviour.
+/// Standalone WebApplicationFactory to avoid configuration conflicts with JGBackendApiFactory.
+/// </summary>
+public sealed class RateLimitedApiFactory : WebApplicationFactory<Program>
+{
+    public const string SigningKey = "host-tests-signing-key-that-is-long-enough";
+    public const string JwtIssuer = "host-composition-tests";
+    public const string JwtAudience = "host-composition-tests";
+    private const int JwtExpirationInMinutes = 60;
+
+    private static readonly Dictionary<string, string> Settings = new()
+    {
+        ["ConnectionStrings__JDBConnection"] =
+            "Host=unused;Database=unused;Username=unused;Password=unused",
+        ["ConnectionStrings__JDBConnectionWrite"] =
+            "Host=unused;Database=unused;Username=unused;Password=unused",
+        ["Database__AutoMigrate"] = "false",
+        ["Jwt__Key"] = "host-tests-signing-key-that-is-long-enough",
+        ["Jwt__Issuer"] = "host-composition-tests",
+        ["Jwt__Audience"] = "host-composition-tests",
+        ["Jwt__ExpirationInMinutes"] = "60",
+        ["Swagger__Enabled"] = "false",
+        ["Github__BaseUrl"] = "https://api.github.com",
+        ["Notion__Version"] = "2026-03-11",
+    };
+
+    private readonly Dictionary<string, string?> _originals;
+
+    public RateLimitedApiFactory()
+    {
+        _originals = Settings.Keys.ToDictionary(
+            key => key,
+            key => Environment.GetEnvironmentVariable(key));
+
+        // Rate limiting is supplied through in-memory configuration below so this
+        // factory can enable it while the default factory disables it.
+        foreach (var setting in Settings)
+        {
+            Environment.SetEnvironmentVariable(setting.Key, setting.Value);
+        }
+    }
+
+    /// <summary>
+    /// A client carrying the test Admin token.
+    /// </summary>
+    public HttpClient CreateAdminClient()
+    {
+        var options = Options.Create(new JwtOptions
+        {
+            Key = SigningKey,
+            Issuer = JwtIssuer,
+            Audience = JwtAudience,
+            ExpirationInMinutes = JwtExpirationInMinutes
+        });
+        var result = new JwtTokenService(options).CreateToken(SigningKey);
+        Assert.NotNull(result.Token);
+
+        var client = CreateClient();
+        client.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue("Bearer", result.Token);
+        return client;
+    }
+
+    public FakeExperienceRepository Experience { get; } = new();
+    public FakeProjectRepository Projects { get; } = new();
+    public FakeTechStackRepository TechStacks { get; } = new();
+    public FakeTechStackCategoryRepository SkillCategories { get; } = new();
+    public FakeRecommendationRepository Recommendations { get; } = new();
+    public FakePageContentReader Notion { get; } = new();
+    public FakeGithubRepositoryReader Github { get; } = new();
+
+    protected override void ConfigureWebHost(IWebHostBuilder builder)
+    {
+        builder.UseEnvironment(Environments.Production);
+
+        builder.ConfigureAppConfiguration((context, config) =>
+        {
+            // Explicitly enable the production limits; the default factory disables
+            // them and the in-memory source must win over any ambient setting.
+            config.AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["RateLimiting:Disabled"] = "false"
+            });
+        });
+
+        builder.ConfigureServices(services =>
+        {
+            services.RemoveAll<IExperienceRepository>();
+            services.RemoveAll<IProjectRepository>();
+            services.RemoveAll<ISkillRepository>();
+            services.RemoveAll<ITechStackCategoryRepository>();
+            services.RemoveAll<IRecommendationRepository>();
+            services.RemoveAll<IPageContentReader>();
+            services.RemoveAll<IGithubRepositoryReader>();
+
+            services.AddSingleton<IExperienceRepository>(Experience);
+            services.AddSingleton<IProjectRepository>(Projects);
+            services.AddSingleton<ISkillRepository>(TechStacks);
+            services.AddSingleton<ITechStackCategoryRepository>(SkillCategories);
+            services.AddSingleton<IRecommendationRepository>(Recommendations);
+            services.AddSingleton<IPageContentReader>(Notion);
+            services.AddSingleton<IGithubRepositoryReader>(Github);
+        });
+    }
+
+    protected override void Dispose(bool disposing)
+    {
+        if (disposing)
+        {
+            foreach (var original in _originals)
+            {
+                Environment.SetEnvironmentVariable(original.Key, original.Value);
+            }
+        }
+
+        base.Dispose(disposing);
+    }
 }

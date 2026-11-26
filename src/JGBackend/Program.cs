@@ -28,7 +28,7 @@ builder.Services.AddAuthentication(builder.Configuration);
 builder.Services.AddCorsOrigins(builder.Configuration, builder.Environment);
 builder.Services.AddHealthChecks();
 builder.Services.AddForwardedHeadersConfig();
-builder.Services.AddRateLimitingConfig();
+builder.Services.AddRateLimitingConfig(builder.Configuration);
 
 var app = builder.Build();
 

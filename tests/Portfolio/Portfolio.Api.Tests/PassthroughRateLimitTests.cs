@@ -2,10 +2,10 @@ namespace Portfolio.Api.Tests;
 
 /// <summary>
 /// The external-service passthroughs are rate limited so a public route cannot
-/// amplify into unbounded Notion/GitHub calls. A fresh factory per test keeps each
-/// limiter's window independent; the shared fixture fakes the upstream readers.
+/// amplify into unbounded Notion/GitHub calls. Each test gets a fresh factory so
+/// its limiter window is independent of the other tests.
 /// </summary>
-[Collection(JGBackendHostCollection.Name)]
+[Collection(RateLimitedHostCollection.RateLimitedHostCollectionName)]
 public sealed class PassthroughRateLimitTests
 {
     private const int PermitLimit = 30;
@@ -13,8 +13,8 @@ public sealed class PassthroughRateLimitTests
     [Fact]
     public async Task NotionEndpoint_Returns429AfterThePermitLimit()
     {
-        using var factory = new JGBackendApiFactory();
-        var client = factory.CreateClient();
+        using var factory = new RateLimitedApiFactory();
+        using var client = factory.CreateClient();
 
         await RateLimitAssertions.SendUntilRejectedAsync(
             () => client.GetAsync("/api/v1/notion/page-1"),
@@ -24,8 +24,8 @@ public sealed class PassthroughRateLimitTests
     [Fact]
     public async Task GithubEndpoint_Returns429AfterThePermitLimit()
     {
-        using var factory = new JGBackendApiFactory();
-        var client = factory.CreateClient();
+        using var factory = new RateLimitedApiFactory();
+        using var client = factory.CreateClient();
 
         await RateLimitAssertions.SendUntilRejectedAsync(
             () => client.GetAsync("/api/v1/github/owner/octocat/repositories"),
@@ -35,8 +35,8 @@ public sealed class PassthroughRateLimitTests
     [Fact]
     public async Task RejectedPassthrough_KeepsTheCorsHeader()
     {
-        using var factory = new JGBackendApiFactory();
-        var client = factory.CreateClient();
+        using var factory = new RateLimitedApiFactory();
+        using var client = factory.CreateClient();
 
         var rejected = await RateLimitAssertions.SendUntilRejectedAsync(
             () => client.SendAsync(RequestWithAllowedOrigin()),

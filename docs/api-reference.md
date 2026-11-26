@@ -247,6 +247,8 @@ credential as the other slices. See
 | `POST` | `/api/v1/admin/experience/{experienceId}/project` | same shape | `201`, dto + `Location: /api/v1/project/{id}` | `400`, `401`, `404`, `503` |
 | `PUT` | `/api/v1/admin/project/{id}/experience` | `{ "experienceId": 4 | null }` | `200`, dto | `400`, `401`, `404`, `503` |
 | `PUT` | `/api/v1/admin/project/{id}` | same shape | `200`, dto | `400`, `401`, `404`, `503` |
+| `POST` | `/api/v1/admin/project/{id}/tech-stack` | `{ "techStackId": 5 }` | `200`, dto | `400`, `401`, `404`, `503` |
+| `DELETE` | `/api/v1/admin/project/{id}/tech-stack/{techStackId}` | — | `200`, dto | `400`, `401`, `404`, `503` |
 | `PUT` | `/api/v1/admin/project/{id}/tech-stacks` | `{ "techStackIds": [2, 5] }` | `200`, dto | `400`, `401`, `404`, `503` |
 | `DELETE` | `/api/v1/admin/project/{id}` | — | `204`, empty | `400`, `401`, `404`, `503` |
 
@@ -261,6 +263,10 @@ credential as the other slices. See
   `experience_id`: a positive id attaches or moves it; `null` detaches it.
   The project must exist. The experience must exist when the id is non-null.
   It does not change the project's name, description, contribution or tech stacks.
+- `POST /admin/project/{id}/tech-stack` adds a single tech stack link. The stack
+  must exist and not already be linked. Returns the updated project.
+- `DELETE /admin/project/{id}/tech-stack/{techStackId}` removes a single tech
+  stack link. The stack must currently be linked. Returns the updated project.
 - Both `POST` routes return a `Location` pointing at the anonymous detail GET.
 - Missing ids are `404 + not_found`; a database outage is `503`.
 

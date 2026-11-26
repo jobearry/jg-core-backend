@@ -421,6 +421,185 @@ public class ProjectAdminEndpointsTests : IClassFixture<JGBackendApiFactory>
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
+    [Fact]
+    public async Task AdminAddProjectTechStack_WithToken_Returns200AndAddsLink()
+    {
+        using var client = _factory.CreateAdminClient();
+
+        var response = await client.PostAsJsonAsync(
+            $"{ProjectPath}/7/tech-stack", new { techStackId = 5 });
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal(7, body.GetProperty("id").GetInt32());
+        Assert.Equal(2, body.GetProperty("techStacks").GetArrayLength());
+        Assert.Contains(body.GetProperty("techStacks").EnumerateArray(), s => s.GetProperty("id").GetInt32() == 5);
+    }
+
+    [Fact]
+    public async Task AdminAddProjectTechStack_AlreadyLinked_Returns400()
+    {
+        using var client = _factory.CreateAdminClient();
+
+        var response = await client.PostAsJsonAsync(
+            $"{ProjectPath}/7/tech-stack", new { techStackId = 2 });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+
+        var problem = await response.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal("validation_failed", problem.GetProperty("code").GetString());
+    }
+
+    [Fact]
+    public async Task AdminAddProjectTechStack_UnknownStack_Returns404()
+    {
+        using var client = _factory.CreateAdminClient();
+
+        var response = await client.PostAsJsonAsync(
+            $"{ProjectPath}/7/tech-stack", new { techStackId = 99 });
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    public async Task AdminAddProjectTechStack_WithInvalidStackId_Returns400(int stackId)
+    {
+        using var client = _factory.CreateAdminClient();
+
+        var response = await client.PostAsJsonAsync(
+            $"{ProjectPath}/7/tech-stack", new { techStackId = stackId });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+
+        var problem = await response.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal("validation_failed", problem.GetProperty("code").GetString());
+    }
+
+    [Fact]
+    public async Task AdminAddProjectTechStack_WithInvalidProjectId_Returns400()
+    {
+        using var client = _factory.CreateAdminClient();
+
+        var response = await client.PostAsJsonAsync(
+            $"{ProjectPath}/0/tech-stack", new { techStackId = 2 });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+
+        var problem = await response.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal("validation_failed", problem.GetProperty("code").GetString());
+    }
+
+    [Fact]
+    public async Task AdminAddProjectTechStack_ForMissingProject_Returns404()
+    {
+        using var client = _factory.CreateAdminClient();
+
+        var response = await client.PostAsJsonAsync(
+            $"{ProjectPath}/99/tech-stack", new { techStackId = 2 });
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task AdminAddProjectTechStack_WithoutToken_Returns401()
+    {
+        using var client = _factory.CreateClient();
+
+        var response = await client.PostAsJsonAsync(
+            $"{ProjectPath}/7/tech-stack", new { techStackId = 2 });
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task AdminAddProjectTechStack_WithNullBody_Returns400()
+    {
+        using var client = _factory.CreateAdminClient();
+
+        var response = await client.PostAsync(
+            $"{ProjectPath}/7/tech-stack", new StringContent("null", Encoding.UTF8, "application/json"));
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+
+        var problem = await response.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal("validation_failed", problem.GetProperty("code").GetString());
+    }
+
+    [Fact]
+    public async Task AdminRemoveProjectTechStack_WithToken_Returns200AndRemovesLink()
+    {
+        using var client = _factory.CreateAdminClient();
+
+        var response = await client.DeleteAsync($"{ProjectPath}/7/tech-stack/2");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal(7, body.GetProperty("id").GetInt32());
+        Assert.Empty(body.GetProperty("techStacks").EnumerateArray());
+    }
+
+    [Fact]
+    public async Task AdminRemoveProjectTechStack_NotLinked_Returns404()
+    {
+        using var client = _factory.CreateAdminClient();
+
+        var response = await client.DeleteAsync($"{ProjectPath}/7/tech-stack/5");
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    public async Task AdminRemoveProjectTechStack_WithInvalidStackId_Returns400(int stackId)
+    {
+        using var client = _factory.CreateAdminClient();
+
+        var response = await client.DeleteAsync($"{ProjectPath}/7/tech-stack/{stackId}");
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+
+        var problem = await response.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal("validation_failed", problem.GetProperty("code").GetString());
+    }
+
+    [Fact]
+    public async Task AdminRemoveProjectTechStack_WithInvalidProjectId_Returns400()
+    {
+        using var client = _factory.CreateAdminClient();
+
+        var response = await client.DeleteAsync($"{ProjectPath}/0/tech-stack/2");
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+
+        var problem = await response.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal("validation_failed", problem.GetProperty("code").GetString());
+    }
+
+    [Fact]
+    public async Task AdminRemoveProjectTechStack_ForMissingProject_Returns404()
+    {
+        using var client = _factory.CreateAdminClient();
+
+        var response = await client.DeleteAsync($"{ProjectPath}/99/tech-stack/2");
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task AdminRemoveProjectTechStack_WithoutToken_Returns401()
+    {
+        using var client = _factory.CreateClient();
+
+        var response = await client.DeleteAsync($"{ProjectPath}/7/tech-stack/2");
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
     private static void Seed(JGBackendApiFactory factory)
     {
         factory.Projects.Failure = null;

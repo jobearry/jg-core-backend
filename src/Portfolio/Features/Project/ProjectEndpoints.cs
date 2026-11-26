@@ -122,6 +122,38 @@ public static class ProjectEndpoints
         .ProducesProblem(StatusCodes.Status404NotFound)
         .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
 
+        admin.MapPost("project/{id:int}/tech-stack", async (
+                int id,
+                AddProjectTechStackRequest? request,
+                AddProjectTechStackHandler handler,
+                CancellationToken cancellationToken) =>
+            (await handler.HandleAsync(id, request, cancellationToken)).ToHttpResult())
+        .WithName("AdminAddProjectTechStack")
+        .WithSummary("Add a tech stack link to a project")
+        .WithDescription("Adds a single tech stack link. The stack must exist and not already be linked. Returns the updated project.")
+        .RequireAuthorization("Admin")
+        .Produces<ProjectDto>(StatusCodes.Status200OK)
+        .ProducesProblem(StatusCodes.Status400BadRequest)
+        .ProducesProblem(StatusCodes.Status401Unauthorized)
+        .ProducesProblem(StatusCodes.Status404NotFound)
+        .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
+
+        admin.MapDelete("project/{id:int}/tech-stack/{techStackId:int}", async (
+                int id,
+                int techStackId,
+                RemoveProjectTechStackHandler handler,
+                CancellationToken cancellationToken) =>
+            (await handler.HandleAsync(id, new RemoveProjectTechStackRequest(techStackId), cancellationToken)).ToHttpResult())
+        .WithName("AdminRemoveProjectTechStack")
+        .WithSummary("Remove a tech stack link from a project")
+        .WithDescription("Removes a single tech stack link. The stack must currently be linked. Returns the updated project.")
+        .RequireAuthorization("Admin")
+        .Produces<ProjectDto>(StatusCodes.Status200OK)
+        .ProducesProblem(StatusCodes.Status400BadRequest)
+        .ProducesProblem(StatusCodes.Status401Unauthorized)
+        .ProducesProblem(StatusCodes.Status404NotFound)
+        .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
+
         admin.MapPut("project/{id:int}/tech-stacks", async (
                 int id,
                 ReplaceProjectTechStacksRequest? request,

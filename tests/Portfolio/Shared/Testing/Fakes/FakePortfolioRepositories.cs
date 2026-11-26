@@ -198,6 +198,64 @@ public sealed class FakeProjectRepository : IProjectRepository
         return Task.CompletedTask;
     }
 
+    public Task<Project> AddTechStackAsync(
+        Project project, TechStackRef techStackRef, CancellationToken cancellationToken)
+    {
+        LastCancellationToken = cancellationToken;
+        if (Failure is not null)
+        {
+            return Task.FromException<Project>(Failure);
+        }
+
+        var index = Projects.FindIndex(item => item.Id == project.Id);
+        if (index < 0)
+        {
+            return Task.FromException<Project>(
+                new InvalidOperationException($"Project {project.Id} does not exist."));
+        }
+
+        // The handler already did the duplicate check and mutated the project.
+        // Just persist the updated project.
+        var updated = new Project(
+            project.Id,
+            project.ExperienceId,
+            project.ProjectName,
+            project.Description,
+            project.Contribution,
+            project.TechStacks);
+        Projects[index] = updated;
+        return Task.FromResult(updated);
+    }
+
+    public Task<Project> RemoveTechStackAsync(
+        Project project, int techStackId, CancellationToken cancellationToken)
+    {
+        LastCancellationToken = cancellationToken;
+        if (Failure is not null)
+        {
+            return Task.FromException<Project>(Failure);
+        }
+
+        var index = Projects.FindIndex(item => item.Id == project.Id);
+        if (index < 0)
+        {
+            return Task.FromException<Project>(
+                new InvalidOperationException($"Project {project.Id} does not exist."));
+        }
+
+        // The handler already did the existence check and mutated the project.
+        // Just persist the updated project.
+        var updated = new Project(
+            project.Id,
+            project.ExperienceId,
+            project.ProjectName,
+            project.Description,
+            project.Contribution,
+            project.TechStacks);
+        Projects[index] = updated;
+        return Task.FromResult(updated);
+    }
+
     private Task<List<Project>> Respond() =>
         Failure is null
             ? Task.FromResult(Projects)

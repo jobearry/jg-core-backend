@@ -17,11 +17,23 @@ public static class RateLimitConfiguration
 
     private static readonly TimeSpan Window = TimeSpan.FromMinutes(1);
 
-    public static IServiceCollection AddRateLimitingConfig(this IServiceCollection services)
+    public static IServiceCollection AddRateLimitingConfig(this IServiceCollection services, IConfiguration configuration)
     {
         services.AddRateLimiter(options =>
         {
             options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+
+            // Read configuration when the options are created, not during service
+            // registration: WebApplicationFactory adds its in-memory sources later.
+            if (configuration.GetValue("RateLimiting:Disabled", false))
+            {
+                options.AddPolicy<string>(RateLimitPolicies.Default, _ => RateLimitPartition.GetNoLimiter("disabled"));
+                options.AddPolicy<string>(RateLimitPolicies.AdminWrite, _ => RateLimitPartition.GetNoLimiter("disabled"));
+                options.AddPolicy<string>(RateLimitPolicies.NotionPassthrough, _ => RateLimitPartition.GetNoLimiter("disabled"));
+                options.AddPolicy<string>(RateLimitPolicies.GithubPassthrough, _ => RateLimitPartition.GetNoLimiter("disabled"));
+                options.AddPolicy<string>(RateLimitPolicies.AuthLogin, _ => RateLimitPartition.GetNoLimiter("disabled"));
+                return;
+            }
 
             AddFixedWindow(options, RateLimitPolicies.Default, DefaultPermitLimit);
             AddFixedWindow(options, RateLimitPolicies.AuthLogin, 5);

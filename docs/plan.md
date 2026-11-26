@@ -86,8 +86,7 @@ unless this plan is explicitly authorized and implemented.
 
 ## B. Relationship endpoints
 
-**Status:** Phase 1 and phase 2 are implemented. The remaining decisions stay open
-and no further phase is authorized.
+**Status:** Phases 1, 2, and 3 are implemented. The remaining decisions (admin list, category reassignment) stay open and no further phase is authorized.
 
 ### Scope
 
@@ -102,7 +101,7 @@ repository port.
 | Relationship | Covered today | Gap |
 |---|---|---|
 | `experience` → `project` | `POST /admin/experience/{experienceId}/project` creates and attaches; `PUT /admin/project/{id}/experience` attaches, moves or detaches | Role-scoped list remains open |
-| `project` → `tech_stack` | `PUT /admin/project/{id}/tech-stacks` replaces the whole set | Incremental add/remove |
+| `project` → `tech_stack` | `PUT /admin/project/{id}/tech-stacks` replaces the whole set; `POST`/`DELETE /admin/project/{id}/tech-stack/{stackId}` for incremental links | — |
 | `tech_stack` → `tech_stack_category` | Set by name in `POST`/`PUT /admin/skill`, resolved to an id | Standalone reassignment (probably not needed) |
 
 ### Implemented endpoint — phase 2
@@ -121,13 +120,27 @@ project's name/description/contribution, or touch its tech stacks.
   the effect is visible through `GET /api/v1/experience?includeProjects=true`.
   Malformed or non-positive ids are `400`, missing rows `404`, outages `503`.
 
+### Implemented endpoints — phase 3
+
+Incremental tech-stack links as an alternative to replace-all:
+
+- `POST /api/v1/admin/project/{id}/tech-stack` — adds a single link. Body:
+  `{ "techStackId": 5 }`. The stack must exist and not already be linked.
+  Returns `200` + `ProjectDto`.
+- `DELETE /api/v1/admin/project/{id}/tech-stack/{techStackId}` — removes a
+  single link. The stack must currently be linked. Returns `200` + `ProjectDto`.
+
+Both use the Skill read port to validate existence, and the Project aggregate's
+`ReplaceTechStacks` internally. The replace-all route remains available for
+deterministic full-set updates.
+
 ### Decisions
 
 | Decision | Options | Recommendation | Status |
 |---|---|---|---|
 | Attach, detach or move an existing project | A single `PUT /admin/project/{id}/experience`, or paired `POST`/`DELETE` under `/admin/experience/{experienceId}/project/{projectId}` | The single project-side route above: `Project` owns `experience_id`, and one contract covers attach, move and detach | Implemented |
 | Admin list of projects for a role | Reuse `GET /api/v1/experience?includeProjects=true`, or add `GET /admin/experience/{experienceId}/project` | Reuse the public projection until the admin app proves it needs a separate raw list | Open |
-| Incremental tech-stack links | Add `POST`/`DELETE /admin/project/{id}/tech-stack/{stackId}`, or keep replace-all | Keep replace-all: it is deterministic and avoids half-applied sets | Open |
+| Incremental tech-stack links | Add `POST`/`DELETE /admin/project/{id}/tech-stack/{stackId}`, or keep replace-all | Both available: replace-all for determinism, incremental for convenience | Implemented |
 | Standalone category reassignment | Add `PUT /admin/skill/{id}/category`, or keep the existing skill update | Keep the existing update; the category is already resolved by name there | Open |
 | Failure semantics | `404` for an absent parent/child, `400` for a malformed or non-positive id | Use that split consistently; database outages stay `503` | Open |
 
@@ -138,8 +151,8 @@ project's name/description/contribution, or touch its tech stacks.
 2. **Done — phase 2:** implement the project-side `PUT .../experience` route.
    Tests cover invalid ids, missing parent/child, a failed lookup and the three
    success outcomes.
-3. **Phase 3:** only if the owner confirms the need, add incremental stack links
-   or a role-scoped admin list.
+3. **Done — phase 3:** implement incremental tech-stack add/remove routes.
+   Tests cover all success and failure branches.
 
 Out of scope: schema changes, public writes, category reassignment and any change
 to the anonymous read contract.
