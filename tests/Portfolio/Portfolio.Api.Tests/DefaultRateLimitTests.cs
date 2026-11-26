@@ -10,21 +10,18 @@ namespace Portfolio.Api.Tests;
 /// stricter endpoint policies override it. Health probes are exempt so a monitor
 /// never sees 429 and mistakes it for an outage.
 /// 
-/// Metadata tests use the base factory (rate limiting disabled).
-/// Actual 429 behaviour tests use RateLimitedApiFactory.
+/// Each test builds its own host so one limiter's window cannot affect another.
 /// </summary>
 [Collection(RateLimitedHostCollection.RateLimitedHostCollectionName)]
-public sealed class DefaultRateLimitTests : IClassFixture<RateLimitedApiFactory>
+public sealed class DefaultRateLimitTests
 {
     private const int DefaultPermitLimit = 120;
-    private readonly RateLimitedApiFactory _factory;
-
-    public DefaultRateLimitTests(RateLimitedApiFactory factory) => _factory = factory;
 
     [Fact]
     public async Task PortfolioReadEndpoint_Returns429AfterTheDefaultPermitLimit()
     {
-        using var client = _factory.CreateClient();
+        using var factory = new RateLimitedApiFactory();
+        using var client = factory.CreateClient();
 
         await RateLimitAssertions.SendUntilRejectedAsync(
             () => client.GetAsync("/api/v1/skill"),

@@ -76,17 +76,12 @@ public class JGBackendApiFactory : WebApplicationFactory<Program>
             key => key,
             key => Environment.GetEnvironmentVariable(key));
 
-        // Set all settings as environment variables EXCEPT rate limiting.
-        // Rate limiting is configured via in-memory config in ConfigureWebHost.
+        // Rate limiting stays out of the environment because each factory needs its
+        // own value; it is supplied through in-memory configuration below.
         foreach (var setting in Settings)
         {
-            if (!setting.Key.StartsWith("RateLimiting", StringComparison.OrdinalIgnoreCase))
-            {
-                Environment.SetEnvironmentVariable(setting.Key, setting.Value);
-            }
+            Environment.SetEnvironmentVariable(setting.Key, setting.Value);
         }
-        // Ensure RateLimiting:Disabled is not set as env var - it will be configured via in-memory config.
-        Environment.SetEnvironmentVariable("RateLimiting:Disabled", null);
     }
 
     /// <summary>
@@ -132,7 +127,8 @@ public class JGBackendApiFactory : WebApplicationFactory<Program>
 
         builder.ConfigureAppConfiguration((context, config) =>
         {
-            // Disable rate limiting by default for tests so sequential admin-write tests don't hit 429.
+            // Disable rate limiting by default for tests so the many admin-write
+            // assertions in a class do not exhaust the production 30/min policy.
             config.AddInMemoryCollection(new Dictionary<string, string?>
             {
                 ["RateLimiting:Disabled"] = "true"
@@ -218,14 +214,11 @@ public sealed class RateLimitedApiFactory : WebApplicationFactory<Program>
             key => key,
             key => Environment.GetEnvironmentVariable(key));
 
-        // Set all settings as environment variables EXCEPT rate limiting.
-        // Rate limiting is configured via in-memory config in ConfigureWebHost.
+        // Rate limiting is supplied through in-memory configuration below so this
+        // factory can enable it while the default factory disables it.
         foreach (var setting in Settings)
         {
-            if (!setting.Key.StartsWith("RateLimiting", StringComparison.OrdinalIgnoreCase))
-            {
-                Environment.SetEnvironmentVariable(setting.Key, setting.Value);
-            }
+            Environment.SetEnvironmentVariable(setting.Key, setting.Value);
         }
     }
 
@@ -264,15 +257,11 @@ public sealed class RateLimitedApiFactory : WebApplicationFactory<Program>
 
         builder.ConfigureAppConfiguration((context, config) =>
         {
-            // Enable rate limiting with high limits for these tests.
+            // Explicitly enable the production limits; the default factory disables
+            // them and the in-memory source must win over any ambient setting.
             config.AddInMemoryCollection(new Dictionary<string, string?>
             {
-                ["RateLimiting:Disabled"] = "false",
-                ["RateLimiting:Default:PermitLimit"] = "10000",
-                ["RateLimiting:AdminWrite:PermitLimit"] = "10000",
-                ["RateLimiting:NotionPassthrough:PermitLimit"] = "10000",
-                ["RateLimiting:GithubPassthrough:PermitLimit"] = "10000",
-                ["RateLimiting:AuthLogin:PermitLimit"] = "10000",
+                ["RateLimiting:Disabled"] = "false"
             });
         });
 
