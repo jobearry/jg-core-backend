@@ -76,6 +76,34 @@ and `DELETE` on the portfolio tables but no DDL. The GitHub Actions migration se
 `PRODUCTION_CONNECTION_STRING` is unchanged and remains the only owner connection.
 See [ADR-0007](adr/0007-admin-authorization-and-writer-role.md).
 
+The production `portfolio_writer` role is provisioned out of band. Run this once
+as a migration-owner role, and re-run the table/sequence grants after any
+migration that adds a table. Do not use `ALTER DEFAULT PRIVILEGES`: future tables
+must not inherit write rights automatically.
+
+```sql
+GRANT USAGE ON SCHEMA public TO portfolio_writer;
+
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE
+    public.experience,
+    public.project,
+    public.project_tech_stack,
+    public.recommendation,
+    public.tech_stack,
+    public.tech_stack_category
+TO portfolio_writer;
+
+GRANT USAGE, SELECT ON SEQUENCE
+    public.experience_id_seq,
+    public.project_id_seq,
+    public.recommendation_id_seq,
+    public.tech_stack_id_seq,
+    public.tech_stack_category_id_seq
+TO portfolio_writer;
+```
+
+This grants no DDL, `TRUNCATE`, or access to `__EFMigrationsHistory`.
+
 Admin write routes live under `/api/v1/admin` and require the `role=Admin` token
 from `/api/v1/auth/login`. They are capped at 30 requests/minute per IP by the
 `admin-write` policy and use a CORS policy that permits `PUT` and `DELETE` from the
@@ -262,7 +290,7 @@ The composed host reads only the keys in §3. On `jdbweb`, use this list;
 | Setting | Action | Why |
 |---|---|---|
 | `ConnectionStrings__JDBConnection` | keep | runtime read connection (`portfolio_app`, `SELECT` only); the workflow's migration step uses the separate `PRODUCTION_CONNECTION_STRING` secret (§5) |
-| `ConnectionStrings__JDBConnectionWrite` | add/verify | required runtime write connection (`portfolio_writer`, DML only); GitHub Actions does not set it, and the same value as the read connection is acceptable only outside production |
+| `ConnectionStrings__JDBConnectionWrite` | add/verify | required runtime write connection (`portfolio_writer`, DML only); apply the grant SQL in §3 first, verify the App Service setting, and note that GitHub Actions does not set it. The same value as the read connection is acceptable only outside production |
 | `Jwt__Key`, `Jwt__Issuer`, `Jwt__Audience` | keep | issuer and audience are validated on every request (`AuthenticationConfiguration.cs:47-52`); changing them invalidates existing tokens |
 | `Jwt__ExpirationInMinutes` | keep or unset | defaults to 60 |
 | `Jwt__Expires` | remove | old Generic-host key; the app reads `Jwt:ExpirationInMinutes` (KI-031) |

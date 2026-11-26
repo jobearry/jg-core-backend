@@ -69,13 +69,18 @@ public sealed class EfProjectRepository
         DomainProject project, CancellationToken cancellationToken)
     {
         var entity = ProjectMapper.ToEntity(project);
-
-        // Mark only the root row modified. Update() would also attach the empty
-        // ProjectTechStacks collection, which risks rewriting join rows this slice
-        // does not own.
-        _writeContext.Projects.Attach(entity);
-        _writeContext.Entry(entity).State = EntityState.Modified;
         StampUpdatedAt(entity);
+
+        // Update() would also attach the empty ProjectTechStacks collection, which
+        // risks rewriting join rows this slice does not own. Mark only the columns
+        // this command owns; CreatedAt belongs to the database default.
+        _writeContext.Projects.Attach(entity);
+        var entry = _writeContext.Entry(entity);
+        entry.Property(e => e.ExperienceId).IsModified = true;
+        entry.Property(e => e.ProjectName).IsModified = true;
+        entry.Property(e => e.Description).IsModified = true;
+        entry.Property(e => e.Contribution).IsModified = true;
+        entry.Property(e => e.UpdatedAt).IsModified = true;
         await _writeContext.SaveChangesAsync(cancellationToken);
 
         return ProjectMapper.ToDomain(entity);
@@ -148,7 +153,9 @@ public sealed class EfProjectRepository
     }
 
     private void StampUpdatedAt(ProjectEntity entity) =>
-        entity.UpdatedAt = _timeProvider.GetUtcNow().UtcDateTime;
+        // updated_at is timestamp without time zone; Npgsql rejects Kind=Utc.
+        entity.UpdatedAt = DateTime.SpecifyKind(
+            _timeProvider.GetUtcNow().UtcDateTime, DateTimeKind.Unspecified);
 
     public async Task DeleteAsync(
         DomainProject project, CancellationToken cancellationToken)

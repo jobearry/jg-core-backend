@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Portfolio.Features.Project;
 using Portfolio.Persistence.Contexts;
@@ -34,6 +35,8 @@ public sealed class ProjectWriteTimestampTests
             () => repository.UpdateAsync(project, CancellationToken.None));
 
         Assert.Equal(FixedNow.UtcDateTime, interceptor.Project?.UpdatedAt);
+        Assert.Equal(DateTimeKind.Unspecified, interceptor.Project?.UpdatedAt?.Kind);
+        Assert.False(interceptor.ProjectEntry?.Property(e => e.CreatedAt).IsModified);
     }
 
     private static DbContextOptions<PortfolioContext> ReadOptions() =>
@@ -51,15 +54,17 @@ public sealed class ProjectWriteTimestampTests
     {
         public ProjectEntity? Project { get; private set; }
 
+        public EntityEntry<ProjectEntity>? ProjectEntry { get; private set; }
+
         public override ValueTask<InterceptionResult<int>> SavingChangesAsync(
             DbContextEventData eventData,
             InterceptionResult<int> result,
             CancellationToken cancellationToken = default)
         {
-            Project = eventData.Context?.ChangeTracker
+            ProjectEntry = eventData.Context?.ChangeTracker
                 .Entries<ProjectEntity>()
-                .Single()
-                .Entity;
+                .Single();
+            Project = ProjectEntry?.Entity;
             throw new StopBeforeDatabase();
         }
     }

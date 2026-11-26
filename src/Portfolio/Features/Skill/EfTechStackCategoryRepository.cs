@@ -57,7 +57,9 @@ public sealed class EfTechStackCategoryRepository
     {
         var entity = TechStackCategoryMapper.ToEntity(category);
 
-        _writeContext.TechStackCategories.Update(entity);
+        // Update() would mark created_at modified and clear the database default.
+        _writeContext.TechStackCategories.Attach(entity);
+        _writeContext.Entry(entity).Property(e => e.Category).IsModified = true;
         await _writeContext.SaveChangesAsync(cancellationToken);
 
         return TechStackCategoryMapper.ToDomain(entity);

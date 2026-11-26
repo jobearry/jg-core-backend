@@ -55,7 +55,12 @@ public sealed class EfSkillRepository
     {
         var entity = TechStackMapper.ToEntity(stack, categoryId);
 
-        _writeContext.TechStacks.Update(entity);
+        // Update() would mark created_at modified and clear the database default.
+        _writeContext.TechStacks.Attach(entity);
+        var entry = _writeContext.Entry(entity);
+        entry.Property(e => e.StackName).IsModified = true;
+        entry.Property(e => e.ImgSrc).IsModified = true;
+        entry.Property(e => e.TechStackCategoryId).IsModified = true;
         await _writeContext.SaveChangesAsync(cancellationToken);
 
         return await MapWithCategoryAsync(entity, cancellationToken);

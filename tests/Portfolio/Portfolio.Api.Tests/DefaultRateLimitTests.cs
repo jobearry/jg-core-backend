@@ -9,7 +9,7 @@ namespace Portfolio.Api.Tests;
 /// The host applies a named 120/min per-IP policy to every mapped endpoint;
 /// stricter endpoint policies override it. Health probes are exempt so a monitor
 /// never sees 429 and mistakes it for an outage.
-/// 
+///
 /// Each test builds its own host so one limiter's window cannot affect another.
 /// </summary>
 [Collection(RateLimitedHostCollection.RateLimitedHostCollectionName)]
